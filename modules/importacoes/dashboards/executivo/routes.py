@@ -1391,6 +1391,7 @@ def recent_operations():
             'transit_time_real', 'valor_cif_real', 'custo_frete_inter', 
             'custo_armazenagem', 'custo_honorarios', 'numero_di', 'data_registro',
             'canal', 'data_desembaraco', 'despesas_processo',
+            'armazenagem_data', 'has_armazenagem_data',
             
             # CORREÇÃO BUG: Incluir pais_procedencia e url_bandeira para o modal
             'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira',

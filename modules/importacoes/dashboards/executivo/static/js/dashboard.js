@@ -25,6 +25,315 @@ const DASH_COLORS = {
     custo: '#f59e0b'      // laranja
 };
 
+// ===== CONFIGURAÇÃO DINÂMICA DE COLUNAS =====
+const DASHBOARD_COLUMNS_STORAGE_KEY_DEFAULT = 'dashboard_exec_columns_config';
+const AVAILABLE_COLUMNS = [
+    // Grupo: Identificação
+    { id: 'acoes', label: 'Ações', visible: true, fixed: true, showInConfig: false, sortable: false, category: 'Identificação', order: 0 },
+    { id: 'ref_importador', label: 'Ref. Importador', visible: true, fixed: false, category: 'Identificação', order: 1 },
+    { id: 'importador', label: 'Importador', visible: true, fixed: false, category: 'Identificação', order: 2 },
+
+    // Grupo: Informações Principais
+    { id: 'data_abertura', label: 'Data Abertura', visible: true, fixed: false, category: 'Informações Principais', order: 3 },
+    { id: 'exportador', label: 'Exportador / Fornecedor', visible: true, fixed: false, category: 'Informações Principais', order: 4 },
+    { id: 'modal', label: 'Modal', visible: true, fixed: false, category: 'Informações Principais', order: 5 },
+    { id: 'status', label: 'Status', visible: true, fixed: false, category: 'Informações Principais', order: 6 },
+
+    // Grupo: Informações Financeiras
+    { id: 'custos', label: 'Custos', visible: true, fixed: false, category: 'Informações Financeiras', order: 7 },
+    { id: 'despesas', label: 'Despesas Detalhadas', visible: false, fixed: false, sortable: false, category: 'Informações Financeiras', order: 21 },
+
+    // Grupo: Datas e Prazos
+    { id: 'data_chegada', label: 'Data Chegada', visible: true, fixed: false, category: 'Datas e Prazos', order: 8 },
+    { id: 'data_embarque', label: 'Data Embarque', visible: false, fixed: false, category: 'Datas e Prazos', order: 9 },
+    { id: 'transit_time', label: 'Transit Time', visible: false, fixed: false, category: 'Datas e Prazos', order: 10 },
+    { id: 'data_registro', label: 'Data Registro', visible: false, fixed: false, category: 'Datas e Prazos', order: 11 },
+
+    // Grupo: Carga e Mercadoria
+    { id: 'mercadoria', label: 'Mercadoria', visible: true, fixed: false, category: 'Carga e Mercadoria', order: 12 },
+    { id: 'container', label: 'Container', visible: false, fixed: false, category: 'Carga e Mercadoria', order: 13 },
+    { id: 'peso_bruto', label: 'Peso Bruto', visible: false, fixed: false, category: 'Carga e Mercadoria', order: 14 },
+    { id: 'produtos', label: 'Produtos', visible: false, fixed: false, sortable: false, category: 'Carga e Mercadoria', order: 20 },
+
+    // Grupo: Despacho Aduaneiro
+    { id: 'urf', label: 'URF', visible: true, fixed: false, category: 'Despacho Aduaneiro', order: 15 },
+    { id: 'numero_di', label: 'Número DI', visible: false, fixed: false, category: 'Despacho Aduaneiro', order: 16 },
+    { id: 'canal', label: 'Canal', visible: false, fixed: false, category: 'Despacho Aduaneiro', order: 17 },
+
+    // Grupo: Informações Complementares
+    { id: 'pais', label: 'País', visible: false, fixed: false, category: 'Informações Complementares', order: 18 },
+
+    // Grupo: Armazenagem
+    { id: 'data_desova', label: 'Data Desova (ETB)', visible: false, fixed: false, category: 'Armazenagem', order: 22 },
+    { id: 'limite_primeiro_periodo', label: 'Limite 1º Período', visible: false, fixed: false, category: 'Armazenagem', order: 23 },
+    { id: 'limite_segundo_periodo', label: 'Limite 2º Período', visible: false, fixed: false, category: 'Armazenagem', order: 24 },
+    { id: 'dias_extras_armazenagem', label: 'Dias Extras Armazenagem', visible: false, fixed: false, category: 'Armazenagem', order: 25 },
+    { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, category: 'Armazenagem', order: 26 }
+];
+
+let cachedColumnsConfig = null;
+
+function getColumnsStorageKey() {
+    if (window.dashboardColumnsStorageKey && typeof window.dashboardColumnsStorageKey === 'string') {
+        return window.dashboardColumnsStorageKey;
+    }
+    return DASHBOARD_COLUMNS_STORAGE_KEY_DEFAULT;
+}
+
+function getDefaultColumnsConfig() {
+    return AVAILABLE_COLUMNS.map(col => ({
+        id: col.id,
+        visible: col.fixed ? true : col.visible,
+        order: col.order
+    }));
+}
+
+function normalizeColumnsConfig(config) {
+    const configMap = new Map((config || []).map(item => [item.id, item]));
+    const normalized = AVAILABLE_COLUMNS.map(col => {
+        const stored = configMap.get(col.id);
+        return {
+            id: col.id,
+            visible: col.fixed ? true : (stored ? Boolean(stored.visible) : col.visible),
+            order: typeof stored?.order === 'number' ? stored.order : col.order
+        };
+    });
+    normalized.sort((a, b) => a.order - b.order);
+    normalized.forEach((item, index) => { item.order = index; });
+    return normalized;
+}
+
+function getColumnConfig() {
+    if (window.tempColumnConfig) {
+        return window.tempColumnConfig.map(col => ({ ...col }));
+    }
+
+    if (cachedColumnsConfig) {
+        return cachedColumnsConfig.map(col => ({ ...col }));
+    }
+
+    const stored = localStorage.getItem(getColumnsStorageKey());
+    if (stored) {
+        try {
+            const parsed = JSON.parse(stored);
+            cachedColumnsConfig = normalizeColumnsConfig(parsed);
+            return cachedColumnsConfig.map(col => ({ ...col }));
+        } catch (error) {
+            console.warn('[DASHBOARD_EXECUTIVO] Configuração de colunas inválida, restaurando padrão', error);
+        }
+    }
+
+    cachedColumnsConfig = normalizeColumnsConfig(getDefaultColumnsConfig());
+    return cachedColumnsConfig.map(col => ({ ...col }));
+}
+
+function setTempColumnConfig(config) {
+    window.tempColumnConfig = normalizeColumnsConfig(config);
+}
+
+function clearTempColumnConfig() {
+    delete window.tempColumnConfig;
+}
+
+function saveColumnConfig(config) {
+    const normalized = normalizeColumnsConfig(config);
+    cachedColumnsConfig = normalized;
+    localStorage.setItem(getColumnsStorageKey(), JSON.stringify(normalized));
+    clearTempColumnConfig();
+    console.log('[DASHBOARD_EXECUTIVO] Configuração de colunas persistida', normalized);
+}
+
+function resetColumnConfigToDefault() {
+    const defaultConfig = normalizeColumnsConfig(getDefaultColumnsConfig());
+    setTempColumnConfig(defaultConfig);
+    return defaultConfig.map(col => ({ ...col }));
+}
+
+function getVisibleColumns() {
+    const config = getColumnConfig();
+    const visibleIds = new Map(config.filter(col => col.visible).map(col => [col.id, col.order]));
+    return AVAILABLE_COLUMNS.filter(col => visibleIds.has(col.id))
+        .sort((a, b) => visibleIds.get(a.id) - visibleIds.get(b.id));
+}
+
+// Expor helpers globais para o módulo de configuração
+window.dashboardColumns = {
+    getAvailableColumns: () => AVAILABLE_COLUMNS.map(col => ({ ...col })),
+    getColumnConfig,
+    setTempColumnConfig,
+    clearTempColumnConfig,
+    saveColumnConfig,
+    resetColumnConfigToDefault,
+    getVisibleColumns
+};
+
+
+// ===== Helpers para renderização de colunas dinâmicas =====
+function escapeHtml(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function summarizeProdutos(operation, maxItems = 3) {
+    if (!operation || !Array.isArray(operation.produtos_processo) || operation.produtos_processo.length === 0) {
+        return {
+            text: '-'
+        };
+    }
+
+    const entries = operation.produtos_processo.map(produto => {
+        if (!produto || typeof produto !== 'object') return null;
+
+        const descricao = (produto.descricao || produto.descricao_produto || produto.descricao_adicao || '').toString().trim();
+        const ncm = (produto.ncm || produto.ncm_sh || '').toString().trim();
+        const unidade = (produto.unidade_medida || produto.unidade || '').toString().trim();
+        const quantidadeRaw = produto.quantidade || produto.qtd || produto.quantidade_declarada;
+        const quantidade = quantidadeRaw ? Number(quantidadeRaw) : null;
+
+        const partes = [];
+        if (descricao) {
+            partes.push(descricao);
+        } else if (ncm) {
+            partes.push(`NCM ${ncm}`);
+        }
+
+        const detalhes = [];
+        if (ncm && descricao && !descricao.includes(ncm)) {
+            detalhes.push(`NCM ${ncm}`);
+        }
+        if (!descricao && ncm) {
+            // já adicionamos o NCM acima quando não há descrição
+        }
+
+        if (!Number.isNaN(quantidade) && quantidade !== null) {
+            const casasDecimais = Math.abs(quantidade % 1) > 0 ? 2 : 0;
+            const quantidadeFormatada = formatNumber(quantidade, casasDecimais);
+            detalhes.push(`${quantidadeFormatada}${unidade ? ` ${unidade}` : ''}`.trim());
+        } else if (unidade) {
+            detalhes.push(unidade);
+        }
+
+        if (detalhes.length) {
+            partes.push(`(${detalhes.join(' • ')})`);
+        }
+
+        const label = partes.join(' ').trim();
+        return label || null;
+    }).filter(Boolean);
+
+    if (!entries.length) {
+        return {
+            text: '-'
+        };
+    }
+
+    const displayEntries = entries.slice(0, maxItems);
+    const suffix = entries.length > maxItems ? ` +${entries.length - maxItems}` : '';
+
+    return {
+        text: `${displayEntries.join(', ')}${suffix}`.trim(),
+        tooltip: entries.join('\n')
+    };
+}
+
+function summarizeDespesas(expenseData, operation, maxItems = 3) {
+    let data = expenseData;
+
+    if ((!data || !data.categorias) && operation && Array.isArray(operation.despesas_processo) && operation.despesas_processo.length) {
+        data = processExpensesByCategory(operation.despesas_processo);
+    }
+
+    const categorias = data && data.categorias ? data.categorias : null;
+    if (!categorias || Object.keys(categorias).length === 0) {
+        return {
+            text: '-'
+        };
+    }
+
+    const entries = Object.entries(categorias)
+        .filter(([, valor]) => valor && Number(valor) !== 0)
+        .sort(([, valorA], [, valorB]) => Number(valorB) - Number(valorA))
+        .map(([categoria, valor]) => `${categoria}: ${formatCurrency(valor)}`);
+
+    if (!entries.length) {
+        return {
+            text: '-'
+        };
+    }
+
+    const displayEntries = entries.slice(0, maxItems);
+    const suffix = entries.length > maxItems ? ` +${entries.length - maxItems}` : '';
+
+    return {
+        text: `${displayEntries.join(', ')}${suffix}`.trim(),
+        tooltip: entries.join('\n')
+    };
+}
+
+function hasArmazenagemDetails(operation) {
+    if (!operation) {
+        return false;
+    }
+
+    if (operation.has_armazenagem_data) {
+        return true;
+    }
+
+    const data = operation.armazenagem_data;
+    if (data && typeof data === 'object') {
+        return Object.values(data).some(value => {
+            if (value === null || value === undefined) return false;
+            if (typeof value === 'number') return !Number.isNaN(value) && value !== 0;
+            const str = String(value).trim();
+            return str !== '' && str !== '0' && str !== '-';
+        });
+    }
+
+    return false;
+}
+
+function getArmazenagemDisplay(operation, field) {
+    if (!operation) {
+        return '-';
+    }
+
+    const data = operation.armazenagem_data;
+    if (!data || typeof data !== 'object') {
+        return '-';
+    }
+
+    const value = data[field];
+    if (value === null || value === undefined || value === '' || value === '-') {
+        return '-';
+    }
+
+    if (field === 'valor_despesas_extras') {
+        const numeric = Number(value);
+        if (!Number.isNaN(numeric) && numeric !== 0) {
+            return formatCurrency(numeric);
+        }
+        return '-';
+    }
+
+    if (field === 'dias_extras_armazenagem') {
+        const numeric = Number(value);
+        if (!Number.isNaN(numeric) && numeric !== 0) {
+            return `${numeric} ${numeric === 1 ? 'dia' : 'dias'}`;
+        }
+        return '-';
+    }
+
+    return formatDate(value);
+}
+
+
 // CACHE INTELIGENTE: Sistema de cache para evitar recarregamentos desnecessários
 let dashboardCache = {
     kpis: null,
@@ -772,130 +1081,177 @@ function initializeEnhancedTable() {
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
+    
+    // Override row rendering method para suportar colunas dinâmicas
+    recentOperationsTable.renderRow = function(operation) {
+        const visibleColumns = getVisibleColumns();
 
-    // Override row rendering method
-    recentOperationsTable.renderRow = function(operation, index) {
-        // Check if global array exists
-        if (!window.currentOperations) {
-            console.error(`[RENDER_ROW_DEBUG] window.currentOperations não existe ainda!`);
-            return '<td colspan="11">Carregando...</td>';
+        if (!visibleColumns.length) {
+            return '<td colspan="1">Configuração de colunas indisponível</td>';
         }
-        // Use ref_importador to find the correct index in the global array
-        const globalIndex = window.currentOperations.findIndex(op => op.ref_importador === operation.ref_importador);
-        console.log(`[RENDER_ROW] Processo: ${operation.ref_importador}, Index local: ${index}, Index global: ${globalIndex}`);
-        console.log(`[RENDER_ROW_DEBUG] operation.status_macro_sistema:`, operation.status_macro_sistema);
-        console.log(`[RENDER_ROW_DEBUG] operation.status:`, operation.status);
-        console.log(`[RENDER_ROW_DEBUG] Todos os campos do objeto:`, Object.keys(operation));
-        // Validation check
-        if (globalIndex === -1) {
-            console.warn(`[RENDER_ROW] Processo ${operation.ref_importador} não encontrado no array global!`);
-            console.warn(`[RENDER_ROW] Primeiros 5 do array global:`, 
-                window.currentOperations.slice(0, 5).map(op => op.ref_importador));
-        }
-        
-        // Calcular custo total - PRIORIZAR custo_total_view/custo_total (igual ao modal)
-        let custoTotal = 0;
-        if (operation.custo_total_view !== undefined && operation.custo_total_view !== null && operation.custo_total_view > 0) {
-            custoTotal = operation.custo_total_view;
-            console.log(`[RENDER_ROW] Usando custo_total_view para ${operation.ref_unique}: ${custoTotal}`);
-        } else if (operation.custo_total !== undefined && operation.custo_total !== null && operation.custo_total > 0) {
-            custoTotal = operation.custo_total;
-            console.log(`[RENDER_ROW] Usando custo_total para ${operation.ref_unique}: ${custoTotal}`);
-        } else if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
-            // Fallback: calcular manualmente
-            const expenseData = processExpensesByCategory(operation.despesas_processo);
-            custoTotal = expenseData.total;
-            console.log(`[RENDER_ROW] Calculado manualmente para ${operation.ref_unique}: ${custoTotal}`);
-        }
-        
-        // Log específico para processo 6555 na tabela
-        if (operation.ref_unique && operation.ref_unique.includes('6555')) {
-            console.log(`[RENDER_ROW] *** PROCESSO 6555 NA TABELA ***`);
-            console.log(`[RENDER_ROW] custo_total_view: ${operation.custo_total_view}`);
-            console.log(`[RENDER_ROW] custo_total: ${operation.custo_total}`);
-            console.log(`[RENDER_ROW] custoTotal final usado: ${custoTotal}`);
-        }
-        
-        // Determinar se deve mostrar coluna Material
-        // Verificar se há clientes KINGSPAN nos dados atuais da tabela
-        const hasKingspanInCurrentData = window.currentOperations && 
-            window.currentOperations.some(op => 
-                op.importador && op.importador.toUpperCase().includes('KING')
-            );
-        
-        // Se há clientes KINGSPAN nos dados, mostrar a coluna
-        // Para clientes KINGSPAN, mostrar o material; para outros, mostrar "-"
-        const isKingspanClient = operation.importador && operation.importador.toUpperCase().includes('KING');
-        const materialColumn = hasKingspanInCurrentData ? 
-            `<td>${isKingspanClient ? (operation.mercadoria || '-') : '-'}</td>` : '';
-        
-        // CORREÇÃO: Tratar "N/A" como valor inválido no fallback URF
-        const urfValue = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A') 
-                         ? operation.urf_despacho_normalizado 
-                         : (operation.urf_despacho || '-');
-        const urfColumn = `<td>${urfValue}</td>`;
-        
-        // Truncar Exportador/Fornecedor para 18 caracteres
+
+        const hasGlobalData = Array.isArray(window.currentOperations);
+        const globalIndex = hasGlobalData
+            ? window.currentOperations.findIndex(op => op.ref_importador === operation.ref_importador)
+            : -1;
+        const fallbackIndex = hasGlobalData ? window.currentOperations.indexOf(operation) : -1;
+        const modalIndex = globalIndex > -1 ? globalIndex : fallbackIndex;
+
+        const isKingspanProcess = (operation.importador || '').toUpperCase().includes('KING');
+        const hasProdutos = Array.isArray(operation.produtos_processo) && operation.produtos_processo.length > 0;
+        const hasArmazenagemData = hasArmazenagemDetails(operation);
+
+        // Pré-calcular campos utilizados em múltiplas colunas
         const exportadorFull = operation.exportador_fornecedor || '-';
-        const exportadorDisplay = (exportadorFull && exportadorFull.length > 18)
-            ? exportadorFull.substring(0, 18) + '…'
-            : exportadorFull;
-        
-        // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
-        // Se não houver status_sistema, usar fallback
+        const exportadorDisplay = exportadorFull && exportadorFull.length > 18
+            ? `${exportadorFull.substring(0, 18)}…`
+            : exportadorFull || '-';
+
         let statusDisplay = operation.status_sistema;
-        
-        // Debug para identificar problema
-        if (!statusDisplay && globalIndex === 0) {
-            console.warn('[STATUS_DEBUG] Primeiro registro sem status_sistema:', operation);
-            console.warn('[STATUS_DEBUG] Campos disponíveis:', Object.keys(operation));
-        }
-        
-        // Fallback se status_sistema estiver vazio
-        if (!statusDisplay || statusDisplay.trim() === '') {
+        if (!statusDisplay || !statusDisplay.trim()) {
             statusDisplay = operation.status_processo || operation.status || 'Sem Info';
         }
-        
-        // Verificar se é processo Kingspan (nome contém "KING")
-        const isKingspan = operation.importador && operation.importador.toUpperCase().includes('KING');
-        const hasProdutos = operation.produtos_processo && operation.produtos_processo.length > 0;
-        
-        // Botão de Ações (olho sempre visível)
-        let actionsButtons = `
-            <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
-                <i class="mdi mdi-eye-outline"></i>
-            </button>
-        `;
-        
-        // Adicionar botão de informações complementares (bagagem) se:
-        // - For Kingspan com acesso OU tiver produtos cadastrados
-        const showBagagem = (isKingspan && window.hasKingspanAccess) || hasProdutos;
-        
-        if (showBagagem && typeof window.ArmazenagemKingspan !== 'undefined') {
-            const hasArmazenagemData = operation.has_armazenagem_data || false;
-            const iconType = hasArmazenagemData ? '' : '-outline';
-            const tooltipText = hasProdutos ? 'Ver produtos e informações' : (hasArmazenagemData ? 'Editar armazenagem' : 'Cadastrar armazenagem');
-            
-            actionsButtons += `
-            <button class="table-action-btn" onclick="openArmazenagemModal(${globalIndex})" title="${tooltipText}">
-                <i class="mdi mdi-bag-suitcase${iconType}"></i>
-            </button>
-            `;
+
+        let expenseData = null;
+        if (Array.isArray(operation.despesas_processo) && operation.despesas_processo.length) {
+            expenseData = processExpensesByCategory(operation.despesas_processo);
         }
-        
-        return `
-            <td>${actionsButtons}</td>
-            <td><strong>${operation.ref_importador || '-'}</strong></td>
-            <td>${operation.importador || '-'}</td>
-            <td>${formatDate(operation.data_abertura)}</td>
-            <td title="${exportadorFull}">${exportadorDisplay}</td>
-            <td>${getModalBadge(operation.modal)}</td>
-            <td>${getStatusBadge(statusDisplay)}</td>
-            <td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>
-            <td>${formatDataChegada(operation.data_chegada)}</td>
-            ${materialColumn}
-            ${urfColumn}
-        `;
+
+        let custoTotal = 0;
+        if (operation.custo_total_view && operation.custo_total_view > 0) {
+            custoTotal = operation.custo_total_view;
+        } else if (operation.custo_total && operation.custo_total > 0) {
+            custoTotal = operation.custo_total;
+        } else if (expenseData) {
+            custoTotal = expenseData.total || 0;
+        }
+
+        const urfValue = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A')
+            ? operation.urf_despacho_normalizado
+            : (operation.urf_despacho || '-');
+
+        const canalValue = operation.canal || operation.canal_parametrizado || '-';
+        const canalContent = getCanalIndicator(canalValue);
+
+        const produtosResumo = summarizeProdutos(operation);
+        const despesasResumo = summarizeDespesas(expenseData, operation);
+
+        const cells = visibleColumns.map(column => {
+            switch (column.id) {
+                case 'acoes': {
+                    const actionButtons = [];
+                    if (modalIndex > -1) {
+                        actionButtons.push(`
+                            <button class="table-action-btn" onclick="openProcessModal(${modalIndex})" title="Ver detalhes">
+                                <i class="mdi mdi-eye-outline"></i>
+                            </button>
+                        `);
+                    } else {
+                        actionButtons.push(`
+                            <button class="table-action-btn" disabled title="Processo indisponível">
+                                <i class="mdi mdi-eye-off-outline"></i>
+                            </button>
+                        `);
+                    }
+
+                    const allowBagagem = (isKingspanProcess && window.hasKingspanAccess) || hasProdutos || hasArmazenagemData;
+                    if (allowBagagem && typeof window.ArmazenagemKingspan !== 'undefined') {
+                        const tooltipText = (hasProdutos && hasArmazenagemData)
+                            ? 'Ver produtos e informações de armazenagem'
+                            : hasProdutos
+                                ? 'Ver produtos detalhados'
+                                : 'Ver informações de armazenagem';
+                        const iconSuffix = (hasProdutos || hasArmazenagemData) ? '' : '-outline';
+
+                        if (modalIndex > -1) {
+                            actionButtons.push(`
+                                <button class="table-action-btn" onclick="openArmazenagemModal(${modalIndex})" title="${tooltipText}">
+                                    <i class="mdi mdi-bag-suitcase${iconSuffix}"></i>
+                                </button>
+                            `);
+                        }
+                    }
+
+                    return `<td>${actionButtons.join('')}</td>`;
+                }
+                case 'ref_importador':
+                    return `<td><strong>${operation.ref_importador || '-'}</strong></td>`;
+                case 'importador':
+                    return `<td>${operation.importador || '-'}</td>`;
+                case 'data_abertura':
+                    return `<td>${formatDate(operation.data_abertura)}</td>`;
+                case 'exportador':
+                    return `<td title="${exportadorFull}">${exportadorDisplay}</td>`;
+                case 'modal':
+                    return `<td>${getModalBadge(operation.modal)}</td>`;
+                case 'status':
+                    return `<td>${getStatusBadge(statusDisplay)}</td>`;
+                case 'custos':
+                    return `<td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>`;
+                case 'data_chegada':
+                    return `<td>${formatDataChegada(operation.data_chegada)}</td>`;
+                case 'data_embarque':
+                    return `<td>${formatDate(operation.data_embarque)}</td>`;
+                case 'transit_time': {
+                    const transitTime = operation.transit_time || operation.transit_time_real;
+                    return `<td>${transitTime ? `${transitTime} dias` : '-'}</td>`;
+                }
+                case 'mercadoria':
+                    return `<td>${operation.mercadoria || '-'}</td>`;
+                case 'produtos': {
+                    const text = escapeHtml(produtosResumo.text || '-');
+                    const tooltip = produtosResumo.tooltip
+                        ? escapeHtml(produtosResumo.tooltip).replace(/\n/g, '&#10;')
+                        : '';
+                    const tooltipAttr = tooltip ? ` title="${tooltip}"` : '';
+                    return `<td${tooltipAttr}>${text || '-'}</td>`;
+                }
+                case 'container': {
+                    const containerValue = operation.container || operation.numero_container || operation.conteiner || '-';
+                    return `<td>${containerValue || '-'}</td>`;
+                }
+                case 'peso_bruto': {
+                    const peso = operation.peso_bruto || operation.peso_bruto_kg || operation.peso_bruto_total;
+                    return `<td>${peso ? `${formatNumber(peso, 2)} kg` : '-'}</td>`;
+                }
+                case 'despesas': {
+                    const text = escapeHtml(despesasResumo.text || '-');
+                    const tooltip = despesasResumo.tooltip
+                        ? escapeHtml(despesasResumo.tooltip).replace(/\n/g, '&#10;')
+                        : '';
+                    const tooltipAttr = tooltip ? ` title="${tooltip}"` : '';
+                    return `<td${tooltipAttr}>${text || '-'}</td>`;
+                }
+                case 'urf':
+                    return `<td>${urfValue}</td>`;
+                case 'numero_di': {
+                    const numeroDi = operation.numero_di || operation.numero_declaracao || '-';
+                    return `<td>${numeroDi}</td>`;
+                }
+                case 'data_registro':
+                    return `<td>${formatDate(operation.data_registro || operation.data_registro_di)}</td>`;
+                case 'canal':
+                    return `<td>${canalContent}</td>`;
+                case 'pais': {
+                    const pais = operation.pais || operation.pais_procedencia_normalizado || operation.pais_procedencia;
+                    return `<td>${pais || '-'}</td>`;
+                }
+                case 'data_desova':
+                    return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'data_desova'))}</td>`;
+                case 'limite_primeiro_periodo':
+                    return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'limite_primeiro_periodo'))}</td>`;
+                case 'limite_segundo_periodo':
+                    return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'limite_segundo_periodo'))}</td>`;
+                case 'dias_extras_armazenagem':
+                    return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'dias_extras_armazenagem'))}</td>`;
+                case 'valor_despesas_extras':
+                    return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'valor_despesas_extras'))}</td>`;
+                default:
+                    return '<td>-</td>';
+            }
+        });
+
+        return cells.join('');
     };
 
     console.log('[DASHBOARD_EXECUTIVO] Enhanced Table inicializada');
@@ -1606,26 +1962,38 @@ async function loadMonthlyChart(granularidade) {
 /**
  * Ajustar cabeçalhos e colunas da tabela baseado nos dados
  */
-function adjustTableHeadersAndColumns(operations) {
-    // Verificar se há clientes KINGSPAN nos dados
-    const hasKingspanClients = operations.some(op => 
-        op.importador && op.importador.toUpperCase().includes('KING')
-    );
-    
-    console.log('[DASHBOARD_EXECUTIVO] Clientes KINGSPAN encontrados:', hasKingspanClients);
-    
-    // Encontrar o cabeçalho da coluna Material
+function adjustTableHeadersAndColumns() {
     const table = document.getElementById('recent-operations-table');
-    if (!table) return;
-    
-    const materialHeader = Array.from(table.querySelectorAll('thead th')).find(th => 
-        th.textContent.trim() === 'Material'
-    );
-    
-    if (materialHeader) {
-        // Mostrar/ocultar coluna Material baseado na presença de clientes KINGSPAN
-        materialHeader.style.display = hasKingspanClients ? '' : 'none';
-        console.log('[DASHBOARD_EXECUTIVO] Coluna Material:', hasKingspanClients ? 'mostrada' : 'oculta');
+    if (!table) {
+        console.warn('[DASHBOARD_EXECUTIVO] Tabela recent-operations-table não encontrada');
+        return;
+    }
+
+    const thead = table.querySelector('thead') || table.createTHead();
+    let headerRow = thead.querySelector('tr');
+    if (!headerRow) {
+        headerRow = document.createElement('tr');
+        thead.appendChild(headerRow);
+    }
+
+    const visibleColumns = getVisibleColumns();
+    headerRow.innerHTML = '';
+
+    visibleColumns.forEach(column => {
+        const th = document.createElement('th');
+        th.textContent = column.label;
+
+        const isSortable = column.sortable !== false && column.id !== 'acoes';
+        if (isSortable) {
+            th.classList.add('sortable');
+            th.dataset.sortField = column.sortField || column.id;
+        }
+
+        headerRow.appendChild(th);
+    });
+
+    if (recentOperationsTable) {
+        recentOperationsTable.visibleColumns = visibleColumns.map(col => col.id);
     }
 }
 
@@ -1635,8 +2003,7 @@ function adjustTableHeadersAndColumns(operations) {
 function updateRecentOperationsTable(operations) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando tabela com', operations.length, 'operações');
     
-    // Ajustar cabeçalhos e colunas baseado nos dados
-    adjustTableHeadersAndColumns(operations);
+    adjustTableHeadersAndColumns();
     
     if (!recentOperationsTable) {
         console.warn('[DASHBOARD_EXECUTIVO] Enhanced table não inicializada, tentando inicializar...');
@@ -3507,20 +3874,22 @@ function getModalIcon(modal) {
  * Get canal indicator HTML
  */
 function getCanalIndicator(canal) {
-    let dotClass = '';
-    
-    if (canal && canal.toLowerCase) {
-        const canalLower = canal.toLowerCase();
-        if (canalLower.includes('verde') || canalLower === 'verde') {
-            dotClass = 'verde';
-        } else if (canalLower.includes('amarelo') || canalLower === 'amarelo') {
-            dotClass = 'amarelo';
-        } else if (canalLower.includes('vermelho') || canalLower === 'vermelho') {
-            dotClass = 'vermelho';
-        }
+    const rawLabel = canal ? String(canal).trim() : '';
+    const upperLabel = rawLabel ? rawLabel.toUpperCase() : '';
+    let dotClass = 'neutro';
+
+    if (upperLabel.includes('VERDE')) {
+        dotClass = 'verde';
+    } else if (upperLabel.includes('AMARELO')) {
+        dotClass = 'amarelo';
+    } else if (upperLabel.includes('VERMELHO')) {
+        dotClass = 'vermelho';
     }
-    
-    return `<span class="canal-indicator"><span class="canal-dot ${dotClass}"></span></span>`;
+
+    const displayLabel = upperLabel && upperLabel !== 'N/A' ? upperLabel : '-';
+    const escapedLabel = escapeHtml(displayLabel);
+
+    return `<span class="canal-indicator"><span class="canal-dot ${dotClass}"></span><span class="canal-text">${escapedLabel}</span></span>`;
 }
 
 /**

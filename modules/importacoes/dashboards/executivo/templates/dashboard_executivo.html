@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard-customization.css') }}">
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/column-filters.css') }}">
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/armazenagem-kingspan.css') }}">
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/columns-config.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -51,10 +52,6 @@
             <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
-            </button>
-            <button id="open-filters" class="btn btn-light">
-                <i class="mdi mdi-filter"></i>
-                {{ t('importacoes.dashboard_operacional.filtros') }}
             </button>
         </div>
     </div>
@@ -285,6 +282,16 @@
                     <i class="mdi mdi-magnify enhanced-search-icon"></i>
                     <input type="text" id="recent-operations-search" class="enhanced-search-input" 
                            placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
+                </div>
+                <div class="enhanced-control-buttons">
+                    <button id="open-filters" class="btn btn-light" type="button">
+                        <i class="mdi mdi-filter"></i>
+                        {{ t('importacoes.dashboard_operacional.filtros') }}
+                    </button>
+                    <button id="open-columns-config" class="btn btn-light" type="button">
+                        <i class="mdi mdi-cog-outline"></i>
+                        Configurar Colunas
+                    </button>
                 </div>
             </div>
         </div>
@@ -722,6 +729,62 @@
         </div>
     </div>
 
+    <!-- Modal de Configuração de Colunas -->
+    <div class="columns-config-modal-overlay" aria-hidden="true">
+        <div class="columns-config-modal" role="dialog" aria-modal="true">
+            <div class="columns-config-header">
+                <h3>
+                    <i class="mdi mdi-view-column"></i>
+                    Configurar Colunas
+                </h3>
+                <button type="button" class="columns-config-close" aria-label="Fechar">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+
+            <div class="columns-config-body">
+                <p class="columns-config-description">
+                    Escolha quais informações deseja visualizar na tabela. Colunas com <i class="mdi mdi-lock"></i> são obrigatórias.
+                </p>
+
+                <div class="columns-config-search">
+                    <i class="mdi mdi-magnify"></i>
+                    <input type="text" id="columns-search" placeholder="Buscar coluna" autocomplete="off">
+                </div>
+
+                <div class="columns-config-actions">
+                    <button type="button" class="columns-config-btn-small" id="columns-select-all">
+                        <i class="mdi mdi-checkbox-multiple-marked"></i>
+                        Marcar todas
+                    </button>
+                    <button type="button" class="columns-config-btn-small" id="columns-deselect-all">
+                        <i class="mdi mdi-checkbox-multiple-blank-outline"></i>
+                        Desmarcar todas
+                    </button>
+                </div>
+
+                <div class="columns-list" id="columns-list"></div>
+            </div>
+
+            <div class="columns-config-footer">
+                <button type="button" class="columns-config-btn columns-config-btn-danger" id="columns-reset-default">
+                    <i class="mdi mdi-restore"></i>
+                    Restaurar padrão
+                </button>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="columns-config-btn columns-config-btn-secondary" id="columns-cancel">
+                        <i class="mdi mdi-close"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="columns-config-btn columns-config-btn-primary" id="columns-apply">
+                        <i class="mdi mdi-check"></i>
+                        Aplicar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
     <!-- Modal de Detalhes do Processo -->
@@ -738,13 +801,20 @@
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/column-filters.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
+<script>
+const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
+window.dashboardUserId = rawDashboardUserId || null;
+window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
+</script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/armazenagem-kingspan.js') }}"></script>
 
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager
 window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
-window.showCompanyWarning = {{ 'true' if show_company_warning else 'false' }};
+const rawShowCompanyWarning = '{{ 1 if show_company_warning else 0 }}';
+window.showCompanyWarning = rawShowCompanyWarning === '1';
 
 // Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
 document.addEventListener('DOMContentLoaded', function() {

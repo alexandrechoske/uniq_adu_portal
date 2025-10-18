@@ -1122,6 +1122,7 @@ canvas {
 .canal-indicator {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     margin-right: 6px;
     flex-shrink: 0;
 }
@@ -1132,6 +1133,7 @@ canvas {
     border-radius: 50%;
     border: 2px solid #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: #d1d5db;
 }
 
 .canal-dot.verde {
@@ -1146,9 +1148,14 @@ canvas {
     background: #f44336;
 }
 
+.canal-dot.neutro {
+    background: #d1d5db;
+}
+
 .canal-text {
     font-size: 0.9rem;
     font-weight: 500;
+    color: #374151;
 }
 
 /* Container List Styles */
