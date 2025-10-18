@@ -151,6 +151,7 @@ const ArmazenagemKingspan = {
      */
     async openModal(refUnique, processData = null) {
         console.log('[ARMAZENAGEM] Abrindo modal para ref_unique:', refUnique);
+        console.log('[ARMAZENAGEM] Dados do processo:', processData);
         
         this.currentRefUnique = refUnique;
         this.isOpen = true;
@@ -164,7 +165,15 @@ const ArmazenagemKingspan = {
             const container = processData.container || 'N/A';
             const infoEl = document.getElementById('armazenagem-process-info');
             if (infoEl) infoEl.textContent = `${importador} - ${container}`;
+            
+            // Renderizar produtos se existirem
+            if (processData.produtos_processo) {
+                this.renderProdutos(processData.produtos_processo);
+            }
         }
+        
+        // Configurar tabs baseado nos dados do processo
+        this.setupTabs(processData);
         
         // Resetar formulário
         this.resetForm();
@@ -172,7 +181,7 @@ const ArmazenagemKingspan = {
         // Mostrar loading
         this.showLoading(true);
         
-        // Buscar dados existentes
+        // Buscar dados existentes de armazenagem
         await this.loadArmazenagemData(refUnique);
         
         // Esconder loading
@@ -541,6 +550,160 @@ const ArmazenagemKingspan = {
      */
     hideMessages() {
         document.querySelectorAll('.armazenagem-error-message, .armazenagem-success-message').forEach(el => el.classList.remove('active'));
+    },
+    
+    /**
+     * Configurar tabs e eventos de navegação
+     */
+    setupTabs(processData) {
+        console.log('[ARMAZENAGEM] Configurando tabs...');
+        
+        const isKingspan = processData && processData.importador && processData.importador.toUpperCase().includes('KING');
+        const hasProdutos = processData && processData.produtos_processo && processData.produtos_processo.length > 0;
+        
+        // Mostrar/ocultar tabs baseado nos dados
+        const tabProdutos = document.querySelector('.armazenagem-tab[data-tab="produtos"]');
+        const tabArmazenagem = document.querySelector('.armazenagem-tab[data-tab="armazenagem"]');
+        
+        // Tab de produtos sempre visível se houver produtos
+        if (tabProdutos) {
+            if (hasProdutos) {
+                tabProdutos.style.display = 'inline-flex';
+            } else {
+                tabProdutos.style.display = 'none';
+            }
+        }
+        
+        // Tab de armazenagem só visível para Kingspan
+        if (tabArmazenagem) {
+            if (isKingspan && this.hasKingspanAccess) {
+                tabArmazenagem.style.display = 'inline-flex';
+            } else {
+                tabArmazenagem.style.display = 'none';
+            }
+        }
+        
+        // Definir tab inicial ativa
+        let initialTab = 'produtos';
+        if (hasProdutos) {
+            initialTab = 'produtos';
+        } else if (isKingspan && this.hasKingspanAccess) {
+            initialTab = 'armazenagem';
+        }
+        
+        this.switchTab(initialTab);
+        
+        // Configurar eventos de clique nas tabs
+        document.querySelectorAll('.armazenagem-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.getAttribute('data-tab');
+                this.switchTab(tabName);
+            });
+        });
+        
+        console.log('[ARMAZENAGEM] Tabs configuradas. Tab inicial:', initialTab);
+    },
+    
+    /**
+     * Alternar entre tabs
+     */
+    switchTab(tabName) {
+        console.log('[ARMAZENAGEM] Alternando para tab:', tabName);
+        
+        // Remover classe active de todas as tabs
+        document.querySelectorAll('.armazenagem-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Adicionar classe active na tab clicada
+        const activeTab = document.querySelector(`.armazenagem-tab[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
+        
+        // Esconder todos os conteúdos
+        document.querySelectorAll('.armazenagem-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Mostrar conteúdo correspondente
+        const activeContent = document.getElementById(`tab-${tabName}`);
+        if (activeContent) {
+            activeContent.classList.add('active');
+        }
+        
+        // Controlar visibilidade do footer (só mostra na tab de armazenagem)
+        const footer = document.querySelector('.armazenagem-modal-footer');
+        if (footer) {
+            if (tabName === 'armazenagem') {
+                footer.style.display = 'flex';
+            } else {
+                footer.style.display = 'none';
+            }
+        }
+    },
+    
+    /**
+     * Renderizar tabela de produtos
+     */
+    renderProdutos(produtos) {
+        console.log('[ARMAZENAGEM] Renderizando produtos:', produtos);
+        
+        const wrapper = document.querySelector('.produtos-table-wrapper');
+        const emptyState = document.querySelector('.produtos-empty');
+        
+        if (!wrapper) {
+            console.error('[ARMAZENAGEM] Container de produtos não encontrado');
+            return;
+        }
+        
+        // Se não tem produtos, mostrar estado vazio
+        if (!produtos || produtos.length === 0) {
+            wrapper.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+        
+        // Esconder estado vazio
+        if (emptyState) emptyState.style.display = 'none';
+        
+        // Criar tabela
+        let tableHTML = `
+            <table class="produtos-table">
+                <thead>
+                    <tr>
+                        <th>NCM</th>
+                        <th>Quantidade</th>
+                        <th>Unidade</th>
+                        <th style="text-align: right;">Valor Unitário</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        produtos.forEach(produto => {
+            const ncm = produto.ncm || '-';
+            const quantidade = produto.quantidade ? parseFloat(produto.quantidade).toFixed(4) : '0.0000';
+            const unidade = produto.unidade_medida || '-';
+            const valorUnitario = produto.valor_unitario ? parseFloat(produto.valor_unitario).toFixed(5) : '0.00000';
+            
+            tableHTML += `
+                <tr>
+                    <td class="ncm-cell">${ncm}</td>
+                    <td class="quantidade-cell">${quantidade}</td>
+                    <td>${unidade}</td>
+                    <td class="valor-cell">R$ ${valorUnitario}</td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        wrapper.innerHTML = tableHTML;
+        console.log('[ARMAZENAGEM] Tabela de produtos renderizada:', produtos.length, 'itens');
     }
 };
 

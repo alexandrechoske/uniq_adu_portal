@@ -837,11 +837,23 @@ window.canViewMaterials = false;
     <div class="armazenagem-modal">
         <div class="armazenagem-modal-header">
             <h3>
-                <i class="mdi mdi-warehouse"></i>
-                Dados de Armazenagem - Kingspan
+                <i class="mdi mdi-information-outline"></i>
+                Informações do Processo
             </h3>
             <button class="armazenagem-modal-close">
                 <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <!-- Tabs Navigation -->
+        <div class="armazenagem-tabs">
+            <button class="armazenagem-tab active" data-tab="produtos">
+                <i class="mdi mdi-package-variant"></i>
+                Produtos
+            </button>
+            <button class="armazenagem-tab" data-tab="armazenagem">
+                <i class="mdi mdi-warehouse"></i>
+                Armazenagem Kingspan
             </button>
         </div>
         
@@ -869,88 +881,110 @@ window.canViewMaterials = false;
                 <span></span>
             </div>
             
-            <!-- Formulário -->
-            <form id="armazenagem-form">
-                <!-- Seção de Datas -->
-                <h4 style="margin: 0 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                    <i class="mdi mdi-calendar-range"></i> Datas de Controle
-                </h4>
-                
-                <div class="armazenagem-form-group">
-                    <label for="armazenagem-data-desova">
-                        <i class="mdi mdi-calendar-check"></i>
-                        Data de Desova
-                        <span class="armazenagem-tooltip" data-tooltip="Data em que o container foi desovado/esvaziado">
-                            <i class="mdi mdi-information-outline"></i>
-                        </span>
-                    </label>
-                    <input type="text" 
-                           id="armazenagem-data-desova" 
-                           class="armazenagem-date-input"
-                           placeholder="DD/MM/AAAA"
-                           maxlength="10">
-                    <small>Formato: DD/MM/AAAA</small>
+            <!-- TAB: Produtos -->
+            <div class="armazenagem-tab-content active" id="tab-produtos">
+                <div class="produtos-container">
+                    <h4 style="margin: 0 0 1rem 0; color: #111827; font-size: 1rem; font-weight: 600;">
+                        <i class="mdi mdi-package-variant"></i> Produtos do Processo
+                    </h4>
+                    <div class="produtos-empty" style="display: none;">
+                        <i class="mdi mdi-package-variant-closed" style="font-size: 3rem; color: #d1d5db;"></i>
+                        <p style="color: #6b7280; margin-top: 1rem;">Nenhum produto cadastrado neste processo.</p>
+                    </div>
+                    <div class="produtos-table-wrapper">
+                        <!-- Tabela será renderizada pelo JavaScript -->
+                    </div>
                 </div>
-                
-                <div class="armazenagem-form-row">
+            </div>
+            
+            <!-- TAB: Armazenagem -->
+            <div class="armazenagem-tab-content" id="tab-armazenagem">
+                <!-- Formulário -->
+                <form id="armazenagem-form">
+                    <!-- Seção de Datas -->
+                    <h4 style="margin: 0 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                        <i class="mdi mdi-calendar-range"></i> Datas de Controle
+                    </h4>
+                    
                     <div class="armazenagem-form-group">
-                        <label for="armazenagem-limite-primeiro">
-                            <i class="mdi mdi-calendar-alert"></i>
-                            Limite 1º Período
+                        <label for="armazenagem-data-desova">
+                            <i class="mdi mdi-calendar-check"></i>
+                            Data de Desova
+                            <span class="armazenagem-tooltip" data-tooltip="Data em que o container foi desovado/esvaziado">
+                                <i class="mdi mdi-information-outline"></i>
+                            </span>
                         </label>
                         <input type="text" 
-                               id="armazenagem-limite-primeiro" 
+                               id="armazenagem-data-desova" 
                                class="armazenagem-date-input"
                                placeholder="DD/MM/AAAA"
                                maxlength="10">
-                        <small>Primeiro prazo limite</small>
+                        <small>Formato: DD/MM/AAAA</small>
                     </div>
                     
-                    <div class="armazenagem-form-group">
-                        <label for="armazenagem-limite-segundo">
-                            <i class="mdi mdi-calendar-alert"></i>
-                            Limite 2º Período
-                        </label>
-                        <input type="text" 
-                               id="armazenagem-limite-segundo" 
-                               class="armazenagem-date-input"
-                               placeholder="DD/MM/AAAA"
-                               maxlength="10">
-                        <small>Segundo prazo limite</small>
-                    </div>
-                </div>
-                
-                <!-- Seção de Valores -->
-                <h4 style="margin: 24px 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                    <i class="mdi mdi-cash-multiple"></i> Valores e Períodos Extras
-                </h4>
-                
-                <div class="armazenagem-form-row">
-                    <div class="armazenagem-form-group">
-                        <label for="armazenagem-dias-extras">
-                            <i class="mdi mdi-calendar-plus"></i>
-                            Dias Extras de Armazenagem
-                        </label>
-                        <input type="number" 
-                               id="armazenagem-dias-extras" 
-                               placeholder="0"
-                               min="0"
-                               step="1">
-                        <small>Quantidade de dias adicionais</small>
+                    <div class="armazenagem-form-row">
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-limite-primeiro">
+                                <i class="mdi mdi-calendar-alert"></i>
+                                Limite 1º Período
+                            </label>
+                            <input type="text" 
+                                   id="armazenagem-limite-primeiro" 
+                                   class="armazenagem-date-input"
+                                   placeholder="DD/MM/AAAA"
+                                   maxlength="10">
+                            <small>Primeiro prazo limite</small>
+                        </div>
+                        
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-limite-segundo">
+                                <i class="mdi mdi-calendar-alert"></i>
+                                Limite 2º Período
+                            </label>
+                            <input type="text" 
+                                   id="armazenagem-limite-segundo" 
+                                   class="armazenagem-date-input"
+                                   placeholder="DD/MM/AAAA"
+                                   maxlength="10">
+                            <small>Segundo prazo limite</small>
+                        </div>
                     </div>
                     
-                    <div class="armazenagem-form-group">
-                        <label for="armazenagem-valor-despesas">
-                            <i class="mdi mdi-currency-usd"></i>
-                            Valor Despesas Extras (R$)
-                        </label>
-                        <input type="number" 
-                               id="armazenagem-valor-despesas" 
-                               placeholder="0.00"
-                               min="0"
-                               step="0.01">
-                        <small>Valor em reais (ex: 1500.50)</small>
+                    <!-- Seção de Valores -->
+                    <h4 style="margin: 24px 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                        <i class="mdi mdi-cash-multiple"></i> Valores e Períodos Extras
+                    </h4>
+                    
+                    <div class="armazenagem-form-row">
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-dias-extras">
+                                <i class="mdi mdi-calendar-plus"></i>
+                                Dias Extras de Armazenagem
+                            </label>
+                            <input type="number" 
+                                   id="armazenagem-dias-extras" 
+                                   placeholder="0"
+                                   min="0"
+                                   step="1">
+                            <small>Quantidade de dias adicionais</small>
+                        </div>
+                        
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-valor-despesas">
+                                <i class="mdi mdi-currency-usd"></i>
+                                Valor Despesas Extras (R$)
+                            </label>
+                            <input type="number" 
+                                   id="armazenagem-valor-despesas" 
+                                   placeholder="0.00"
+                                   min="0"
+                                   step="0.01">
+                            <small>Valor em reais (ex: 1500.50)</small>
+                        </div>
                     </div>
+                </form>
+            </div>
+        </div>
                 </div>
             </form>
         </div>

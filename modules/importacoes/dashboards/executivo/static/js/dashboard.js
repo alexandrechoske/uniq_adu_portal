@@ -858,20 +858,27 @@ function initializeEnhancedTable() {
         
         // Verificar se é processo Kingspan (nome contém "KING")
         const isKingspan = operation.importador && operation.importador.toUpperCase().includes('KING');
+        const hasProdutos = operation.produtos_processo && operation.produtos_processo.length > 0;
         
-        // Botão de Ações com ícone de bagagem para Kingspan
+        // Botão de Ações (olho sempre visível)
         let actionsButtons = `
             <button class="table-action-btn" onclick="openProcessModal(${globalIndex})" title="Ver detalhes">
                 <i class="mdi mdi-eye-outline"></i>
             </button>
         `;
         
-        // Adicionar botão de armazenagem se for Kingspan E usuário tiver acesso
-        if (isKingspan && window.hasKingspanAccess && typeof window.ArmazenagemKingspan !== 'undefined') {
+        // Adicionar botão de informações complementares (bagagem) se:
+        // - For Kingspan com acesso OU tiver produtos cadastrados
+        const showBagagem = (isKingspan && window.hasKingspanAccess) || hasProdutos;
+        
+        if (showBagagem && typeof window.ArmazenagemKingspan !== 'undefined') {
             const hasArmazenagemData = operation.has_armazenagem_data || false;
+            const iconType = hasArmazenagemData ? '' : '-outline';
+            const tooltipText = hasProdutos ? 'Ver produtos e informações' : (hasArmazenagemData ? 'Editar armazenagem' : 'Cadastrar armazenagem');
+            
             actionsButtons += `
-            <button class="table-action-btn" onclick="openArmazenagemModal(${globalIndex})" title="${hasArmazenagemData ? 'Editar armazenagem' : 'Cadastrar armazenagem'}">
-                <i class="mdi mdi-bag-suitcase${hasArmazenagemData ? '' : '-outline'}"></i>
+            <button class="table-action-btn" onclick="openArmazenagemModal(${globalIndex})" title="${tooltipText}">
+                <i class="mdi mdi-bag-suitcase${iconType}"></i>
             </button>
             `;
         }

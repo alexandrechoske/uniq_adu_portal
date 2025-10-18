@@ -1393,7 +1393,10 @@ def recent_operations():
             'canal', 'data_desembaraco', 'despesas_processo',
             
             # CORREÇÃO BUG: Incluir pais_procedencia e url_bandeira para o modal
-            'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira'
+            'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira',
+            
+            # Produtos e informações complementares para modal com tabs
+            'produtos_processo'
         ]
         
         # Colunas normalizadas disponíveis
