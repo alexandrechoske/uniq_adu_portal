@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/dashboard-customization.css') }}">
 <link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/column-filters.css') }}">
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/armazenagem-kingspan.css') }}">
+<link rel="stylesheet" href="{{ url_for('dashboard_executivo.static', filename='css/columns-config.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -47,13 +49,13 @@
             </div>
         </div>
         <div class="actions-right">
+            <button id="open-filters" class="btn btn-light" type="button">
+                <i class="mdi mdi-filter"></i>
+                {{ t('importacoes.dashboard_operacional.filtros') }}
+            </button>
             <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
                 <i class="mdi mdi-filter-off"></i>
                 {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
-            </button>
-            <button id="open-filters" class="btn btn-light">
-                <i class="mdi mdi-filter"></i>
-                {{ t('importacoes.dashboard_operacional.filtros') }}
             </button>
         </div>
     </div>
@@ -284,6 +286,12 @@
                     <i class="mdi mdi-magnify enhanced-search-icon"></i>
                     <input type="text" id="recent-operations-search" class="enhanced-search-input" 
                            placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
+                </div>
+                <div class="enhanced-control-buttons">
+                    <button id="open-columns-config" class="btn btn-light" type="button">
+                        <i class="mdi mdi-cog-outline"></i>
+                        Configurar Colunas
+                    </button>
                 </div>
             </div>
         </div>
@@ -721,6 +729,62 @@
         </div>
     </div>
 
+    <!-- Modal de Configuração de Colunas -->
+    <div class="columns-config-modal-overlay" aria-hidden="true">
+        <div class="columns-config-modal" role="dialog" aria-modal="true">
+            <div class="columns-config-header">
+                <h3>
+                    <i class="mdi mdi-view-column"></i>
+                    Configurar Colunas
+                </h3>
+                <button type="button" class="columns-config-close" aria-label="Fechar">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+
+            <div class="columns-config-body">
+                <p class="columns-config-description">
+                    Escolha quais informações deseja visualizar na tabela. Colunas com <i class="mdi mdi-lock"></i> são obrigatórias.
+                </p>
+
+                <div class="columns-config-search">
+                    <i class="mdi mdi-magnify"></i>
+                    <input type="text" id="columns-search" placeholder="Buscar coluna" autocomplete="off">
+                </div>
+
+                <div class="columns-config-actions">
+                    <button type="button" class="columns-config-btn-small" id="columns-select-all">
+                        <i class="mdi mdi-checkbox-multiple-marked"></i>
+                        Marcar todas
+                    </button>
+                    <button type="button" class="columns-config-btn-small" id="columns-deselect-all">
+                        <i class="mdi mdi-checkbox-multiple-blank-outline"></i>
+                        Desmarcar todas
+                    </button>
+                </div>
+
+                <div class="columns-list" id="columns-list"></div>
+            </div>
+
+            <div class="columns-config-footer">
+                <button type="button" class="columns-config-btn columns-config-btn-danger" id="columns-reset-default">
+                    <i class="mdi mdi-restore"></i>
+                    Restaurar padrão
+                </button>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="columns-config-btn columns-config-btn-secondary" id="columns-cancel">
+                        <i class="mdi mdi-close"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="columns-config-btn columns-config-btn-primary" id="columns-apply">
+                        <i class="mdi mdi-check"></i>
+                        Aplicar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
     <!-- Modal de Detalhes do Processo -->
@@ -737,12 +801,20 @@
 <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/column-filters.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
+<script>
+const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
+window.dashboardUserId = rawDashboardUserId || null;
+window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
+</script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
+<script src="{{ url_for('dashboard_executivo.static', filename='js/armazenagem-kingspan.js') }}"></script>
 
 <script>
 // Disponibilizar role do usuário globalmente para o Document Manager
 window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
-window.showCompanyWarning = {{ 'true' if show_company_warning else 'false' }};
+const rawShowCompanyWarning = '{{ 1 if show_company_warning else 0 }}';
+window.showCompanyWarning = rawShowCompanyWarning === '1';
 
 // Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
 document.addEventListener('DOMContentLoaded', function() {
@@ -829,4 +901,187 @@ function toggleMaterialSections(canViewMaterials) {
 // Armazenar permissão globalmente para uso em outros módulos
 window.canViewMaterials = false;
 </script>
+
+<!-- Modal de Armazenagem Kingspan -->
+<div class="armazenagem-modal-overlay">
+    <div class="armazenagem-modal">
+        <div class="armazenagem-modal-header">
+            <h3>
+                <i class="mdi mdi-information-outline"></i>
+                Informações do Processo
+            </h3>
+            <button class="armazenagem-modal-close">
+                <i class="mdi mdi-close"></i>
+            </button>
+        </div>
+        
+        <!-- Tabs Navigation -->
+        <div class="armazenagem-tabs">
+            <button class="armazenagem-tab active" data-tab="produtos">
+                <i class="mdi mdi-package-variant"></i>
+                Produtos
+            </button>
+            <button class="armazenagem-tab" data-tab="armazenagem">
+                <i class="mdi mdi-warehouse"></i>
+                Armazenagem Kingspan
+            </button>
+        </div>
+        
+        <div class="armazenagem-modal-body">
+            <!-- Info Box -->
+            <div class="armazenagem-info-box">
+                <h4>Processo: <span class="ref-unique" id="armazenagem-ref-unique">-</span></h4>
+                <p id="armazenagem-process-info">Carregando informações...</p>
+            </div>
+            
+            <!-- Loading -->
+            <div class="armazenagem-loading">
+                <div class="armazenagem-spinner"></div>
+                <p style="margin-top: 12px; color: #666;">Carregando dados...</p>
+            </div>
+            
+            <!-- Mensagens -->
+            <div class="armazenagem-error-message">
+                <i class="mdi mdi-alert-circle"></i>
+                <span></span>
+            </div>
+            
+            <div class="armazenagem-success-message">
+                <i class="mdi mdi-check-circle"></i>
+                <span></span>
+            </div>
+            
+            <!-- TAB: Produtos -->
+            <div class="armazenagem-tab-content active" id="tab-produtos">
+                <div class="produtos-container">
+                    <h4 style="margin: 0 0 1rem 0; color: #111827; font-size: 1rem; font-weight: 600;">
+                        <i class="mdi mdi-package-variant"></i> Produtos do Processo
+                    </h4>
+                    <div class="produtos-empty" style="display: none;">
+                        <i class="mdi mdi-package-variant-closed" style="font-size: 3rem; color: #d1d5db;"></i>
+                        <p style="color: #6b7280; margin-top: 1rem;">Nenhum produto cadastrado neste processo.</p>
+                    </div>
+                    <div class="produtos-table-wrapper">
+                        <!-- Tabela será renderizada pelo JavaScript -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TAB: Armazenagem -->
+            <div class="armazenagem-tab-content" id="tab-armazenagem">
+                <!-- Formulário -->
+                <form id="armazenagem-form">
+                    <!-- Seção de Datas -->
+                    <h4 style="margin: 0 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                        <i class="mdi mdi-calendar-range"></i> Datas de Controle
+                    </h4>
+                    
+                    <div class="armazenagem-form-group">
+                        <label for="armazenagem-data-desova">
+                            <i class="mdi mdi-calendar-check"></i>
+                            Data de Desova
+                            <span class="armazenagem-tooltip" data-tooltip="Data em que o container foi desovado/esvaziado">
+                                <i class="mdi mdi-information-outline"></i>
+                            </span>
+                        </label>
+                        <input type="text" 
+                               id="armazenagem-data-desova" 
+                               class="armazenagem-date-input"
+                               placeholder="DD/MM/AAAA"
+                               maxlength="10">
+                        <small>Formato: DD/MM/AAAA</small>
+                    </div>
+                    
+                    <div class="armazenagem-form-row">
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-limite-primeiro">
+                                <i class="mdi mdi-calendar-alert"></i>
+                                Limite 1º Período
+                            </label>
+                            <input type="text" 
+                                   id="armazenagem-limite-primeiro" 
+                                   class="armazenagem-date-input"
+                                   placeholder="DD/MM/AAAA"
+                                   maxlength="10">
+                            <small>Primeiro prazo limite</small>
+                        </div>
+                        
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-limite-segundo">
+                                <i class="mdi mdi-calendar-alert"></i>
+                                Limite 2º Período
+                            </label>
+                            <input type="text" 
+                                   id="armazenagem-limite-segundo" 
+                                   class="armazenagem-date-input"
+                                   placeholder="DD/MM/AAAA"
+                                   maxlength="10">
+                            <small>Segundo prazo limite</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção de Valores -->
+                    <h4 style="margin: 24px 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                        <i class="mdi mdi-cash-multiple"></i> Valores e Períodos Extras
+                    </h4>
+                    
+                    <div class="armazenagem-form-row">
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-dias-extras">
+                                <i class="mdi mdi-calendar-plus"></i>
+                                Dias Extras de Armazenagem
+                            </label>
+                            <input type="number" 
+                                   id="armazenagem-dias-extras" 
+                                   placeholder="0"
+                                   min="0"
+                                   step="1">
+                            <small>Quantidade de dias adicionais</small>
+                        </div>
+                        
+                        <div class="armazenagem-form-group">
+                            <label for="armazenagem-valor-despesas">
+                                <i class="mdi mdi-currency-usd"></i>
+                                Valor Despesas Extras (R$)
+                            </label>
+                            <input type="number" 
+                                   id="armazenagem-valor-despesas" 
+                                   placeholder="0.00"
+                                   min="0"
+                                   step="0.01">
+                            <small>Valor em reais (ex: 1500.50)</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="armazenagem-modal-footer">
+            <div>
+                <button type="button" 
+                        id="armazenagem-btn-delete" 
+                        class="armazenagem-btn armazenagem-btn-danger"
+                        style="display: none;">
+                    <i class="mdi mdi-delete"></i>
+                    Deletar Dados
+                </button>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button type="button" 
+                        id="armazenagem-btn-cancel" 
+                        class="armazenagem-btn armazenagem-btn-secondary">
+                    <i class="mdi mdi-close"></i>
+                    Cancelar
+                </button>
+                <button type="button" 
+                        id="armazenagem-btn-save" 
+                        class="armazenagem-btn armazenagem-btn-primary">
+                    <i class="mdi mdi-content-save"></i>
+                    Salvar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

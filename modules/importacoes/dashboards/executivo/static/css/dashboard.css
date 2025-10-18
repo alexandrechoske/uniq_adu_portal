@@ -398,6 +398,35 @@ canvas {
     height: 100% !important;
 }
 
+/* Chip list for comma separated values */
+.data-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.data-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid rgba(3, 105, 161, 0.18);
+    white-space: nowrap;
+}
+
+.data-chip-more {
+    background: #f3f4f6;
+    color: #4b5563;
+    border-color: rgba(107, 114, 128, 0.25);
+}
+
 /* Table Section */
 .table-section {
     background: white;
@@ -1122,6 +1151,7 @@ canvas {
 .canal-indicator {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     margin-right: 6px;
     flex-shrink: 0;
 }
@@ -1132,6 +1162,7 @@ canvas {
     border-radius: 50%;
     border: 2px solid #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    background: #d1d5db;
 }
 
 .canal-dot.verde {
@@ -1146,9 +1177,14 @@ canvas {
     background: #f44336;
 }
 
+.canal-dot.neutro {
+    background: #d1d5db;
+}
+
 .canal-text {
     font-size: 0.9rem;
     font-weight: 500;
+    color: #374151;
 }
 
 /* Container List Styles */

@@ -1,0 +1,646 @@
+/* =====================================================
+   ÍCONE DE ARMAZENAGEM NA TABELA (COLUNA DE AÇÕES)
+   ===================================================== */
+
+/* Padronizar tamanho de TODOS os ícones na tabela de ações */
+.table-action-btn i {
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Cor padrão dos ícones */
+.table-action-btn .mdi-eye-outline {
+    color: #6b7280;
+}
+
+/* Bagagem preenchida (tem dados) - cor azul */
+.table-action-btn .mdi-bag-suitcase {
+    color: #4a90e2;
+}
+
+/* Bagagem vazia (sem dados) - cor cinza */
+.table-action-btn .mdi-bag-suitcase-outline {
+    color: #9e9e9e;
+}
+
+/* Hover nos ícones */
+.table-action-btn:hover .mdi-eye-outline {
+    color: #2563eb;
+}
+
+.table-action-btn:hover .mdi-bag-suitcase {
+    color: #2e6bb8;
+}
+
+.table-action-btn:hover .mdi-bag-suitcase-outline {
+    color: #667eea;
+}
+
+/* =====================================================
+   MODAL DE ARMAZENAGEM KINGSPAN
+   ===================================================== */
+
+.armazenagem-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.armazenagem-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+}
+
+.armazenagem-modal {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95) translateY(20px);
+    transition: all 0.3s ease-out;
+}
+
+.armazenagem-modal-overlay.active .armazenagem-modal {
+    transform: scale(1) translateY(0);
+}
+
+.armazenagem-modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f9fafb;
+    border-radius: 8px 8px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.armazenagem-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.armazenagem-modal-header i {
+    font-size: 20px;
+    color: #6b7280;
+}
+
+.armazenagem-modal-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.armazenagem-modal-close:hover {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+/* =====================================================
+   TABS NAVIGATION
+   ===================================================== */
+
+.armazenagem-tabs {
+    display: flex;
+    border-bottom: 2px solid #e5e7eb;
+    background: #ffffff;
+    padding: 0 2rem;
+    gap: 0.5rem;
+}
+
+.armazenagem-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    top: 2px;
+}
+
+.armazenagem-tab i {
+    font-size: 1rem;
+}
+
+.armazenagem-tab:hover {
+    color: #3b82f6;
+    background: #f9fafb;
+}
+
+.armazenagem-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+    background: #ffffff;
+}
+
+.armazenagem-tab.disabled {
+    color: #d1d5db;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* =====================================================
+   TAB CONTENT
+   ===================================================== */
+
+.armazenagem-tab-content {
+    display: none;
+}
+
+.armazenagem-tab-content.active {
+    display: block;
+}
+
+/* Produtos Tab Styles */
+.produtos-container {
+    margin-top: 1rem;
+}
+
+.produtos-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.produtos-table-wrapper {
+    overflow-x: auto;
+}
+
+.produtos-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+.produtos-table thead {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.produtos-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.produtos-table th.descricao-header {
+    width: 36%;
+}
+
+.produtos-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background 0.2s ease;
+}
+
+.produtos-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.produtos-table td {
+    padding: 0.75rem 1rem;
+    color: #374151;
+}
+
+.produtos-table td.ncm-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #111827;
+}
+
+.produtos-table td.quantidade-cell {
+    text-align: right;
+    font-weight: 500;
+}
+
+.produtos-table td.valor-cell {
+    text-align: right;
+    font-weight: 600;
+    color: #059669;
+}
+
+.produtos-table td.descricao-cell {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: #4b5563;
+    max-width: 26rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.produtos-table td.descricao-cell .descricao-text {
+    line-clamp: 4;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* =====================================================
+   MODAL BODY & FORM (ARMAZENAGEM TAB)
+   ===================================================== */
+
+.armazenagem-modal-body {
+    padding: 2rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.armazenagem-info-box {
+    background: #f3f4f6;
+    border-left: 3px solid #6b7280;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.armazenagem-info-box h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.armazenagem-info-box p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.armazenagem-info-box .ref-unique {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #111827;
+}
+
+.armazenagem-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.armazenagem-form-group label {
+    display: block;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.armazenagem-form-group label i {
+    margin-right: 0.375rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.armazenagem-form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    color: #111827;
+}
+
+.armazenagem-form-group input::placeholder {
+    color: #9ca3af;
+}
+
+.armazenagem-form-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.armazenagem-form-group input:disabled {
+    background-color: #f9fafb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.armazenagem-form-group small {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.armazenagem-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.armazenagem-modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border-radius: 0 0 8px 8px;
+}
+
+.armazenagem-btn {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.armazenagem-btn i {
+    font-size: 0.875rem;
+}
+
+.armazenagem-btn-primary {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.armazenagem-btn-primary:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.armazenagem-btn-primary:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+    border-color: #d1d5db;
+}
+
+.armazenagem-btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+
+.armazenagem-btn-secondary:hover {
+    background: #d1d5db;
+    border-color: #d1d5db;
+}
+
+.armazenagem-btn-danger {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+.armazenagem-btn-danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+/* Badge de status na coluna da tabela */
+.armazenagem-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.armazenagem-status-badge.filled {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.armazenagem-status-badge.empty {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.armazenagem-status-badge:hover {
+    background-color: opacity 0.9;
+}
+
+.armazenagem-status-badge i {
+    font-size: 0.75rem;
+}
+
+/* Botão de ação na tabela */
+.armazenagem-action-btn {
+    padding: 0.5rem 0.75rem;
+    background: #3b82f6;
+    color: white;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.armazenagem-action-btn:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.armazenagem-action-btn i {
+    font-size: 0.75rem;
+}
+
+/* Loading spinner */
+.armazenagem-loading {
+    display: none;
+    text-align: center;
+    padding: 1.25rem;
+}
+
+.armazenagem-loading.active {
+    display: block;
+}
+
+.armazenagem-spinner {
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 2.5rem;
+    height: 2.5rem;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+/* Mensagens de erro */
+.armazenagem-error-message {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #7f1d1d;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.25rem;
+    display: none;
+}
+
+.armazenagem-error-message.active {
+    display: block;
+}
+
+.armazenagem-error-message i {
+    margin-right: 0.5rem;
+}
+
+/* Mensagens de sucesso */
+.armazenagem-success-message {
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.25rem;
+    display: none;
+}
+
+.armazenagem-success-message.active {
+    display: block;
+}
+
+.armazenagem-success-message i {
+    margin-right: 0.5rem;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .armazenagem-modal {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .armazenagem-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .armazenagem-modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .armazenagem-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Tooltip para campos */
+.armazenagem-tooltip {
+    position: relative;
+    display: inline-block;
+    margin-left: 6px;
+    color: #999;
+    cursor: help;
+}
+
+.armazenagem-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.armazenagem-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #333;
+    z-index: 1000;
+}

@@ -11,14 +11,35 @@
 .column-header-content {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: flex-start;
+    gap: 6px;
     cursor: pointer;
     user-select: none;
 }
 
 .column-header-text {
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.column-sort-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    color: #9ca3af;
+    transition: color 0.2s ease;
+}
+
+.column-sort-indicator i {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.column-sort-indicator.active {
+    color: #2563eb;
 }
 
 /* Ícone de filtro */
