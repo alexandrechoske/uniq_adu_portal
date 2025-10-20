@@ -5,6 +5,10 @@ import signal
 import extensions
 from session_handler import init_session_handler
 from services.logging_middleware import logging_middleware
+from log_config import configure_logging, get_log_level_from_env
+
+# Configurar logging da aplicação
+configure_logging(level=get_log_level_from_env())
 
 # Initialize Flask app
 app = Flask(__name__)

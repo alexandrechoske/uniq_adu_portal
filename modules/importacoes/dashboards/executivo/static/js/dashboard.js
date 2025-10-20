@@ -3933,8 +3933,8 @@ function createPrincipaisMateriaisTable(data) {
         return;
     }
     
-    // Exibir apenas o Top 5 materiais
-    (data.data.slice(0, 5)).forEach(material => {
+    // Exibir TODOS os materiais (já ordenados pelo backend)
+    data.data.forEach(material => {
         const row = document.createElement('tr');
         // Add urgente class if needed
         if (material.is_urgente) {
@@ -3954,7 +3954,7 @@ function createPrincipaisMateriaisTable(data) {
         tableBody.appendChild(row);
     });
     
-    console.log(`[DASHBOARD_EXECUTIVO] Tabela de materiais criada com ${data.data.length} itens`);
+    console.log(`[DASHBOARD_EXECUTIVO] Tabela de materiais criada com ${data.data.length} itens exibidos (total: ${data.data.length})`);
 }
 
 /**
