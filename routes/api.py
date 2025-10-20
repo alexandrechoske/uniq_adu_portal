@@ -197,7 +197,7 @@ def global_data():
 
         # 1) Importações/processos (com retries)
         try:
-            query = supabase.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
+            query = supabase.table('importacoes_processos_aberta').select('*')
             if user_role == 'cliente_unique':
                 user_companies = get_user_companies(user_data)
                 payload['user_companies'] = user_companies
@@ -235,9 +235,9 @@ def global_data():
                     'aereo': int((df['modal'] == 'AEREA').sum()) if 'modal' in df.columns else 0,
                     'terrestre': int((df['modal'] == 'TERRESTRE').sum()) if 'modal' in df.columns else 0,
                     'maritimo': int((df['modal'] == 'MARITIMA').sum()) if 'modal' in df.columns else 0,
-                    'aguardando_chegada': int(df['status_processo'].str.contains('TRANSITO', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
-                    'aguardando_embarque': int(df['status_processo'].str.contains('DECLARACAO', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
-                    'di_registrada': int(df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False).sum()) if 'status_processo' in df.columns else 0,
+                    'aguardando_chegada': int(df['status_sistema'].str.contains('TRANSITO', na=False, case=False).sum()) if 'status_sistema' in df.columns else 0,
+                    'aguardando_embarque': int(df['status_sistema'].str.contains('DECLARACAO', na=False, case=False).sum()) if 'status_sistema' in df.columns else 0,
+                    'di_registrada': int(df['status_sistema'].str.contains('DESEMBARACADA', na=False, case=False).sum()) if 'status_sistema' in df.columns else 0,
                 }
             else:
                 payload['dashboard_stats'] = {
@@ -363,14 +363,14 @@ def force_refresh():
             
             # Query com ordenação para garantir dados mais recentes
             query = supabase.table('importacoes_processos_aberta').select(
-                'id, ref_unique, status_processo, canal, data_chegada, '
+                'id, ref_unique, status_sistema, canal, data_chegada, '
                 'valor_fob_real, valor_cif_real, cnpj_importador, importador, '
                 'created_at, updated_at, modal, data_aberture, '
                 'mercadoria, data_embarque, pais_procedencia, numero_di, data_registro, '
                 'peso_bruto, transit_time_real, exportador_fornecedor, fabricante, '
                 'presenca_carga, data_desembaraco, custo_total, firebird_di_codigo, '
                 'firebird_fat_codigo, container, urf_despacho'
-            ).neq('status_processo', 'Despacho Cancelado').order('updated_at', desc=True)
+            ).order('updated_at', desc=True)
             
             # Aplicar filtros baseados no role do usuário
             if user_role == 'cliente_unique':
@@ -406,9 +406,9 @@ def force_refresh():
                     'aereo': len(df[df['modal'] == 'AEREA']),
                     'terrestre': len(df[df['modal'] == 'TERRESTRE']),
                     'maritimo': len(df[df['modal'] == 'MARITIMA']),
-                    'aguardando_embarque': len(df[df['status_processo'].str.contains('DECLARACAO', na=False, case=False)]),
-                    'em_transito': len(df[df['status_processo'].str.contains('TRANSITO', na=False, case=False)]),
-                    'desembarcadas': len(df[df['status_processo'].str.contains('DESEMBARACADA', na=False, case=False)]),
+                    'aguardando_embarque': len(df[df['status_sistema'].str.contains('DECLARACAO', na=False, case=False)]) if 'status_sistema' in df.columns else 0,
+                    'em_transito': len(df[df['status_sistema'].str.contains('TRANSITO', na=False, case=False)]) if 'status_sistema' in df.columns else 0,
+                    'desembarcadas': len(df[df['status_sistema'].str.contains('DESEMBARACADA', na=False, case=False)]) if 'status_sistema' in df.columns else 0,
                     'vmcv_total': float(df['valor_cif_real'].sum()),
                     'vmle_total': float(df['valor_fob_real'].sum())
                 }

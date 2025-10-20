@@ -185,12 +185,12 @@ def dashboard_kpis():
         total_processos = len(df)
         total_despesas = df['custo_total'].sum() if 'custo_total' in df.columns else 0
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
-        em_transito = len(df[df['status_processo'].str.contains('trânsito', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        em_transito = len(df[df['status_sistema'].str.contains('trânsito', case=False, na=False)]) if 'status_sistema' in df.columns else 0
 
-        # Total Agd Embarque: status_processo contém 'aguardando embarque'
-        total_agd_embarque = len(df[df['status_processo'].str.contains('aguardando embarque', case=False, na=False)]) if 'status_processo' in df.columns else 0
-        # Total Ag Chegada: status_processo contém 'aguardando chegada'
-        total_ag_chegada = len(df[df['status_processo'].str.contains('aguardando chegada', case=False, na=False)]) if 'status_processo' in df.columns else 0
+        # Total Agd Embarque: status_sistema contém 'aguardando embarque'
+        total_agd_embarque = len(df[df['status_sistema'].str.contains('aguardando embarque', case=False, na=False)]) if 'status_sistema' in df.columns else 0
+        # Total Ag Chegada: status_sistema contém 'aguardando chegada'
+        total_ag_chegada = len(df[df['status_sistema'].str.contains('aguardando chegada', case=False, na=False)]) if 'status_sistema' in df.columns else 0
 
         # Chegando este mês/semana (quantidade e custo)
         hoje = pd.Timestamp.now().normalize()
@@ -304,8 +304,8 @@ def dashboard_charts():
             monthly_chart = {'periods': [], 'processes': [], 'values': []}
 
         # Gráfico de Status do Processo
-        if 'status_processo' in df.columns:
-            status_data = df['status_processo'].value_counts()
+        if 'status_sistema' in df.columns:
+            status_data = df['status_sistema'].value_counts()
             status_chart = {
                 'labels': status_data.index.tolist(),
                 'values': status_data.values.tolist()
@@ -419,7 +419,7 @@ def recent_operations():
         # Selecionar colunas relevantes (priorizando normalizadas)
         relevant_columns = [
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
-            'modal', 'status_processo', 'custo_total', 'data_chegada'
+            'modal', 'status_sistema', 'custo_total', 'data_chegada'
         ]
         
         # Adicionar colunas normalizadas se disponíveis, senão usar originais
