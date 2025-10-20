@@ -307,3 +307,135 @@
     z-index: 1000;
     pointer-events: none;
 }
+
+/* === SKELETON LOADING === */
+.dashboard-main-content {
+    display: block;
+    transition: opacity 0.25s ease;
+}
+
+.dashboard-container.dashboard-loading .dashboard-main-content {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dashboard-skeleton {
+    display: none;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+.dashboard-container.dashboard-loading .dashboard-skeleton {
+    display: flex;
+}
+
+.dashboard-container.dashboard-loading .component-loading {
+    display: none !important;
+}
+
+.skeleton-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.skeleton-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.skeleton-kpi-card,
+.skeleton-chart-card,
+.skeleton-table-section {
+    background: var(--unique-background-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skeleton-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+
+.skeleton-chart-grid.secondary {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.skeleton-chart-area {
+    height: 180px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-table-section {
+    padding: 1.5rem;
+    gap: 1.25rem;
+}
+
+.skeleton-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.skeleton-table-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+}
+
+.skeleton-line {
+    display: block;
+    width: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-line-xs {
+    height: 10px;
+}
+
+.skeleton-line-sm {
+    height: 14px;
+}
+
+.skeleton-line-lg {
+    height: 22px;
+}
+
+.skeleton-kpi-card .skeleton-line-lg {
+    width: 70%;
+}
+
+.skeleton-kpi-card .skeleton-line-sm {
+    width: 55%;
+}
+
+.skeleton-table-row .skeleton-line-xs {
+    height: 12px;
+}
+
+.skeleton-table-row .skeleton-line-xs:nth-child(3n) {
+    width: 60%;
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}

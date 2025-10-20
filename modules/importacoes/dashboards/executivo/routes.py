@@ -10,10 +10,14 @@ import numpy as np
 import unicodedata
 import re
 import json
+import logging
 from decimal import Decimal, InvalidOperation
 from services.data_cache import DataCacheService
 from services.retry_utils import run_with_retries
 from threading import Lock
+
+# Configurar logger
+logger = logging.getLogger(__name__)
 
 # Instanciar o serviço de cache
 data_cache = DataCacheService()
@@ -43,7 +47,7 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
         existing_inside = data_cache.get_cache(user_id, 'dashboard_v2_data')
         if existing_inside and not force:
             return existing_inside
-        print(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Carregando dados fresh para user {user_id} (force={force})")
         query = supabase_admin.table('vw_importacoes_6_meses_abertos_dash').select('*')
         
         # Verificar se usuário precisa de filtragem por empresa
@@ -54,9 +58,9 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente filtrando por CNPJs: {len(user_cnpjs)} empresas")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente filtrando por CNPJs: {len(user_cnpjs)} empresas")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente sem CNPJs vinculados -> dados vazios")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Cliente sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
         elif role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
@@ -64,13 +68,13 @@ def fetch_and_cache_dashboard_data(user_data, force=False):
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
                 query = query.in_('cnpj_importador', user_cnpjs)
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno filtrando por CNPJs: {len(user_cnpjs)} empresas")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Interno filtrando por CNPJs: {len(user_cnpjs)} empresas")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] (Helper) Interno sem CNPJs vinculados -> dados vazios")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Interno sem CNPJs vinculados -> dados vazios")
                 data_cache.set_cache(user_id, 'dashboard_v2_data', [])
                 return []
         else:
-            print(f"[DASHBOARD_EXECUTIVO] (Helper) Admin vê todos os dados (perfil: {perfil_principal})")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] (Helper) Admin vê todos os dados (perfil: {perfil_principal})")
         def _run_main_query():
             return query.execute()
         result = run_with_retries('dashboard_executivo.helper_load_data', _run_main_query, max_attempts=3, base_delay_seconds=0.8,
@@ -604,7 +608,7 @@ def filter_by_date_python(item_date, data_inicio, data_fim):
         
         return inicio_dt <= item_dt <= fim_dt
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao filtrar data: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao filtrar data: {str(e)}")
         return False
 
 def apply_filters(data):
@@ -764,7 +768,7 @@ def apply_filters(data):
         return filtered_data
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros: {str(e)}")
         return data
 
 def user_can_view_materials(user_data):
@@ -835,7 +839,7 @@ def user_can_view_materials(user_data):
 @perfil_required('importacoes', 'dashboard_executivo')
 def index():
     """Página principal do Dashboard Executivo - APENAS para módulo de importações"""
-    print(f"[DASHBOARD_EXECUTIVO] Acesso autorizado ao dashboard executivo de importações")
+    logger.info(f"[DASHBOARD_EXECUTIVO] Acesso autorizado ao dashboard executivo de importações")
     
     # Verificar se é cliente_unique sem empresas associadas
     user_data = session.get('user', {})
@@ -845,7 +849,7 @@ def index():
     if user_role == 'cliente_unique':
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
-            print(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
+            logger.info(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
@@ -854,7 +858,7 @@ def index():
     if user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']:
         user_cnpjs = get_user_companies(user_data)
         if not user_cnpjs:
-            print(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
+            logger.info(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
             return render_template('dashboard_executivo.html', show_company_warning=True)
     
@@ -881,20 +885,20 @@ def load_data():
         # Log simples de estrutura
         first_with_expenses = next((r for r in enriched_data if r.get('despesas_processo')), None)
         if first_with_expenses:
-            print(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo (primeiro com dados): {str(first_with_expenses.get('despesas_processo'))[:120]} ...")
-        print(f"[DASHBOARD_EXECUTIVO] Total registros enriquecidos: {len(enriched_data)}")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] Exemplo despesas_processo (primeiro com dados): {str(first_with_expenses.get('despesas_processo'))[:120]} ...")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Total registros enriquecidos: {len(enriched_data)}")
 
         return jsonify({'success': True, 'data': enriched_data, 'total_records': len(enriched_data)})
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao carregar dados: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao carregar dados: {str(e)}")
         # Fallback: se houver dados previamente cacheados, retorne-os para evitar quebra na UX
         try:
             user_data = session.get('user', {})
             user_id = user_data.get('id')
             cached = data_cache.get_cache(user_id, 'dashboard_v2_data')
             if cached:
-                print(f"[DASHBOARD_EXECUTIVO] Retornando dados do cache após erro ({len(cached)} registros)")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Retornando dados do cache após erro ({len(cached)} registros)")
                 return jsonify({'success': True, 'data': cached, 'total_records': len(cached), 'source': 'server_cache_fallback'})
         except Exception:
             pass
@@ -960,7 +964,7 @@ def dashboard_kpis():
                     df.at[idx, 'custo_calculado'] = valor
                     recalc += 1
             if recalc:
-                print(f"[DEBUG_KPI] Recalculados {recalc} custos a partir de despesas_processo")
+                logger.debug(f"[DEBUG_KPI] Recalculados {recalc} custos a partir de despesas_processo")
         
         registros_com_custo = (df['custo_calculado'] > 0).sum()
         total_despesas_debug = df['custo_calculado'].sum()
@@ -969,30 +973,30 @@ def dashboard_kpis():
         for idx, row in df.head(5).iterrows():
             ref_unique = row.get('ref_unique', 'N/A')
             custo_view = row.get('custo_total_view', 0)  # CORRIGIDO: usar custo_total_view
-            print(f"[DEBUG_KPI] Registro {idx}: ref={ref_unique}, custo_total_view={custo_view:,.2f}")
+            logger.debug(f"[DEBUG_KPI] Registro {idx}: ref={ref_unique}, custo_total_view={custo_view:,.2f}")
             
             # Log específico para o processo 6555
             if '6555' in str(ref_unique):
-                print(f"[DEBUG_KPI] *** PROCESSO 6555 ENCONTRADO: custo_total_view={custo_view:,.2f} ***")
+                logger.debug(f"[DEBUG_KPI] *** PROCESSO 6555 ENCONTRADO: custo_total_view={custo_view:,.2f} ***")
         
-        print(f"[DEBUG_KPI] Registros com custo > 0: {registros_com_custo}/{len(df)}")
-        print(f"[DEBUG_KPI] Total despesas calculado: {total_despesas_debug:,.2f}")
+        logger.debug(f"[DEBUG_KPI] Registros com custo > 0: {registros_com_custo}/{len(df)}")
+        logger.debug(f"[DEBUG_KPI] Total despesas calculado: {total_despesas_debug:,.2f}")
         
         # Calcular KPIs executivos usando o novo custo
         total_processos = len(df)
         total_despesas = df['custo_calculado'].sum()
         ticket_medio = (total_despesas / total_processos) if total_processos > 0 else 0
         
-        print(f"[DEBUG_KPI] KPIs Calculados:")
-        print(f"[DEBUG_KPI] - Total processos: {total_processos}")
-        print(f"[DEBUG_KPI] - Total despesas: {total_despesas:,.2f}")
-        print(f"[DEBUG_KPI] - Ticket médio: {ticket_medio:,.2f}")
+        logger.debug(f"[DEBUG_KPI] KPIs Calculados:")
+        logger.debug(f"[DEBUG_KPI] - Total processos: {total_processos}")
+        logger.debug(f"[DEBUG_KPI] - Total despesas: {total_despesas:,.2f}")
+        logger.debug(f"[DEBUG_KPI] - Ticket médio: {ticket_medio:,.2f}")
         
         # Comparar com custo_total_view original se disponível
         if 'custo_total_view' in df.columns:
             total_original = df['custo_total_view'].sum()
-            print(f"[DEBUG_KPI] Total original (custo_total_view): {total_original:,.2f}")
-            print(f"[DEBUG_KPI] Diferença: {total_despesas - total_original:,.2f}")
+            logger.debug(f"[DEBUG_KPI] Total original (custo_total_view): {total_original:,.2f}")
+            logger.debug(f"[DEBUG_KPI] Diferença: {total_despesas - total_original:,.2f}")
 
         # Função robusta para normalizar status
         import unicodedata, re
@@ -1055,12 +1059,12 @@ def dashboard_kpis():
             agd_desembaraco = len(df[df['timeline_number'] == 5])    # 5 - AG. DESEMBARAÇO (NOVO)
             agd_fechamento = len(df[df['timeline_number'] == 6])     # 6 - AG. FECHAMENTO
             
-            print(f"[DEBUG_KPI] Status Timeline counts (NOVA ESTRUTURA):")
-            print(f"[DEBUG_KPI] 2 - AG. EMBARQUE: {agd_embarque}")
-            print(f"[DEBUG_KPI] 3 - AG. CHEGADA: {agd_chegada}")
-            print(f"[DEBUG_KPI] 4 - AG. REGISTRO: {agd_registro}")
-            print(f"[DEBUG_KPI] 5 - AG. DESEMBARAÇO: {agd_desembaraco}")
-            print(f"[DEBUG_KPI] 6 - AG. FECHAMENTO: {agd_fechamento}")
+            logger.debug(f"[DEBUG_KPI] Status Timeline counts (NOVA ESTRUTURA):")
+            logger.debug(f"[DEBUG_KPI] 2 - AG. EMBARQUE: {agd_embarque}")
+            logger.debug(f"[DEBUG_KPI] 3 - AG. CHEGADA: {agd_chegada}")
+            logger.debug(f"[DEBUG_KPI] 4 - AG. REGISTRO: {agd_registro}")
+            logger.debug(f"[DEBUG_KPI] 5 - AG. DESEMBARAÇO: {agd_desembaraco}")
+            logger.debug(f"[DEBUG_KPI] 6 - AG. FECHAMENTO: {agd_fechamento}")
         else:
             agd_embarque = 0
             agd_chegada = 0
@@ -1111,9 +1115,9 @@ def dashboard_kpis():
         processos_abertos = total_processos  # Todos os da view são processos em andamento
         processos_fechados = 0  # Não há processos concluídos na view
         
-        print(f"[DEBUG_KPI] NOVA REGRA:")
-        print(f"[DEBUG_KPI] - Processos Abertos (todos da view, exceto concluídos): {processos_abertos}")
-        print(f"[DEBUG_KPI] - Total: {total_processos}")
+        logger.debug(f"[DEBUG_KPI] NOVA REGRA:")
+        logger.debug(f"[DEBUG_KPI] - Processos Abertos (todos da view, exceto concluídos): {processos_abertos}")
+        logger.debug(f"[DEBUG_KPI] - Total: {total_processos}")
 
         kpis = {
             'total_processos': total_processos,
@@ -1132,7 +1136,7 @@ def dashboard_kpis():
             'chegando_semana_custo': float(chegando_semana_custo)
         }
         
-        print(f"[DEBUG_KPI] KPIs finais: {kpis}")
+        logger.debug(f"[DEBUG_KPI] KPIs finais: {kpis}")
         
         return jsonify({
             'success': True,
@@ -1140,7 +1144,7 @@ def dashboard_kpis():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao calcular KPIs: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao calcular KPIs: {str(e)}")
         # Fallback seguro
         return jsonify({'success': False, 'error': str(e), 'kpis': {}}), 200
 
@@ -1178,7 +1182,7 @@ def dashboard_charts():
                 v = calculate_custo_from_despesas_processo(df.at[idx, 'despesas_processo'])
                 if v > 0:
                     df.at[idx, 'custo_calculado'] = v
-        print(f"[DEBUG_CHARTS] Total custo calculado (com fallback): {df['custo_calculado'].sum():,.2f}")
+        logger.debug(f"[DEBUG_CHARTS] Total custo calculado (com fallback): {df['custo_calculado'].sum():,.2f}")
         
         # Gráfico Evolução Mensal
         monthly_chart = {'labels': [], 'datasets': []}
@@ -1281,7 +1285,7 @@ def dashboard_charts():
             else:
                 print('[DEBUG_CHARTS] Nenhuma coluna de status encontrada para o Status Chart')
         except Exception as e:
-            print(f"[DEBUG_CHARTS] Erro ao montar Status Chart: {e}")
+            logger.debug(f"[DEBUG_CHARTS] Erro ao montar Status Chart: {e}")
 
         # Gráfico de Modal
         grouped_modal_chart = {'labels': [], 'datasets': []}
@@ -1338,9 +1342,14 @@ def dashboard_charts():
         principais_materiais = {'data': []}
         if can_view_materials and 'mercadoria' in df.columns and 'data_chegada' in df.columns:
             try:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário autorizado para materiais, processando tabela...")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Usuário autorizado para materiais, processando tabela...")
+                
+                # Substituir valores nulos/vazios por "OUTROS" antes do agrupamento
+                df['mercadoria'] = df['mercadoria'].fillna('OUTROS')
+                df.loc[df['mercadoria'].str.strip() == '', 'mercadoria'] = 'OUTROS'
+                
                 # Agrupar por material e calcular métricas
-                material_groups = df.groupby('mercadoria').agg({
+                material_groups = df.groupby('mercadoria', dropna=False).agg({
                     'ref_unique': 'count',
                     'custo_calculado': 'sum',  # USANDO CUSTO CALCULADO
                     'data_chegada': 'first',
@@ -1352,16 +1361,38 @@ def dashboard_charts():
                     material_groups['data_chegada'], format='%d/%m/%Y', errors='coerce'
                 )
                 
-                # Ordenar por data_chegada mais próxima (futura)
+                # Ordenar por:
+                # 1. Data de chegada mais próxima de hoje (futuras primeiro, depois passadas)
+                # 2. Quantidade de processos (maior primeiro)
+                # 3. Custo total (maior primeiro)
                 hoje = pd.Timestamp.now()
                 material_groups['is_future'] = material_groups['data_chegada_dt'] >= hoje
-                material_groups = material_groups.sort_values([
-                    'is_future', 'data_chegada_dt'
-                ], ascending=[False, True])
+                material_groups['dias_ate_chegada'] = (material_groups['data_chegada_dt'] - hoje).dt.days
                 
-                # Preparar dados da tabela
+                # Separar futuras e passadas
+                futuras = material_groups[material_groups['is_future'] == True].copy()
+                passadas = material_groups[material_groups['is_future'] == False].copy()
+                
+                # Ordenar futuras: por dias até chegada (menor = mais próxima), depois por processos e custo
+                if not futuras.empty:
+                    futuras = futuras.sort_values(
+                        ['dias_ate_chegada', 'ref_unique', 'custo_calculado'],
+                        ascending=[True, False, False]
+                    )
+                
+                # Ordenar passadas: por data mais recente (maior timestamp), depois por processos e custo
+                if not passadas.empty:
+                    passadas = passadas.sort_values(
+                        ['data_chegada_dt', 'ref_unique', 'custo_calculado'],
+                        ascending=[False, False, False]
+                    )
+                
+                # Combinar: futuras primeiro, depois passadas
+                material_groups = pd.concat([futuras, passadas], ignore_index=True)
+                
+                # Preparar dados da tabela - REMOVER LIMITE, deixar o frontend decidir
                 table_data = []
-                for _, row in material_groups.head(15).iterrows():
+                for _, row in material_groups.iterrows():
                     # Calcular se está chegando nos próximos 5 dias
                     is_urgente = False
                     dias_para_chegada = 0
@@ -1381,16 +1412,16 @@ def dashboard_charts():
                     })
                 
                 principais_materiais = {'data': table_data}
-                print(f"[DASHBOARD_EXECUTIVO] Tabela de materiais processada: {len(table_data)} itens")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Tabela de materiais processada: {len(table_data)} itens")
                 
             except Exception as e:
-                print(f"[DASHBOARD_EXECUTIVO] Erro ao processar tabela de materiais: {str(e)}")
+                logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao processar tabela de materiais: {str(e)}")
                 principais_materiais = {'data': []}
         else:
             if not can_view_materials:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário não autorizado para ver materiais")
+                logger.info(f"[DASHBOARD_EXECUTIVO] Usuário não autorizado para ver materiais")
             else:
-                print(f"[DASHBOARD_EXECUTIVO] Colunas de material não encontradas nos dados")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Colunas de material não encontradas nos dados")
 
         charts = {
             'monthly': monthly_chart,
@@ -1408,7 +1439,7 @@ def dashboard_charts():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao gerar gráficos: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao gerar gráficos: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'charts': {}}), 200
 
 @bp.route('/api/monthly-chart')
@@ -1484,7 +1515,7 @@ def monthly_chart():
         
         return jsonify({'success': True, 'data': clean_data_for_json(chart_data)})
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao gerar monthly_chart: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao gerar monthly_chart: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'data': {}}), 500
 
 @bp.route('/api/recent-operations')
@@ -1558,15 +1589,15 @@ def recent_operations():
             relevant_columns.append('mercadoria')
         
         available_columns = [col for col in relevant_columns if col in df_table.columns]
-        print(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
-        print(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Colunas disponíveis: {available_columns}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Colunas faltando: {set(relevant_columns) - set(available_columns)}")
         
         # DEBUG: Verificar se data_fechamento está disponível
         if 'data_fechamento' in df_table.columns:
-            print(f"[DASHBOARD_EXECUTIVO] ✅ Coluna 'data_fechamento' DISPONÍVEL no DataFrame")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] ✅ Coluna 'data_fechamento' DISPONÍVEL no DataFrame")
         else:
-            print(f"[DASHBOARD_EXECUTIVO] ❌ Coluna 'data_fechamento' NÃO ENCONTRADA no DataFrame")
-            print(f"[DASHBOARD_EXECUTIVO] Colunas presentes no DataFrame: {list(df_table.columns)}")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] ❌ Coluna 'data_fechamento' NÃO ENCONTRADA no DataFrame")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] Colunas presentes no DataFrame: {list(df_table.columns)}")
         
         # Dados para a tabela (limitados a 50)
         operations_table_data = df_table[available_columns].to_dict('records')
@@ -1617,7 +1648,7 @@ def recent_operations():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao obter operações recentes: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao obter operações recentes: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -1680,7 +1711,7 @@ def filter_options():
             'modais': modais
         }
         
-        print(f"[DASHBOARD_EXECUTIVO] Opções de filtro: {len(materiais)} materiais, {len(clientes)} clientes, {len(canais)} canais, {len(modais)} modais")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Opções de filtro: {len(materiais)} materiais, {len(clientes)} clientes, {len(canais)} canais, {len(modais)} modais")
         
         return jsonify({
             'success': True,
@@ -1688,7 +1719,7 @@ def filter_options():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao obter opções de filtro: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao obter opções de filtro: {str(e)}")
         return jsonify({'success': False, 'error': str(e), 'options': {}}), 200
 
 @bp.route('/api/force-refresh', methods=['POST'])
@@ -1709,7 +1740,7 @@ def force_refresh_dashboard():
         user_role = user_data.get('role')
         
         # 1. Limpar cache do usuário
-        print(f"[DASHBOARD_EXECUTIVO] Limpando cache para user_id: {user_id}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Limpando cache para user_id: {user_id}")
         data_cache.clear_user_cache(user_id)
         
         # 2. Limpar cache da sessão também
@@ -1728,16 +1759,16 @@ def force_refresh_dashboard():
         if user_role == 'cliente_unique' or (user_role == 'interno_unique' and perfil_principal not in ['admin_operacao', 'master_admin']):
             user_cnpjs = get_user_companies(user_data)
             if user_cnpjs:
-                print(f"[DASHBOARD_EXECUTIVO] Filtrando por CNPJs das empresas vinculadas: {user_cnpjs}")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Filtrando por CNPJs das empresas vinculadas: {user_cnpjs}")
                 query = query.in_('cnpj_importador', user_cnpjs)
             else:
-                print(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} (perfil: {perfil_principal}) sem CNPJs vinculados")
+                logger.debug(f"[DASHBOARD_EXECUTIVO] Usuário {user_role} (perfil: {perfil_principal}) sem CNPJs vinculados")
                 return jsonify({
                     'success': False,
                     'error': 'Usuário sem empresas vinculadas'
                 })
         else:
-            print(f"[DASHBOARD_EXECUTIVO] Admin operacional ({perfil_principal}) - visualizando todos os dados")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] Admin operacional ({perfil_principal}) - visualizando todos os dados")
         
         # Executar query
         result = query.execute()
@@ -1749,7 +1780,7 @@ def force_refresh_dashboard():
                 'total_records': 0
             }), 404
         
-        print(f"[DASHBOARD_EXECUTIVO] Dados frescos carregados: {len(result.data)} registros")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Dados frescos carregados: {len(result.data)} registros")
         
         # 4. Enriquecer dados com custos da view vw_despesas_6_meses (VERSÃO OTIMIZADA)
         print("[DASHBOARD_EXECUTIVO] Force refresh - Enriquecendo dados com custos (versão otimizada)...")
@@ -1761,7 +1792,7 @@ def force_refresh_dashboard():
         data_cache.set_cache(user_id, 'dashboard_v2_data', enriched_data)
         session['dashboard_v2_loaded'] = True
         
-        print(f"[DASHBOARD_EXECUTIVO] Cache atualizado com dados frescos para user_id: {user_id}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Cache atualizado com dados frescos para user_id: {user_id}")
         
         # 6. Calcular estatísticas rápidas para retorno
         df = pd.DataFrame(enriched_data)
@@ -1789,7 +1820,7 @@ def force_refresh_dashboard():
         return jsonify(clean_data_for_json(response_data))
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro no force refresh: {str(e)}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Erro no force refresh: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e),
@@ -1813,7 +1844,7 @@ def bootstrap_dashboard():
         if user_role == 'cliente_unique':
             user_cnpjs = get_user_companies(user_data)
             if not user_cnpjs:
-                print(f"[DASHBOARD_EXECUTIVO] Cliente {user_email} sem empresas vinculadas - bloqueando acesso aos dados")
+                logger.info(f"[DASHBOARD_EXECUTIVO] Cliente {user_email} sem empresas vinculadas - bloqueando acesso aos dados")
                 return jsonify({
                     'success': False, 
                     'error': 'no_companies',
@@ -2001,17 +2032,41 @@ def bootstrap_dashboard():
             urf_counts = df['urf_despacho'].value_counts().head(10)
             charts['urf'] = {'labels': urf_counts.index.tolist(),'data': urf_counts.values.tolist()}
         if 'mercadoria' in df.columns:
-            material_counts = df['mercadoria'].value_counts().head(10)
+            # Substituir valores nulos/vazios por "OUTROS" para contagem
+            df_material_count = df.copy()
+            df_material_count['mercadoria'] = df_material_count['mercadoria'].fillna('OUTROS')
+            df_material_count.loc[df_material_count['mercadoria'].str.strip() == '', 'mercadoria'] = 'OUTROS'
+            material_counts = df_material_count['mercadoria'].value_counts().head(10)
             charts['material'] = {'labels': material_counts.index.tolist(),'data': material_counts.values.tolist()}
         if 'mercadoria' in df.columns and 'data_chegada' in df.columns:
             try:
-                material_groups = df.groupby('mercadoria').agg({'ref_unique':'count','custo_calculado':'sum','data_chegada':'first','transit_time_real':'mean'}).reset_index()
+                # Substituir valores nulos/vazios por "OUTROS" antes do agrupamento
+                df['mercadoria'] = df['mercadoria'].fillna('OUTROS')
+                df.loc[df['mercadoria'].str.strip() == '', 'mercadoria'] = 'OUTROS'
+                
+                material_groups = df.groupby('mercadoria', dropna=False).agg({'ref_unique':'count','custo_calculado':'sum','data_chegada':'first','transit_time_real':'mean'}).reset_index()
                 material_groups['data_chegada_dt'] = pd.to_datetime(material_groups['data_chegada'], format='%d/%m/%Y', errors='coerce')
                 hoje = pd.Timestamp.now()
                 material_groups['is_future'] = material_groups['data_chegada_dt'] >= hoje
-                material_groups = material_groups.sort_values(['is_future','data_chegada_dt'], ascending=[False,True])
+                material_groups['dias_ate_chegada'] = (material_groups['data_chegada_dt'] - hoje).dt.days
+                
+                # Separar futuras e passadas
+                futuras = material_groups[material_groups['is_future'] == True].copy()
+                passadas = material_groups[material_groups['is_future'] == False].copy()
+                
+                # Ordenar futuras: por dias até chegada, depois processos e custo
+                if not futuras.empty:
+                    futuras = futuras.sort_values(['dias_ate_chegada', 'ref_unique', 'custo_calculado'], ascending=[True, False, False])
+                
+                # Ordenar passadas: por data mais recente, depois processos e custo
+                if not passadas.empty:
+                    passadas = passadas.sort_values(['data_chegada_dt', 'ref_unique', 'custo_calculado'], ascending=[False, False, False])
+                
+                # Combinar: futuras primeiro, depois passadas
+                material_groups = pd.concat([futuras, passadas], ignore_index=True) if not futuras.empty or not passadas.empty else material_groups
+                
                 table_data = []
-                for _, row in material_groups.head(15).iterrows():
+                for _, row in material_groups.iterrows():
                     is_urgente = False
                     dias_para_chegada = 0
                     if pd.notnull(row['data_chegada_dt']):
@@ -2029,7 +2084,7 @@ def bootstrap_dashboard():
                     })
                 charts['principais_materiais'] = {'data': table_data}
             except Exception as e:
-                print(f"[DASHBOARD_EXECUTIVO] Erro ao processar principais materiais (bootstrap): {str(e)}")
+                logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao processar principais materiais (bootstrap): {str(e)}")
 
         # Operações recentes (limit 25 para bootstrap rápido)
         operations = []
@@ -2087,7 +2142,7 @@ def bootstrap_dashboard():
 
         return jsonify(clean_data_for_json(payload))
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro no bootstrap: {str(e)}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Erro no bootstrap: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/api/test-materials-permission')
@@ -2109,7 +2164,7 @@ def test_materials_permission():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro no teste de permissão: {str(e)}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Erro no teste de permissão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/api/paises-procedencia')
@@ -2124,7 +2179,7 @@ def get_paises_procedencia():
         if not user_id:
             return jsonify({'success': False, 'error': 'Usuário não autenticado'}), 401
         
-        print(f"[DASHBOARD_EXECUTIVO] Carregando dados de países de procedência para user {user_id}")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Carregando dados de países de procedência para user {user_id}")
         
         # Obter dados do cache
         cached_data = fetch_and_cache_dashboard_data(user_data)
@@ -2167,7 +2222,7 @@ def get_paises_procedencia():
         
         # LIMITAÇÃO PARA TOP 7 PAÍSES + OUTROS (para evitar quebra de layout)
         if len(paises_stats) > 7:
-            print(f"[DASHBOARD_EXECUTIVO] Limitando exibição: {len(paises_stats)} -> 7 países + outros")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] Limitando exibição: {len(paises_stats)} -> 7 países + outros")
             
             # Top 7 países
             top_7 = paises_stats.head(7)
@@ -2196,7 +2251,7 @@ def get_paises_procedencia():
                     'url_bandeira': None  # Sem bandeira para "Outros"
                 })
                 
-            print(f"[DASHBOARD_EXECUTIVO] Retornando 7 + 1 'Outros' = {len(paises_data)} itens")
+            logger.debug(f"[DASHBOARD_EXECUTIVO] Retornando 7 + 1 'Outros' = {len(paises_data)} itens")
             
         else:
             # Manter lógica original se já tiver 7 ou menos países
@@ -2209,7 +2264,7 @@ def get_paises_procedencia():
                     'url_bandeira': str(row['url_bandeira']) if pd.notna(row['url_bandeira']) else None
                 })
         
-        print(f"[DASHBOARD_EXECUTIVO] Retornando dados de {len(paises_data)} países")
+        logger.debug(f"[DASHBOARD_EXECUTIVO] Retornando dados de {len(paises_data)} países")
         
         return jsonify({
             'success': True,
@@ -2217,7 +2272,7 @@ def get_paises_procedencia():
         })
         
     except Exception as e:
-        print(f"[DASHBOARD_EXECUTIVO] Erro ao obter dados de países: {str(e)}")
+        logger.info(f"[DASHBOARD_EXECUTIVO] Erro ao obter dados de países: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500

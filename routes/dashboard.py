@@ -119,8 +119,8 @@ def dashboard_data_api(permissions=None):
                     'total_despesas': valor_total,
                     'modal_aereo': int(modal_counts.get('AEREA', 0)),
                     'modal_maritimo': int(modal_counts.get('MARITIMA', 0)),
-                    'em_transito': int(len(df[df.get('status_processo', '') == 'Em andamento'])),
-                    'di_registrada': int(len(df[df.get('status_processo', '') == 'Finalizada'])),
+                    'em_transito': int(len(df[df.get('status_sistema', '') == 'Em andamento'])),
+                    'di_registrada': int(len(df[df.get('status_sistema', '') == 'Finalizada'])),
                     'despesa_media_por_processo': valor_total / total_processos if total_processos > 0 else 0.0,
                     'despesa_mes_atual': valor_mes_atual
                 }
@@ -269,8 +269,8 @@ def dashboard_data_api(permissions=None):
                                 'total_despesas': df['valor_total'].sum(),
                                 'modal_aereo': len(df[df['modal'] == 'AEREA']) if 'modal' in df.columns else 0,
                                 'modal_maritimo': len(df[df['modal'] == 'MARITIMA']) if 'modal' in df.columns else 0,
-                                'em_transito': int(len(df[df.get('status_processo', '') == 'Em andamento'])),
-                                'di_registrada': int(len(df[df.get('status_processo', '') == 'Finalizada'])),
+                                'em_transito': int(len(df[df.get('status_sistema', '') == 'Em andamento'])),
+                                'di_registrada': int(len(df[df.get('status_sistema', '') == 'Finalizada'])),
                                 'despesa_media_por_processo': df['valor_total'].mean() if len(df) > 0 else 0,
                                 'despesa_mes_atual': 0
                             }
@@ -365,7 +365,7 @@ def dashboard_data_api(permissions=None):
                 user_role = user_data.get('role')
                 print(f"[DASHBOARD] User role: {user_role}")
                 
-                query = supabase_admin.table('importacoes_processos_aberta').select('*').neq('status_processo', 'Despacho Cancelado')
+                query = supabase_admin.table('importacoes_processos_aberta').select('*')
                 
                 # Aplicar filtros baseados no role do usuário
                 if user_role == 'cliente_unique':
@@ -548,7 +548,7 @@ def dashboard_data_api(permissions=None):
                 user_role = user_data.get('role')
                 print(f"[DASHBOARD] User role para modal: {user_role}")
                 
-                modal_query = supabase_admin.table('importacoes_processos_aberta').select('modal').neq('status_processo', 'Despacho Cancelado')
+                modal_query = supabase_admin.table('importacoes_processos_aberta').select('modal')
                 
                 # Aplicar filtros baseados no role do usuário
                 if user_role == 'cliente_unique':
@@ -595,7 +595,7 @@ def dashboard_data_api(permissions=None):
             # Gráfico de URF a partir da tabela principal
             try:
                 print("[DASHBOARD] Buscando dados de País Procedência...")
-                pais_query = supabase_admin.table('importacoes_processos_aberta').select('pais_procedencia').neq('status_processo', 'Despacho Cancelado')
+                pais_query = supabase_admin.table('importacoes_processos_aberta').select('pais_procedencia')
                 
                 # Aplicar filtros baseados no role do usuário
                 if user_role == 'cliente_unique':
