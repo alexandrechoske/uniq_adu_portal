@@ -21,7 +21,7 @@
             </ol>
         </nav>
         <div class="actions-buttons">
-            <button class="btn btn-rh-primary" data-bs-toggle="modal" data-bs-target="#modalDepartamento" onclick="abrirModalNovoDepartamento()">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalDepartamento" onclick="abrirModalNovoDepartamento()">
                 <i class="mdi mdi-plus"></i> Novo Departamento
             </button>
         </div>
@@ -92,7 +92,7 @@
         <div class="card-body p-0">
             {% if departamentos|length > 0 %}
             <div class="table-responsive">
-                <table class="table mb-0" id="tableDepartamentos">
+                <table class="table rh-table mb-0" id="tableDepartamentos">
                     <thead class="rh-table-header">
                         <tr>
                             <th style="width: 3%;">#</th>
@@ -219,7 +219,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="mdi mdi-close"></i> Cancelar
                 </button>
-                <button type="button" class="btn btn-rh-primary" onclick="salvarDepartamento()">
+                <button type="button" class="btn btn-primary" onclick="salvarDepartamento()">
                     <i class="mdi mdi-content-save"></i> Salvar Departamento
                 </button>
             </div>
@@ -368,7 +368,7 @@ function visualizarDepartamento(deptoId) {
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                     <i class="mdi mdi-close"></i> Fechar
                                 </button>
-                                <button type="button" class="btn btn-rh-primary" onclick="editarDepartamento('${depto.id}'); $('#modalVisualizarDepto').modal('hide');">
+                                <button type="button" class="btn btn-primary" onclick="editarDepartamento('${depto.id}'); $('#modalVisualizarDepto').modal('hide');">
                                     <i class="mdi mdi-pencil"></i> Editar Departamento
                                 </button>
                             </div>
