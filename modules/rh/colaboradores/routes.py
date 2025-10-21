@@ -9,6 +9,7 @@ from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
 from datetime import datetime, date, timezone
 import os
+from werkzeug.utils import secure_filename
 
 from modules.rh.colaboradores.benefits_utils import (
     BENEFICIOS_CATALOGO,
@@ -17,6 +18,11 @@ from modules.rh.colaboradores.benefits_utils import (
     has_beneficios,
     normalize_beneficios,
     normalize_decimal,
+)
+from modules.rh.colaboradores.foto_service import (
+    upload_foto_colaborador,
+    delete_foto_colaborador,
+    get_lista_fotos_colaborador,
 )
 from services.event_notification_service import EventNotificationService
 
@@ -1706,4 +1712,94 @@ def debug_css_test():
     </body>
     </html>
     """
+
+
+# ============================================================================
+# ENDPOINTS: Upload e Gerenciamento de Fotos de Colaboradores
+# ============================================================================
+
+@colaboradores_bp.route('/api/foto/upload/<colaborador_id>', methods=['POST'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_upload_foto(colaborador_id):
+    """Upload de foto do colaborador"""
+    try:
+        # Validar se colaborador existe
+        colab = supabase_admin.table('rh_colaboradores').select('id, empresa_controladora_id').eq('id', colaborador_id).execute()
+        if not colab.data:
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado'}), 404
+        
+        empresa_id = colab.data[0]['empresa_controladora_id']
+        
+        # Validar arquivo
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo fornecido'}), 400
+        
+        file = request.files['file']
+        
+        # Upload via serviço
+        result = upload_foto_colaborador(colaborador_id, empresa_id, file)
+        
+        status_code = 200 if result['success'] else 400
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/foto/delete/<colaborador_id>', methods=['DELETE'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_delete_foto(colaborador_id):
+    """Deletar foto do colaborador"""
+    try:
+        # Validar se colaborador existe
+        colab = supabase_admin.table('rh_colaboradores')\
+            .select('id, empresa_controladora_id, foto_colab')\
+            .eq('id', colaborador_id)\
+            .execute()
+        
+        if not colab.data:
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado'}), 404
+        
+        empresa_id = colab.data[0]['empresa_controladora_id']
+        foto_url = colab.data[0]['foto_colab']
+        
+        if not foto_url:
+            return jsonify({'success': False, 'message': 'Colaborador não possui foto'}), 400
+        
+        # Construir caminho do arquivo
+        file_path = f"{empresa_id}/{colaborador_id}/{foto_url.split('/')[-1]}"
+        
+        # Deletar via serviço
+        result = delete_foto_colaborador(colaborador_id, empresa_id, file_path)
+        
+        status_code = 200 if result['success'] else 400
+        return jsonify(result), status_code
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@colaboradores_bp.route('/api/fotos/<colaborador_id>', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_lista_fotos(colaborador_id):
+    """Listar fotos do colaborador"""
+    try:
+        # Validar se colaborador existe
+        colab = supabase_admin.table('rh_colaboradores')\
+            .select('id, empresa_controladora_id')\
+            .eq('id', colaborador_id)\
+            .execute()
+        
+        if not colab.data:
+            return jsonify({'success': False, 'message': 'Colaborador não encontrado'}), 404
+        
+        empresa_id = colab.data[0]['empresa_controladora_id']
+        
+        # Listar fotos via serviço
+        result = get_lista_fotos_colaborador(colaborador_id, empresa_id)
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 

@@ -280,26 +280,18 @@
                     </div>
 
                     <div class="row">
+                        {% if not is_editing %}
+                        <!-- Campo de salário aparece apenas no cadastro inicial -->
                         <div class="col-md-4 mb-3">
-                            <label class="form-label {% if not is_editing %}required{% endif %}">Salário Mensal</label>
-                            {% if is_editing %}
-                                <div class="form-control-plaintext fw-semibold">
-                                    {% if info_carreira.salario_mensal %}
-                                        R$ {{ '%.2f' | format(info_carreira.salario_mensal) }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </div>
-                                <small class="text-muted">Use o atalho "Reajustar Salário" na lista de colaboradores para alterar este valor.</small>
-                            {% else %}
-                                <div class="input-group">
-                                    <span class="input-group-text">R$</span>
-                                    <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" step="0.01" min="0" max="999999.99" value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}" placeholder="0.00" required>
-                                </div>
-                                <small class="text-muted">Campo obrigatório - informe apenas números</small>
-                            {% endif %}
+                            <label class="form-label required">Salário Mensal</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" step="0.01" min="0" max="999999.99" value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}" placeholder="0.00" required>
+                            </div>
+                            <small class="text-muted">Campo obrigatório - informe apenas números</small>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        {% endif %}
+                        <div class="col-md-{% if is_editing %}6{% else %}4{% endif %} mb-3">
                             <label class="form-label {% if not is_editing %}required{% endif %}">Tipo de Contrato</label>
                             {% if is_editing %}
                                 <input type="text" class="form-control bg-light" value="{{ info_carreira.tipo_contrato or 'Não informado' }}" readonly>

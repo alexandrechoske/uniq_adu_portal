@@ -533,6 +533,60 @@
 
         <!-- Coluna Lateral -->
         <div class="col-md-4">
+            <!-- Foto de Perfil -->
+            <div class="rh-card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">
+                        <i class="mdi mdi-camera"></i> Foto de Perfil
+                    </h5>
+                    
+                    <!-- Foto atual ou placeholder -->
+                    <div class="mb-3 position-relative" style="max-width: 200px; margin: 0 auto;">
+                        {% if colaborador.foto_colab %}
+                            <img id="fotoColaborador" 
+                                 src="{{ colaborador.foto_colab }}" 
+                                 alt="{{ colaborador.nome_completo }}"
+                                 class="img-fluid rounded-circle mb-3"
+                                 style="width: 200px; height: 200px; object-fit: cover; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        {% else %}
+                            <div id="fotoPlaceholder" class="mb-3" style="width: 200px; height: 200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div class="text-center text-white">
+                                    <i class="mdi mdi-account-circle" style="font-size: 80px;"></i>
+                                    <div class="small mt-2">Sem foto</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Botões de ação -->
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                class="btn btn-outline-primary btn-sm"
+                                onclick="document.getElementById('inputFoto').click()">
+                            <i class="mdi mdi-upload"></i> {{ 'Alterar Foto' if colaborador.foto_colab else 'Upload de Foto' }}
+                        </button>
+                        {% if colaborador.foto_colab %}
+                        <button type="button" 
+                                class="btn btn-outline-danger btn-sm"
+                                onclick="deletarFoto('{{ colaborador.id }}')">
+                            <i class="mdi mdi-trash-can"></i> Remover Foto
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Input file oculto -->
+                    <input type="file" 
+                           id="inputFoto"
+                           accept="image/jpeg,image/png,image/gif"
+                           style="display: none;"
+                           onchange="uploadFoto(this, '{{ colaborador.id }}')">
+                    
+                    <small class="text-muted d-block mt-2">
+                        <i class="mdi mdi-information-outline"></i> JPG, PNG ou GIF - Máx 5MB
+                    </small>
+                </div>
+            </div>
+
             <!-- Status e Info Rápida -->
             <div class="rh-card mb-4">
                 <div class="card-body">
@@ -760,6 +814,150 @@
 
 <script>
 window.RH_BENEFICIOS_CATALOGO = JSON.parse('{{ beneficios_catalogo | tojson | safe }}');
+
+// ========================================
+// UPLOAD E DELEÇÃO DE FOTO DE PERFIL
+// ========================================
+
+/**
+ * Faz upload da foto do colaborador
+ */
+async function uploadFoto(input, colaboradorId) {
+    if (!input.files || input.files.length === 0) {
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    // Validação de tamanho (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('❌ Arquivo muito grande! Tamanho máximo: 5MB');
+        input.value = '';
+        return;
+    }
+    
+    // Validação de tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('❌ Formato inválido! Use apenas JPG, PNG ou GIF');
+        input.value = '';
+        return;
+    }
+    
+    // Encontrar o botão de upload
+    const uploadBtn = document.querySelector('button[onclick*="inputFoto"]');
+    const originalText = uploadBtn.innerHTML;
+    
+    try {
+        // Mostrar loading
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Enviando...';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(
+            `/rh/colaboradores/api/foto/upload/${colaboradorId}`,
+            {
+                method: 'POST',
+                body: formData
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Criar ou atualizar a imagem
+            const fotoImg = document.getElementById('fotoColaborador');
+            const placeholder = document.getElementById('fotoPlaceholder');
+            
+            if (fotoImg) {
+                // Se já existe imagem, atualizar src
+                fotoImg.src = data.url + '?t=' + Date.now(); // Cache busting
+            } else if (placeholder) {
+                // Se é placeholder, substituir por imagem real
+                placeholder.outerHTML = `
+                    <img id="fotoColaborador" 
+                         src="${data.url}?t=${Date.now()}"
+                         alt="Foto do colaborador"
+                         class="img-fluid rounded-circle mb-3"
+                         style="width: 200px; height: 200px; object-fit: cover; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                `;
+            }
+            
+            alert('✅ Foto enviada com sucesso!');
+            
+            // Recarregar para atualizar botões
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('❌ Erro: ' + data.message);
+        }
+    } catch (error) {
+        alert('❌ Erro ao enviar foto: ' + error.message);
+        console.error('Erro no upload:', error);
+    } finally {
+        // Restaurar botão
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+        input.value = ''; // Limpar input
+    }
+}
+
+/**
+ * Deleta a foto do colaborador
+ */
+async function deletarFoto(colaboradorId) {
+    if (!confirm('⚠️ Tem certeza que deseja remover a foto de perfil?')) {
+        return;
+    }
+    
+    // Encontrar o botão de deletar
+    const deleteBtn = document.querySelector('button[onclick*="deletarFoto"]');
+    const originalText = deleteBtn ? deleteBtn.innerHTML : '';
+    
+    try {
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Removendo...';
+        }
+        
+        const response = await fetch(
+            `/rh/colaboradores/api/foto/delete/${colaboradorId}`,
+            {
+                method: 'DELETE'
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Foto removida com sucesso!');
+            
+            // Recarregar página para atualizar UI
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            alert('❌ Erro: ' + data.message);
+            
+            if (deleteBtn) {
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = originalText;
+            }
+        }
+    } catch (error) {
+        alert('❌ Erro ao deletar foto: ' + error.message);
+        console.error('Erro na deleção:', error);
+        
+        if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
+    }
+}
 </script>
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}
