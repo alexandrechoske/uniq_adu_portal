@@ -9,11 +9,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 <link rel="stylesheet" href="{{ url_for('recrutamento.static', filename='recrutamento/recrutamento.css') }}?v=4">
 <style>
-/* Cores do Recrutamento (Verde) */
+/* Cores do Recrutamento (Roxo - Padronizado RH) */
 :root {
-    --recrutamento-primary: #28a745;
-    --recrutamento-primary-dark: #1e7e34;
-    --recrutamento-primary-light: #5cb85c;
+    --recrutamento-primary: #667eea;
+    --recrutamento-primary-dark: #764ba2;
+    --recrutamento-primary-light: #8b9ded;
 }
 
 .btn-recrutamento-primary {
@@ -492,13 +492,13 @@
 }
 
 .quick-action-btn.btn-success-action {
-    color: #28a745;
+    color: #667eea;
 }
 
 .quick-action-btn.btn-success-action:hover {
-    background: #28a745;
+    background: #667eea;
     color: white;
-    border-color: #28a745;
+    border-color: #667eea;
 }
 
 .quick-action-btn.btn-danger-action {
@@ -604,7 +604,7 @@
 .info-section-title {
     font-size: 1rem;
     font-weight: 700;
-    color: #28a745;
+    color: #667eea;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid #e9ecef;
@@ -680,7 +680,7 @@
 
 .timeline-item {
     padding: 1rem;
-    border-left: 2px solid #28a745;
+    border-left: 2px solid #667eea;
     margin-left: 1rem;
     margin-bottom: 1rem;
     position: relative;
@@ -690,7 +690,7 @@
     content: '';
     width: 12px;
     height: 12px;
-    background: #28a745;
+    background: #667eea;
     border-radius: 50%;
     position: absolute;
     left: -7px;
@@ -1046,7 +1046,7 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <!-- Header -->
-            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <h5 class="modal-title">
                     <i class="mdi mdi-account-details"></i> 
                     <span id="modalCandidatoTitulo">Detalhes do Candidato</span>
@@ -1270,7 +1270,7 @@
                             <textarea class="form-control" id="novaObservacao" rows="3" 
                                       placeholder="Digite sua observação..."></textarea>
                             <div class="text-end mt-2">
-                                <button type="button" class="btn btn-success btn-sm" onclick="salvarObservacao()">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="salvarObservacao()">
                                     <i class="mdi mdi-content-save"></i> Salvar
                                 </button>
                             </div>
@@ -1293,7 +1293,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="mdi mdi-close"></i> Fechar
                 </button>
-                <button type="button" class="btn btn-success" id="btnSalvarEdicao" 
+                <button type="button" class="btn btn-primary" id="btnSalvarEdicao" 
                         onclick="salvarEdicaoCandidato()" style="display: none;">
                     <i class="mdi mdi-content-save"></i> Salvar Alterações
                 </button>
