@@ -5,6 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=3.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 {% endblock %}
 
 {% block content %}
@@ -102,7 +103,7 @@
                         <option value="Afastado">Afastado</option>
                     </select>
                 </div>
-                <div class="col-6 col-lg-3">
+                <div class="col-6 col-lg-2">
                     <select id="filterCargo" class="form-select">
                         <option value="">Todos os Cargos</option>
                         {% for cargo in filtros.cargos|sort %}
@@ -110,7 +111,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-6 col-lg-3">
+                <div class="col-6 col-lg-2">
                     <select id="filterDepartamento" class="form-select">
                         <option value="">Todos os Departamentos</option>
                         {% for departamento in filtros.departamentos|sort %}
@@ -118,10 +119,10 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-lg-12 d-flex justify-content-lg-end">
-                    <button id="btnLimparFiltros" class="btn btn-outline-secondary w-100 w-lg-auto mt-2 mt-lg-0">
+                <div class="col-auto">
+                    <button id="btnLimparFiltros" class="btn btn-sm btn-outline-secondary" title="Limpar Filtros">
                         <i class="mdi mdi-filter-off"></i>
-                        Limpar Filtros
+                        <span class="d-none d-lg-inline">Limpar</span>
                     </button>
                 </div>
             </div>
@@ -132,7 +133,7 @@
     <div class="card rh-card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table mb-0" id="tabelaColaboradores">
+                <table class="table mb-0 rh-table" id="tabelaColaboradores">
                     <thead class="rh-table-header">
                         <tr>
                             <th style="width: 3%;" class="text-center">#</th>

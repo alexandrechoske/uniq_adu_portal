@@ -1,0 +1,389 @@
+/* ==============================================
+   ESTILO PADRÃO PARA TABELAS DO MÓDULO RH
+   ============================================== */
+
+/* Tabela Base - Sobrescreve estilos do Bootstrap */
+table.rh-table,
+.rh-table,
+table.table.rh-table-style {
+    width: 100% !important;
+    margin-bottom: 1rem;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background-color: #ffffff !important;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Remove bordas do Bootstrap */
+table.rh-table,
+table.rh-table thead th,
+table.rh-table tbody td {
+    border: none !important;
+}
+
+/* Cabeçalho da Tabela - GRADIENTE CONTÍNUO aplicado na linha <tr> */
+table.rh-table thead tr,
+.rh-table thead tr,
+.rh-table-header tr {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+table.rh-table thead th,
+.rh-table thead th,
+.rh-table-header th {
+    background: transparent !important; /* Remove fundo individual de cada TH */
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 14px 12px !important;
+    border: none !important;
+    border-bottom: none !important;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Primeira coluna do cabeçalho (arredondamento) */
+.rh-table thead th:first-child,
+.rh-table-header th:first-child {
+    border-top-left-radius: 8px;
+}
+
+/* Última coluna do cabeçalho (arredondamento) */
+.rh-table thead th:last-child,
+.rh-table-header th:last-child {
+    border-top-right-radius: 8px;
+}
+
+/* Colunas sortable com hover */
+.rh-table thead th.sortable,
+.rh-table-header th.sortable {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.rh-table thead th.sortable:hover,
+.rh-table-header th.sortable:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
+
+/* Corpo da Tabela */
+.rh-table tbody {
+    background-color: #ffffff;
+}
+
+/* Células do corpo - Com !important para sobrescrever Bootstrap */
+table.rh-table tbody td,
+.rh-table tbody td {
+    padding: 12px !important;
+    font-size: 0.875rem;
+    color: #4a5568 !important;
+    border: none !important;
+    border-top: none !important;
+    vertical-align: middle !important;
+    transition: background-color 0.15s ease;
+}
+
+/* ZEBRAMENTO LEVE CINZA - Com !important e --bs-table-bg para sobrescrever Bootstrap */
+table.rh-table tbody tr:nth-child(odd),
+.rh-table tbody tr:nth-child(odd) {
+    background-color: #ffffff !important;
+    --bs-table-bg: #ffffff !important;
+    --bs-table-accent-bg: #ffffff !important;
+}
+
+table.rh-table tbody tr:nth-child(even),
+.rh-table tbody tr:nth-child(even) {
+    background-color: #f7fafc !important;
+    --bs-table-bg: #f7fafc !important;
+    --bs-table-accent-bg: #f7fafc !important;
+}
+
+/* Hover nas linhas - Com z-index para corrigir bug do dropdown */
+table.rh-table tbody tr:hover,
+.rh-table tbody tr:hover {
+    background-color: #edf2f7 !important;
+    --bs-table-bg: #edf2f7 !important;
+    --bs-table-accent-bg: #edf2f7 !important;
+    --bs-table-hover-bg: #edf2f7 !important;
+    --bs-table-hover-color: #2d3748 !important;
+    transform: scale(1.001);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.15s ease;
+    position: relative; /* Necessário para o z-index funcionar */
+    z-index: 10;        /* Eleva a linha sobre as outras */
+}
+
+/* Texto em negrito */
+.rh-table tbody td strong {
+    color: #2d3748;
+    font-weight: 600;
+}
+
+/* Texto muted */
+.rh-table tbody td .text-muted,
+.rh-table tbody td small.text-muted {
+    color: #718096 !important;
+    font-size: 0.8125rem;
+}
+
+/* Número da linha (primeira coluna) */
+.rh-table tbody td:first-child {
+    color: #a0aec0;
+    font-weight: 500;
+    font-size: 0.8125rem;
+}
+
+/* Info do colaborador (nome + email) */
+.rh-table .colab-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rh-table .colab-info strong {
+    display: block;
+    color: #2d3748;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.rh-table .colab-info small {
+    display: block;
+    color: #718096;
+    font-size: 0.75rem;
+}
+
+/* Badges de Status */
+.rh-table .badge {
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.rh-table .badge i {
+    font-size: 0.875rem;
+}
+
+/* Badge Success (Ativo) */
+.rh-table .badge.bg-success {
+    background-color: #48bb78 !important;
+    color: #ffffff;
+}
+
+/* Badge Warning (Afastado) */
+.rh-table .badge.bg-warning {
+    background-color: #ed8936 !important;
+    color: #ffffff;
+}
+
+/* Badge Danger (Desligado) */
+.rh-table .badge.bg-danger {
+    background-color: #f56565 !important;
+    color: #ffffff;
+}
+
+/* Badge Secondary (Outros) */
+.rh-table .badge.bg-secondary {
+    background-color: #718096 !important;
+    color: #ffffff;
+}
+
+/* Botões de Ação */
+.rh-table .btn-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.rh-table .btn {
+    font-size: 0.8125rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid;
+}
+
+/* Botão Visualizar (Info) */
+.rh-table .btn-outline-info {
+    color: #3182ce;
+    border-color: #3182ce;
+    background-color: transparent;
+}
+
+.rh-table .btn-outline-info:hover {
+    background-color: #3182ce;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(49, 130, 206, 0.3);
+}
+
+/* Botão Editar (Primary) */
+.rh-table .btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+    background-color: transparent;
+}
+
+.rh-table .btn-outline-primary:hover {
+    background-color: #667eea;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+/* Botão Dropdown (Secondary) */
+.rh-table .btn-outline-secondary {
+    color: #718096;
+    border-color: #cbd5e0;
+    background-color: transparent;
+}
+
+.rh-table .btn-outline-secondary:hover {
+    background-color: #718096;
+    color: #ffffff;
+    border-color: #718096;
+}
+
+/* Ícones nos botões */
+.rh-table .btn i {
+    font-size: 1rem;
+}
+
+/* Dropdown Menu - Z-INDEX ALTO para aparecer sobre outros elementos */
+.rh-table .dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    padding: 8px 0;
+    min-width: 200px;
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+
+.rh-table .dropdown {
+    position: static; /* Alterado de relative para static para evitar conflitos */
+}
+
+.rh-table .dropdown-item {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+    color: #4a5568;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rh-table .dropdown-item:hover {
+    background-color: #f7fafc;
+    color: #2d3748;
+}
+
+.rh-table .dropdown-item.text-danger {
+    color: #f56565 !important;
+}
+
+.rh-table .dropdown-item.text-danger:hover {
+    background-color: #fff5f5;
+}
+
+.rh-table .dropdown-item i {
+    font-size: 1rem;
+    width: 20px;
+}
+
+/* Divider no dropdown */
+.rh-table .dropdown-divider {
+    margin: 8px 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Mensagem de tabela vazia */
+.rh-table tbody tr[data-empty-result="true"] td {
+    padding: 40px 20px;
+    text-align: center;
+    color: #a0aec0;
+    font-size: 0.9375rem;
+}
+
+.rh-table tbody tr[data-empty-result="true"] i {
+    color: #cbd5e0;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .rh-table {
+        font-size: 0.8125rem;
+    }
+    
+    .rh-table thead th,
+    .rh-table-header th {
+        padding: 10px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .rh-table tbody td {
+        padding: 10px 8px;
+    }
+    
+    .rh-table .btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .rh-table .btn i {
+        font-size: 0.875rem;
+    }
+}
+
+/* Alinhamentos específicos */
+.rh-table .text-center {
+    text-align: center !important;
+}
+
+.rh-table .text-end,
+.rh-table .text-right {
+    text-align: right !important;
+}
+
+/* Larguras fixas para colunas */
+.rh-table th[style*="width"],
+.rh-table td[style*="width"] {
+    white-space: nowrap;
+}
+
+/* Scroll horizontal em telas pequenas */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Animação suave para ordenação */
+.rh-table thead th.sortable.sorted {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
+
+/* Destaque em células específicas */
+.rh-table tbody td.fw-semibold {
+    font-weight: 600 !important;
+    color: #2d3748;
+}
+
+/* Melhor contraste para links */
+.rh-table a {
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.rh-table a:hover {
+    opacity: 0.8;
+}
