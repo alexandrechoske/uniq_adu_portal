@@ -1,0 +1,335 @@
+/* =====================================================
+   PADRONIZAÇÃO VISUAL DO MÓDULO RH - ROXO GRADIENT
+   ===================================================== */
+
+/* ===== 1. HEADER ROXO (Como financeiro tem laranja) ===== */
+.top-navbar.header-rh,
+.top-navbar.rh-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.top-navbar.header-rh .navbar-content,
+.top-navbar.rh-header .navbar-content {
+    background: transparent !important;
+}
+
+/* ===== 2. BOTÕES PRIMÁRIOS ROXOS ===== */
+.btn-primary,
+.btn.btn-primary,
+button.btn-primary,
+a.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-color: #667eea !important;
+    color: #ffffff !important;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover,
+.btn.btn-primary:hover,
+button.btn-primary:hover,
+a.btn-primary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%) !important;
+    border-color: #5568d3 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:active,
+.btn.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:focus,
+.btn.btn-primary:focus {
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.3) !important;
+}
+
+/* ===== 3. CARDS E CONTAINERS ===== */
+.rh-card,
+.card.rh-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s ease;
+}
+
+.rh-card:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+/* ===== 4. PAGE HEADER ===== */
+.page-header-rh {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    padding: 24px 32px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.page-header-rh h1,
+.page-header-rh h2,
+.page-header-rh h3 {
+    color: #ffffff !important;
+    margin: 0;
+}
+
+.page-header-rh .breadcrumb {
+    background: transparent;
+    margin: 0;
+    padding: 0;
+}
+
+.page-header-rh .breadcrumb-item a {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.page-header-rh .breadcrumb-item.active {
+    color: #ffffff;
+}
+
+/* ===== 5. KPI CARDS ESPECÍFICOS DO RH ===== */
+.kpi-card.kpi-rh-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+}
+
+.kpi-card.kpi-rh-primary .kpi-icon {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* ===== 6. BADGES ROXOS ===== */
+.badge.badge-rh-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+}
+
+.badge.badge-rh-light {
+    background-color: #f3f4ff !important;
+    color: #667eea !important;
+    border: 1px solid #d4d9f7;
+}
+
+/* ===== 7. LINKS E TEXTOS ROXOS ===== */
+.text-rh-primary {
+    color: #667eea !important;
+}
+
+.text-rh-secondary {
+    color: #764ba2 !important;
+}
+
+a.link-rh {
+    color: #667eea;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a.link-rh:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+/* ===== 8. ALERTAS E NOTIFICAÇÕES ===== */
+.alert-rh-info {
+    background-color: #f3f4ff;
+    border-color: #d4d9f7;
+    color: #667eea;
+}
+
+.alert-rh-info .alert-icon {
+    color: #667eea;
+}
+
+/* ===== 9. FORMS E INPUTS COM DESTAQUE ROXO ===== */
+.form-control:focus,
+.form-select:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15) !important;
+}
+
+.input-group-text.rh-input {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-color: #667eea;
+}
+
+/* ===== 10. TABS ROXOS ===== */
+.nav-tabs.rh-tabs .nav-link {
+    color: #667eea;
+    border-color: transparent;
+}
+
+.nav-tabs.rh-tabs .nav-link:hover {
+    color: #764ba2;
+    border-color: #e2e8f0;
+}
+
+.nav-tabs.rh-tabs .nav-link.active {
+    color: #ffffff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+}
+
+/* ===== 11. PROGRESS BARS ROXOS ===== */
+.progress-bar.progress-rh {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* ===== 12. SPINNERS E LOADING ===== */
+.spinner-border.spinner-rh {
+    color: #667eea;
+}
+
+/* ===== 13. TOOLTIPS ROXOS ===== */
+.tooltip.rh-tooltip .tooltip-inner {
+    background-color: #667eea;
+}
+
+.tooltip.rh-tooltip .tooltip-arrow::before {
+    border-top-color: #667eea;
+}
+
+/* ===== 14. MODAIS COM HEADER ROXO ===== */
+.modal-header.modal-rh-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    border-bottom: none;
+}
+
+.modal-header.modal-rh-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-header.modal-rh-header h5,
+.modal-header.modal-rh-header .modal-title {
+    color: #ffffff !important;
+}
+
+/* ===== 15. BOTÕES OUTLINE ROXOS ===== */
+.btn-outline-rh {
+    color: #667eea;
+    border-color: #667eea;
+    background-color: transparent;
+}
+
+.btn-outline-rh:hover {
+    background-color: #667eea;
+    border-color: #667eea;
+    color: #ffffff;
+}
+
+/* ===== 16. ÍCONES COM COR ROXA ===== */
+.icon-rh-primary {
+    color: #667eea !important;
+}
+
+.icon-rh-secondary {
+    color: #764ba2 !important;
+}
+
+/* ===== 17. BORDAS ROXAS ===== */
+.border-rh {
+    border-color: #667eea !important;
+}
+
+.border-rh-light {
+    border-color: #d4d9f7 !important;
+}
+
+/* ===== 18. BACKGROUNDS ROXOS ===== */
+.bg-rh-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: #ffffff !important;
+}
+
+.bg-rh-light {
+    background-color: #f3f4ff !important;
+}
+
+.bg-rh-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+/* ===== 19. HOVER EFFECTS ROXOS ===== */
+.hover-rh:hover {
+    background-color: #f3f4ff;
+    border-color: #667eea;
+    transition: all 0.3s ease;
+}
+
+/* ===== 20. DIVISORES E SEPARADORES ===== */
+.divider-rh {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #667eea, transparent);
+    border: none;
+    margin: 24px 0;
+}
+
+/* ===== 21. CHECKBOXES E RADIOS ROXOS ===== */
+.form-check-input:checked {
+    background-color: #667eea !important;
+    border-color: #667eea !important;
+}
+
+.form-check-input:focus {
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15) !important;
+}
+
+/* ===== 22. DROPDOWN MENU COM DESTAQUE ROXO ===== */
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #667eea !important;
+    color: #ffffff !important;
+}
+
+/* ===== 23. PAGINATION ROXA ===== */
+.pagination .page-link {
+    color: #667eea;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.pagination .page-link:hover {
+    color: #764ba2;
+    background-color: #f3f4ff;
+}
+
+/* ===== 24. BREADCRUMB ROXO ===== */
+.breadcrumb .breadcrumb-item a {
+    color: #667eea;
+}
+
+.breadcrumb .breadcrumb-item.active {
+    color: #764ba2;
+}
+
+/* ===== 25. LIST GROUP COM DESTAQUE ROXO ===== */
+.list-group-item.active {
+    background-color: #667eea !important;
+    border-color: #667eea !important;
+}
+
+.list-group-item:hover {
+    background-color: #f3f4ff;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 768px) {
+    .page-header-rh {
+        padding: 16px 20px;
+        border-radius: 8px;
+    }
+    
+    .btn-primary {
+        padding: 8px 16px;
+        font-size: 0.875rem;
+    }
+}

@@ -3,8 +3,10 @@
 {% block title %}Dashboard Executivo RH - Portal UniSystem{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-theme.css') }}?v=1.0">
 <link rel="stylesheet" href="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.css') }}?v=2.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 <link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
 {% endblock %}
 
