@@ -165,10 +165,15 @@ def gestao_departamentos():
 def api_list_cargos():
     """API: Listar todos os cargos"""
     try:
-        response = supabase_admin.table('rh_cargos')\
-            .select('*')\
-            .order('nome_cargo')\
-            .execute()
+        empresa_id = request.args.get('empresa_id')  # NOVO: Filtro por empresa
+        
+        query = supabase_admin.table('rh_cargos').select('*')
+        
+        # NOVO: Filtrar por empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.order('nome_cargo').execute()
         
         cargos = response.data if response.data else []
         
@@ -360,10 +365,15 @@ def api_delete_cargo(cargo_id):
 def api_list_departamentos():
     """API: Listar todos os departamentos"""
     try:
-        response = supabase_admin.table('rh_departamentos')\
-            .select('*')\
-            .order('nome_departamento')\
-            .execute()
+        empresa_id = request.args.get('empresa_id')  # NOVO: Filtro por empresa
+        
+        query = supabase_admin.table('rh_departamentos').select('*')
+        
+        # NOVO: Filtrar por empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.order('nome_departamento').execute()
         
         departamentos = response.data if response.data else []
         

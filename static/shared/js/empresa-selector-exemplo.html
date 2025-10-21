@@ -1,0 +1,201 @@
+<!-- 
+    EXEMPLO DE USO: Seletor de Empresa no Módulo RH
+    
+    Este arquivo mostra como integrar o componente EmpresaSelector
+    em qualquer página do módulo RH (colaboradores, cargos, departamentos, vagas)
+-->
+
+<!-- 1. ADICIONAR CSS no <head> -->
+<link rel="stylesheet" href="{{ url_for('static', filename='shared/css/empresa-selector.css') }}">
+
+<!-- 2. ADICIONAR JS antes do </body> -->
+<script src="{{ url_for('static', filename='shared/js/empresa-selector.js') }}"></script>
+
+<!-- 3. ADICIONAR CONTAINER no HTML (acima da tabela) -->
+<div class="card-body">
+    <!-- Seletor de Empresa -->
+    <div id="empresa-selector-container"></div>
+    
+    <!-- Tabela de dados -->
+    <table id="tabelaColaboradores" class="table table-striped">
+        <!-- ... -->
+    </table>
+</div>
+
+<!-- 4. INICIALIZAR no JavaScript da página -->
+<script>
+$(document).ready(function() {
+    let dataTable = null;
+    let empresaSelecionada = null;
+    
+    // Inicializar seletor de empresa
+    const seletor = new EmpresaSelector('empresa-selector-container', function(empresaId, empresaNome) {
+        console.log('Empresa selecionada:', empresaNome, empresaId);
+        empresaSelecionada = empresaId;
+        recarregarDados();
+    });
+    
+    // Função para recarregar dados
+    function recarregarDados() {
+        if (dataTable) {
+            dataTable.destroy();
+        }
+        
+        // Inicializar DataTable com filtro de empresa
+        dataTable = $('#tabelaColaboradores').DataTable({
+            ajax: {
+                url: '/rh/colaboradores/api/colaboradores',
+                data: function(d) {
+                    // Adicionar filtro de empresa
+                    if (empresaSelecionada) {
+                        d.empresa_id = empresaSelecionada;
+                    }
+                },
+                dataSrc: 'data'
+            },
+            columns: [
+                { data: 'matricula' },
+                { data: 'nome_completo' },
+                { data: 'nome_cargo' },
+                { data: 'nome_departamento' },
+                { data: 'status' }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            }
+        });
+    }
+    
+    // Carregar dados da empresa padrão
+    empresaSelecionada = seletor.getSelectedEmpresa();
+    recarregarDados();
+});
+</script>
+
+<!-- ========================================================================
+     EXEMPLO ALTERNATIVO: Sem DataTables (fetch manual)
+     ======================================================================== -->
+
+<script>
+$(document).ready(function() {
+    let empresaSelecionada = null;
+    
+    // Inicializar seletor
+    const seletor = new EmpresaSelector('empresa-selector-container', function(empresaId, empresaNome) {
+        empresaSelecionada = empresaId;
+        carregarColaboradores();
+    });
+    
+    // Função para carregar colaboradores
+    async function carregarColaboradores() {
+        try {
+            const url = `/rh/colaboradores/api/colaboradores${empresaSelecionada ? '?empresa_id=' + empresaSelecionada : ''}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderizarColaboradores(data.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+        }
+    }
+    
+    // Função para renderizar na tabela
+    function renderizarColaboradores(colaboradores) {
+        const tbody = $('#tabelaColaboradores tbody');
+        tbody.empty();
+        
+        colaboradores.forEach(col => {
+            tbody.append(`
+                <tr>
+                    <td>${col.matricula}</td>
+                    <td>${col.nome_completo}</td>
+                    <td>${col.nome_cargo || '-'}</td>
+                    <td>${col.nome_departamento || '-'}</td>
+                    <td>
+                        <span class="badge badge-${col.status === 'Ativo' ? 'success' : 'secondary'}">
+                            ${col.status}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editarColaborador('${col.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+    
+    // Carregar dados iniciais
+    empresaSelecionada = seletor.getSelectedEmpresa();
+    carregarColaboradores();
+});
+</script>
+
+<!-- ========================================================================
+     EXEMPLO 3: Filtros adicionais (empresa + status)
+     ======================================================================== -->
+
+<script>
+$(document).ready(function() {
+    let empresaSelecionada = null;
+    let statusSelecionado = 'Ativo';
+    
+    // Seletor de empresa
+    const seletor = new EmpresaSelector('empresa-selector-container', function(empresaId) {
+        empresaSelecionada = empresaId;
+        recarregar();
+    });
+    
+    // Seletor de status
+    $('#statusSelect').on('change', function() {
+        statusSelecionado = $(this).val();
+        recarregar();
+    });
+    
+    function recarregar() {
+        const params = new URLSearchParams();
+        if (empresaSelecionada) params.append('empresa_id', empresaSelecionada);
+        if (statusSelecionado && statusSelecionado !== 'todos') {
+            params.append('status', statusSelecionado);
+        }
+        
+        const url = `/rh/colaboradores/api/colaboradores?${params.toString()}`;
+        
+        // Recarregar DataTable ou fetch
+        // ...
+    }
+    
+    // Inicializar
+    empresaSelecionada = seletor.getSelectedEmpresa();
+    recarregar();
+});
+</script>
+
+<!-- ========================================================================
+     DICAS DE INTEGRAÇÃO
+     ======================================================================== -->
+
+<!-- 
+    DICA 1: Posicionamento
+    - Adicione o container ANTES da tabela/listagem
+    - Use flexbox para alinhar com outros filtros
+    
+    DICA 2: Persistência
+    - O componente já salva em localStorage automaticamente
+    - O filtro persiste entre páginas do módulo RH
+    
+    DICA 3: Loading States
+    - Adicione classe "loading" ao botão durante fetch
+    - Desabilite interações até carregar dados
+    
+    DICA 4: Integração com Formulários
+    - Ao criar novo registro, pegar empresa do seletor:
+      const empresaId = seletor.getSelectedEmpresa();
+    
+    DICA 5: Múltiplos Filtros
+    - Combine empresa_id com outros filtros (status, departamento, etc)
+    - Use URLSearchParams para construir query string limpa
+-->

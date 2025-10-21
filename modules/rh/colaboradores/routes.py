@@ -321,7 +321,7 @@ def novo_colaborador():
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
         departamentos = supabase_admin.table('rh_departamentos').select('*').order('nome_departamento').execute()
-        empresas = supabase_admin.table('rh_empresas').select('*').order('razao_social').execute()
+        empresas = supabase_admin.table('estrutura_empresa_controladora').select('*').order('nome').execute()
         
         # Buscar colaboradores para select de gestor
         colaboradores = supabase_admin.table('rh_colaboradores')\
@@ -382,7 +382,7 @@ def editar_colaborador(colaborador_id):
         # Buscar dados para os selects
         cargos = supabase_admin.table('rh_cargos').select('*').order('nome_cargo').execute()
         departamentos = supabase_admin.table('rh_departamentos').select('*').order('nome_departamento').execute()
-        empresas = supabase_admin.table('rh_empresas').select('*').order('razao_social').execute()
+        empresas = supabase_admin.table('estrutura_empresa_controladora').select('*').order('nome').execute()
         
         # Buscar colaboradores para select de gestor (excluindo o próprio)
         colaboradores = supabase_admin.table('rh_colaboradores')\
@@ -512,7 +512,7 @@ def visualizar_colaborador(colaborador_id):
 
         # Buscar histórico completo de RH
         historico = supabase_admin.table('rh_historico_colaborador')\
-            .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:rh_empresas(razao_social)')\
+            .select('*, cargo:rh_cargos(nome_cargo), departamento:rh_departamentos(nome_departamento), empresa:estrutura_empresa_controladora(nome)')\
             .eq('colaborador_id', colaborador_id)\
             .order('data_evento', desc=True)\
             .order('created_at', desc=True)\
@@ -638,17 +638,41 @@ def visualizar_colaborador(colaborador_id):
 # ROTAS DE API (JSON)
 # =====================================================================
 
+@colaboradores_bp.route('/api/empresas-controladoras', methods=['GET'])
+@perfil_or_bypass_required('rh', 'colaboradores')
+def api_get_empresas_controladoras():
+    """API: Lista todas as empresas controladoras disponíveis"""
+    try:
+        response = supabase_admin.table('estrutura_empresa_controladora')\
+            .select('id, nome')\
+            .order('nome')\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'data': response.data,
+            'count': len(response.data) if response.data else 0
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @colaboradores_bp.route('/api/colaboradores', methods=['GET'])
 @perfil_or_bypass_required('rh', 'colaboradores')
 def api_get_colaboradores():
     """API: Lista todos os colaboradores"""
     try:
         status = request.args.get('status')
+        empresa_id = request.args.get('empresa_id')  # NOVO: Filtro por empresa
         
         query = supabase_admin.table('vw_colaboradores_atual').select('*')
         
         if status:
             query = query.eq('status', status)
+        
+        # NOVO: Filtrar por empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
         
         response = query.order('nome_completo').execute()
         
@@ -713,7 +737,7 @@ def api_create_colaborador():
         data = request.get_json()
         
         # Validar campos obrigatórios
-        required_fields = ['nome_completo', 'cpf', 'data_nascimento', 'data_admissao']
+        required_fields = ['nome_completo', 'cpf', 'data_nascimento', 'data_admissao', 'empresa_controladora_id']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Campo obrigatório: {field}'}), 400
@@ -733,6 +757,7 @@ def api_create_colaborador():
             'cpf': data['cpf'],
             'data_nascimento': data['data_nascimento'],
             'data_admissao': data['data_admissao'],
+            'empresa_controladora_id': data['empresa_controladora_id'],  # NOVO: Campo obrigatório
             'status': 'Ativo'
         }
         
