@@ -1359,31 +1359,3 @@ def calcular_tabela_vagas_abertas_mais_tempo():
         return []
 
 
-
-
-# ========================================
-# IMPORTAR FUNÇÕES DO DASHBOARD ANALÍTICO V2.0
-# ========================================
-from .routes_v2_functions import (
-    calcular_secao_recrutamento,
-    calcular_secao_turnover,
-    calcular_tempo_medio_contratacao_v2,
-    calcular_vagas_abertas_v2,
-    calcular_vagas_fechadas_v2,
-    calcular_vagas_canceladas_v2,
-    calcular_tempo_contratacao_por_cargo_v2,
-    calcular_tempo_contratacao_por_departamento_v2,
-    calcular_evolucao_vagas_v2,
-    calcular_tabela_vagas_abertas_v2,
-    calcular_turnover_geral_v2,
-    calcular_total_desligamentos_v2,
-    calcular_total_admissoes_v2,
-    calcular_tempo_medio_permanencia_v2,
-    calcular_headcount_atual_v2,
-    calcular_turnover_por_departamento_v2,
-    calcular_turnover_por_cargo_v2,
-    calcular_desligamentos_por_tempo_casa_v2,
-    calcular_turnover_por_faixa_etaria_v2,
-    calcular_evolucao_turnover_v2,
-    calcular_tabela_desligamentos_recentes_v2
-)
