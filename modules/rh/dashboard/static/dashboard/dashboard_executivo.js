@@ -390,17 +390,37 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-headcount-variacao', dados.headcount.variacao);
     }
     
-    // KPI 2: Massa Salarial
-    if (dados.massa_salarial) {
-        const elemento = document.getElementById('kpi-massa-salarial-valor');
-        console.log('KPI Massa Salarial - Elemento:', elemento, 'Valor:', dados.massa_salarial.valor);
+    // KPI 2: Custo Salários (Folha)
+    if (dados.custo_salarios) {
+        const elemento = document.getElementById('kpi-custo-salarios-valor');
+        console.log('KPI Custo Salários - Elemento:', elemento, 'Valor:', dados.custo_salarios.valor);
         if (elemento) {
-            elemento.textContent = formatarMoeda(dados.massa_salarial.valor);
+            elemento.textContent = formatarMoeda(dados.custo_salarios.valor);
         }
-        atualizarVariacaoKPI('kpi-massa-salarial-variacao', dados.massa_salarial.variacao);
+        atualizarVariacaoKPI('kpi-custo-salarios-variacao', dados.custo_salarios.variacao);
     }
     
-    // KPI 3: Turnover
+    // KPI 3: Custo Benefícios
+    if (dados.custo_beneficios) {
+        const elemento = document.getElementById('kpi-custo-beneficios-valor');
+        console.log('KPI Custo Benefícios - Elemento:', elemento, 'Valor:', dados.custo_beneficios.valor);
+        if (elemento) {
+            elemento.textContent = formatarMoeda(dados.custo_beneficios.valor);
+        }
+        atualizarVariacaoKPI('kpi-custo-beneficios-variacao', dados.custo_beneficios.variacao);
+    }
+    
+    // KPI 4: Custo Total (Pessoal)
+    if (dados.custo_total) {
+        const elemento = document.getElementById('kpi-custo-total-valor');
+        console.log('KPI Custo Total - Elemento:', elemento, 'Valor:', dados.custo_total.valor);
+        if (elemento) {
+            elemento.textContent = formatarMoeda(dados.custo_total.valor);
+        }
+        atualizarVariacaoKPI('kpi-custo-total-variacao', dados.custo_total.variacao);
+    }
+    
+    // KPI 5: Turnover
     if (dados.turnover) {
         const elemento = document.getElementById('kpi-turnover-valor');
         console.log('KPI Turnover - Elemento:', elemento, 'Valor:', dados.turnover.valor);
@@ -410,7 +430,7 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-turnover-variacao', dados.turnover.variacao);
     }
     
-    // KPI 4: Tempo de Contratação
+    // KPI 6: Tempo de Contratação
     if (dados.tempo_contratacao) {
         const valor = dados.tempo_contratacao.valor;
         const elemento = document.getElementById('kpi-tempo-contratacao-valor');
@@ -421,7 +441,7 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-tempo-contratacao-variacao', dados.tempo_contratacao.variacao);
     }
     
-    // KPI 5: Vagas em Aberto
+    // KPI 7: Vagas em Aberto
     if (dados.vagas_abertas) {
         const elemento = document.getElementById('kpi-vagas-abertas-valor');
         if (elemento) {
@@ -430,7 +450,7 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-vagas-abertas-variacao', dados.vagas_abertas.variacao);
     }
     
-    // KPI 6: Média Candidatos/Vaga
+    // KPI 8: Média Candidatos/Vaga
     if (dados.media_candidatos_vaga) {
         const elemento = document.getElementById('kpi-media-candidatos-valor');
         if (elemento) {
@@ -439,7 +459,7 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-media-candidatos-variacao', dados.media_candidatos_vaga.variacao);
     }
     
-    // KPI 7: Tempo Médio de Casa
+    // KPI 9: Tempo Médio de Casa
     if (dados.tempo_medio_casa) {
         const elemento = document.getElementById('kpi-tempo-casa-valor');
         if (elemento) {
@@ -448,7 +468,7 @@ function renderizarKPIs(dados) {
         atualizarVariacaoKPI('kpi-tempo-casa-variacao', dados.tempo_medio_casa.variacao);
     }
     
-    // KPI 8: Idade Média
+    // KPI 10: Idade Média
     if (dados.idade_media) {
         const elemento = document.getElementById('kpi-idade-media-valor');
         if (elemento) {
@@ -530,28 +550,16 @@ function renderizarGraficoEvolucao(dados) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Headcount',
-                    data: dados.datasets.headcount,
-                    type: 'line',
-                    borderColor: '#6f42c1',
-                    backgroundColor: 'rgba(111, 66, 193, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.4,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#6f42c1'
-                },
-                {
                     label: 'Admissões',
                     data: dados.datasets.admissoes,
                     backgroundColor: '#28a745',
-                    yAxisID: 'y1'
+                    yAxisID: 'y'
                 },
                 {
                     label: 'Demissões',
-                    data: dados.datasets.demissoes,
+                    data: dados.datasets.desligamentos,  // ✅ CORRIGIDO: desligamentos, não demissoes
                     backgroundColor: '#dc3545',
-                    yAxisID: 'y1'
+                    yAxisID: 'y'
                 }
             ]
         },
@@ -569,7 +577,7 @@ function renderizarGraficoEvolucao(dados) {
                 },
                 title: {
                     display: true,
-                    text: 'Evolução de Headcount e Movimentações',
+                    text: 'Admissões e Demissões Mensais',
                     font: { size: 16, weight: 'bold' }
                 },
                 tooltip: {
@@ -580,11 +588,7 @@ function renderizarGraficoEvolucao(dados) {
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                if (context.dataset.type === 'line') {
-                                    label += context.parsed.y + ' colaboradores';
-                                } else {
-                                    label += context.parsed.y + ' pessoas';
-                                }
+                                label += context.parsed.y + ' pessoas';
                             }
                             return label;
                         }
@@ -598,20 +602,9 @@ function renderizarGraficoEvolucao(dados) {
                     position: 'left',
                     title: {
                         display: true,
-                        text: 'Headcount'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Movimentações'
+                        text: 'Quantidade de Pessoas'
                     },
-                    grid: {
-                        drawOnChartArea: false
-                    }
+                    beginAtZero: true
                 }
             }
         }
@@ -739,8 +732,8 @@ function renderizarTabelas(dados) {
     console.log('📋 Renderizando tabelas...', dados);
     
     // Tabela 1: Vagas Abertas
-    if (dados.vagas_abertas) {
-        renderizarTabelaVagasAbertas(dados.vagas_abertas);
+    if (dados.vagas_abertas_mais_tempo) {
+        renderizarTabelaVagasAbertas(dados.vagas_abertas_mais_tempo);
     }
     
     // Tabela 2: Funil de Recrutamento

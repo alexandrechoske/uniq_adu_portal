@@ -124,21 +124,49 @@
                 </div>
             </div>
             
-            <!-- KPI 2: Massa Salarial -->
+            <!-- KPI 2: Custo Salários (Folha) -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
-                    <i class="mdi mdi-cash-multiple" style="color: #28a745; font-size: 24px;"></i>
+                    <i class="mdi mdi-currency-usd" style="color: #28a745; font-size: 24px;"></i>
                 </div>
                 <div class="kpi-metrics-container">
-                    <div class="kpi-title">Custo Mensal (Folha)</div>
-                    <div class="kpi-value" id="kpi-massa-salarial-valor">-</div>
-                    <div class="kpi-comparison neutral" id="kpi-massa-salarial-variacao" style="display: none;">
+                    <div class="kpi-title">Custo Salários (Folha)</div>
+                    <div class="kpi-value" id="kpi-custo-salarios-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-custo-salarios-variacao" style="display: none;">
                         → 0%
                     </div>
                 </div>
             </div>
             
-            <!-- KPI 3: Turnover -->
+            <!-- KPI 3: Custo Benefícios -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(23, 162, 184, 0.15);">
+                    <i class="mdi mdi-gift" style="color: #17a2b8; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Custo Benefícios</div>
+                    <div class="kpi-value" id="kpi-custo-beneficios-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-custo-beneficios-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 4: Custo Total (Pessoal) -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(253, 126, 20, 0.15);">
+                    <i class="mdi mdi-cash-multiple" style="color: #fd7e14; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Custo Total (Pessoal)</div>
+                    <div class="kpi-value" id="kpi-custo-total-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-custo-total-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- KPI 5: Turnover -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
                     <i class="mdi mdi-account-switch" style="color: #dc3545; font-size: 24px;"></i>
@@ -152,7 +180,7 @@
                 </div>
             </div>
             
-            <!-- KPI 4: Tempo Médio de Contratação -->
+            <!-- KPI 6: Tempo Médio de Contratação -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(23, 162, 184, 0.15);">
                     <i class="mdi mdi-clock-outline" style="color: #17a2b8; font-size: 24px;"></i>
@@ -166,7 +194,7 @@
                 </div>
             </div>
             
-            <!-- KPI 5: Total de Vagas em Aberto -->
+            <!-- KPI 7: Total de Vagas em Aberto -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
                     <i class="mdi mdi-briefcase-search" style="color: #ffc107; font-size: 24px;"></i>
@@ -180,7 +208,7 @@
                 </div>
             </div>
             
-            <!-- KPI 6: Média Candidatos por Vaga -->
+            <!-- KPI 8: Média Candidatos por Vaga -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
                     <i class="mdi mdi-account-multiple-outline" style="color: #0d6efd; font-size: 24px;"></i>
@@ -194,7 +222,7 @@
                 </div>
             </div>
             
-            <!-- KPI 7: Tempo Médio de Casa -->
+            <!-- KPI 9: Tempo Médio de Casa -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
                     <i class="mdi mdi-history" style="color: #6f42c1; font-size: 24px;"></i>
@@ -208,7 +236,7 @@
                 </div>
             </div>
             
-            <!-- KPI 8: Idade Média dos Colaboradores -->
+            <!-- KPI 10: Idade Média dos Colaboradores -->
             <div class="kpi-card-compact">
                 <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
                     <i class="mdi mdi-cake-variant" style="color: #6f42c1; font-size: 24px;"></i>
@@ -261,17 +289,6 @@
                 </div>
             </div>
         </div>
-        
-        <div class="row">
-            <!-- Gráfico 4: Dispersão - Tempo de Casa vs Salário -->
-            <div class="col-12 mb-4">
-                <div class="chart-card">
-                    <div class="chart-container" style="height: 400px;">
-                        <canvas id="chart-dispersao-tempo-salario"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
     
     <!-- Tabelas Detalhadas - Seção 3 -->
@@ -288,7 +305,7 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="mdi mdi-briefcase-search"></i>
-                            Acompanhamento de Vagas em Aberto
+                            Vagas Abertas Há Mais de 15 Dias
                         </h5>
                     </div>
                     <div class="card-body p-0">
@@ -308,38 +325,6 @@
                                     <tr>
                                         <td colspan="6" class="text-center text-muted">
                                             Carregando vagas...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Tabela 2: Análise do Funil de Recrutamento -->
-            <div class="col-12 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="mdi mdi-filter-variant"></i>
-                            Eficiência do Funil de Recrutamento (Período)
-                        </h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Etapa do Funil</th>
-                                        <th class="text-center">Nº de Candidatos</th>
-                                        <th class="text-center">Taxa de Conversão (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabela-funil-tbody">
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">
-                                            Carregando dados do funil...
                                         </td>
                                     </tr>
                                 </tbody>
