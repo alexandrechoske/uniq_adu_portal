@@ -624,60 +624,32 @@ def calcular_kpi_custo_total():
     
     Retorna 3 valores separados:
     - custo_salarios: Soma dos salários mensais
-    - custo_beneficios: Soma de todos os benefícios (ajuda_de_custo, vale_alimentacao, etc)
+    - custo_beneficios: Soma de todos os benefícios (calculados pela view)
     - custo_total: Salários + Benefícios
     
     Lógica:
-    - Para cada colaborador ativo, buscar último salário e benefícios no histórico
-    - Otimização: Buscar todos os registros de uma vez usando IN
+    - Usa a view vw_colaboradores_atual que já tem total_beneficios calculado
+    - View já traz último salário e benefícios de cada colaborador ativo
     """
     try:
-        print(f"   🔍 Buscando colaboradores ativos para cálculo de custos...")
+        print(f"   🔍 Buscando custos da view vw_colaboradores_atual...")
         
-        # Buscar colaboradores ativos
-        response_colabs = supabase.table('rh_colaboradores')\
-            .select('id')\
-            .eq('status', 'Ativo')\
-            .is_('data_desligamento', 'null')\
+        # 🔥 OTIMIZAÇÃO: Usar view que já calcula tudo
+        response = supabase.table('vw_colaboradores_atual')\
+            .select('salario_mensal, total_beneficios')\
             .execute()
         
-        colaboradores_ativos = response_colabs.data if response_colabs.data else []
-        colaboradores_ids = [c['id'] for c in colaboradores_ativos]
+        colaboradores = response.data if response.data else []
         
-        print(f"   📊 Total de colaboradores ativos: {len(colaboradores_ids)}")
+        print(f"   📊 Total de colaboradores ativos: {len(colaboradores)}")
         
-        if not colaboradores_ids:
+        if not colaboradores:
             print(f"   ⚠️  Custos: Nenhum colaborador ativo encontrado")
             return {
                 'custo_salarios': 0,
                 'custo_beneficios': 0,
                 'custo_total': 0
             }
-        
-        # 🔥 OTIMIZAÇÃO: Buscar todos os dados de uma vez
-        print(f"   🔍 Buscando salários e benefícios no histórico...")
-        response_historico = supabase.table('rh_historico_colaborador')\
-            .select('colaborador_id, salario_mensal, beneficios_jsonb, data_evento')\
-            .in_('colaborador_id', colaboradores_ids)\
-            .order('data_evento', desc=True)\
-            .execute()
-        
-        registros_encontrados = response_historico.data if response_historico.data else []
-        print(f"   📊 Total de registros no histórico: {len(registros_encontrados)}")
-        
-        # Mapear último registro de cada colaborador (mais recente)
-        ultimo_registro_por_colaborador = {}
-        for registro in registros_encontrados:
-            colab_id = registro.get('colaborador_id')
-            if colab_id and colab_id not in ultimo_registro_por_colaborador:
-                ultimo_registro_por_colaborador[colab_id] = registro
-        
-        print(f"   📊 Colaboradores com histórico: {len(ultimo_registro_por_colaborador)}")
-        
-        # DEBUG: Mostrar amostra dos primeiros 3 registros
-        for idx, (colab_id, registro) in enumerate(list(ultimo_registro_por_colaborador.items())[:3]):
-            beneficios = registro.get('beneficios_jsonb')
-            print(f"      Colaborador {colab_id}: salario={registro.get('salario_mensal')}, beneficios_json={beneficios}")
         
         # Calcular custos separados
         custo_salarios = 0.0
@@ -686,54 +658,40 @@ def calcular_kpi_custo_total():
         colaboradores_com_salario = 0
         colaboradores_com_beneficios = 0
         
-        for colab_id, registro in ultimo_registro_por_colaborador.items():
+        # DEBUG: Mostrar amostra dos primeiros 3 registros
+        for idx, colab in enumerate(colaboradores[:3]):
+            print(f"      Colaborador {idx+1}: salario={colab.get('salario_mensal')}, beneficios={colab.get('total_beneficios')}")
+        
+        for colab in colaboradores:
             # Processar salário
-            salario_mensal = registro.get('salario_mensal')
+            salario_mensal = colab.get('salario_mensal')
             if salario_mensal:
                 try:
                     valor_salario = float(salario_mensal)
                     custo_salarios += valor_salario
                     colaboradores_com_salario += 1
                 except (ValueError, TypeError) as e:
-                    print(f"      ⚠️ Erro ao converter salário do colaborador {colab_id}: {salario_mensal}")
+                    print(f"      ⚠️ Erro ao converter salário: {salario_mensal}")
             
-            # Processar benefícios do JSONB
-            beneficios_jsonb = registro.get('beneficios_jsonb')
-            if beneficios_jsonb and isinstance(beneficios_jsonb, dict):
-                tem_beneficio = False
-                
-                # Percorrer todos os benefícios no JSON
-                for slug, valor in beneficios_jsonb.items():
-                    if valor:
-                        try:
-                            # Vale transporte pode ser boolean
-                            if slug == 'vale_transporte':
-                                if valor in [True, 1, '1', 'true', 'True', 'yes']:
-                                    custo_beneficios += 200.0  # Valor padrão
-                                    tem_beneficio = True
-                            elif isinstance(valor, (int, float)):
-                                custo_beneficios += float(valor)
-                                tem_beneficio = True
-                            elif isinstance(valor, str) and valor.replace('.', '', 1).replace(',', '').isdigit():
-                                # Converter string numérica
-                                valor_num = float(valor.replace(',', '.'))
-                                custo_beneficios += valor_num
-                                tem_beneficio = True
-                        except (ValueError, TypeError) as e:
-                            print(f"      ⚠️ Erro ao processar benefício {slug} do colaborador {colab_id}: {valor}")
-                
-                if tem_beneficio:
-                    colaboradores_com_beneficios += 1
+            # Processar benefícios (já calculados pela view)
+            total_beneficios = colab.get('total_beneficios')
+            if total_beneficios:
+                try:
+                    valor_beneficios = float(total_beneficios)
+                    if valor_beneficios > 0:
+                        custo_beneficios += valor_beneficios
+                        colaboradores_com_beneficios += 1
+                except (ValueError, TypeError) as e:
+                    print(f"      ⚠️ Erro ao converter benefícios: {total_beneficios}")
         
         custo_total = custo_salarios + custo_beneficios
         
         print(f"   ✅ Custo Salários: R$ {custo_salarios:,.2f} ({colaboradores_com_salario} colaboradores)")
         print(f"   ✅ Custo Benefícios: R$ {custo_beneficios:,.2f} ({colaboradores_com_beneficios} colaboradores)")
         print(f"   ✅ Custo Total: R$ {custo_total:,.2f}")
-        print(f"   📊 Total colaboradores processados: {len(ultimo_registro_por_colaborador)}")
         
-        if custo_salarios == 0 and len(ultimo_registro_por_colaborador) > 0:
-            print(f"   ⚠️  ATENÇÃO: Nenhum salário encontrado no histórico! Verifique se os dados estão sendo salvos corretamente.")
+        if custo_salarios == 0 and len(colaboradores) > 0:
+            print(f"   ⚠️  ATENÇÃO: Nenhum salário encontrado! Verifique se os dados estão corretos.")
         
         return {
             'custo_salarios': custo_salarios,
