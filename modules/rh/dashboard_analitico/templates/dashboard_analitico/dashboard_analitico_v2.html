@@ -158,15 +158,13 @@
             <i class="mdi mdi-sync"></i>
             Turnover & Retenção
         </button>
-        <button class="tab-btn" data-section="pessoal" disabled>
+        <button class="tab-btn" data-section="pessoal">
             <i class="mdi mdi-account-group"></i>
-            Administração
-            <span class="badge">Em breve</span>
+            Administração de Pessoal
         </button>
-        <button class="tab-btn" data-section="compliance" disabled>
+        <button class="tab-btn" data-section="compliance">
             <i class="mdi mdi-clipboard-check"></i>
             Compliance
-            <span class="badge">Em breve</span>
         </button>
     </div>
     
@@ -489,6 +487,321 @@
         </div>
     </div>
     
+    <!-- SEÇÃO 3: ADMINISTRAÇÃO DE PESSOAL -->
+    <div id="section-pessoal" class="dashboard-section">
+        <h2 class="section-title">
+            <i class="mdi mdi-account-group"></i>
+            Administração de Pessoal
+        </h2>
+
+        <!-- KPIs Administração de Pessoal -->
+        <div class="kpi-grid-analytic">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-account-group" style="color: #6f42c1;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Headcount Total</p>
+                    <p class="kpi-value" id="kpi-headcount-total">--</p>
+                    <p class="kpi-trend">colaboradores ativos</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-gender-male" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Colaboradores Masculinos</p>
+                    <p class="kpi-value" id="kpi-colaboradores-masculinos">--</p>
+                    <p class="kpi-trend">quantidade e percentual</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-gender-female" style="color: #ffc107;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Colaboradoras Femininas</p>
+                    <p class="kpi-value" id="kpi-colaboradores-femininos">--</p>
+                    <p class="kpi-trend">quantidade e percentual</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-cash-multiple" style="color: #28a745;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Salário Médio Geral</p>
+                    <p class="kpi-value" id="kpi-salario-medio">--</p>
+                    <p class="kpi-trend">remuneração mensal</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-icon-container" style="background: rgba(108, 117, 125, 0.15);">
+                    <i class="mdi mdi-school" style="color: #6c757d;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Superior Completo</p>
+                    <p class="kpi-value" id="kpi-superior-completo">--</p>
+                    <p class="kpi-trend">colaboradores com formação</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Administração -->
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Headcount por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Distribuição atual por área</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-headcount-departamento"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-cash-multiple"></i>
+                        Salário Médio por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Remuneração média mensal</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-salario-departamento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-donut"></i>
+                        Distribuição por Gênero
+                    </h3>
+                    <p class="chart-subtitle">Representatividade atual</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-genero"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-palette"></i>
+                        Distribuição por Raça/Cor
+                    </h3>
+                    <p class="chart-subtitle">Indicador de diversidade</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-raca"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Distribuição por Escolaridade
+                    </h3>
+                    <p class="chart-subtitle">Fundamental | Médio | Superior | Pós</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-escolaridade"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-timer-sand"></i>
+                        Tempo Médio de Empresa por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Médias em anos</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-tempo-medio-departamento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-areaspline"></i>
+                        Pirâmide Etária por Gênero
+                    </h3>
+                    <p class="chart-subtitle">Homens à esquerda, mulheres à direita</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-piramide-etaria"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 4: COMPLIANCE & EVENTOS OPERACIONAIS -->
+    <div id="section-compliance" class="dashboard-section">
+        <h2 class="section-title">
+            <i class="mdi mdi-clipboard-check"></i>
+            Compliance & Eventos Operacionais
+        </h2>
+
+        <!-- KPIs Compliance -->
+        <div class="kpi-grid-analytic">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-alert-circle" style="color: #ffc107;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Exames Pendentes</p>
+                    <p class="kpi-value" id="kpi-exames-pendentes">--</p>
+                    <p class="kpi-trend">colaboradores aguardando</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
+                    <i class="mdi mdi-close-octagon" style="color: #dc3545;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Exames Vencidos</p>
+                    <p class="kpi-value" id="kpi-exames-vencidos">--</p>
+                    <p class="kpi-trend">colaboradores em atraso</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-calendar-clock" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Eventos Pendentes</p>
+                    <p class="kpi-value" id="kpi-eventos-pendentes">--</p>
+                    <p class="kpi-trend">pendentes ou em andamento</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-icon-container" style="background: rgba(108, 117, 125, 0.15);">
+                    <i class="mdi mdi-briefcase-alert" style="color: #6c757d;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Pendências Contabilidade</p>
+                    <p class="kpi-value" id="kpi-pendencias-contabilidade">--</p>
+                    <p class="kpi-trend">eventos aguardando baixa</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Compliance -->
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Eventos por Status
+                    </h3>
+                    <p class="chart-subtitle">Barras empilhadas por tipo</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-eventos-status"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-calendar-multiselect"></i>
+                        Próximos Eventos (30 dias)
+                    </h3>
+                    <p class="chart-subtitle">Timeline de atividades</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-proximos-eventos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Exames Periódicos -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-table"></i>
+                    Controle de Exames Periódicos
+                </h3>
+            </div>
+            <div class="table-body">
+                <table id="table-exames-periodicos" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cargo</th>
+                            <th>Departamento</th>
+                            <th>Último Exame</th>
+                            <th>Próximo Exame</th>
+                            <th>Status</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="7" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando controles de exames...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabela de Pendências Contabilidade -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-briefcase-account"></i>
+                    Pendências Contabilidade
+                </h3>
+            </div>
+            <div class="table-body">
+                <table id="table-pendencias-contabilidade" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Tipo Evento</th>
+                            <th>Data Evento</th>
+                            <th>Dias Pendente</th>
+                            <th>Descrição</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="6" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando pendências contábeis...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 

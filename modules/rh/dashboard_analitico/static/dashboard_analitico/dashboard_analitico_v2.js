@@ -543,6 +543,12 @@ const DashboardAnalitico = {
         
         // Renderizar Seção 2: Turnover
         this.renderSecaoTurnover(data.turnover);
+
+        // Renderizar Seção 3: Administração de Pessoal
+        this.renderSecaoPessoal(data.administracao_pessoal);
+
+        // Renderizar Seção 4: Compliance & Eventos
+        this.renderSecaoCompliance(data.compliance);
     },
     
     // ========================================
@@ -984,6 +990,612 @@ const DashboardAnalitico = {
             tbody.appendChild(tr);
         });
     },
+
+    // ========================================
+    // SEÇÃO 3: ADMINISTRAÇÃO DE PESSOAL
+    // ========================================
+    renderSecaoPessoal(data = {}) {
+        const kpis = data?.kpis || {};
+        const graficos = data?.graficos || {};
+
+        const headcountEl = document.getElementById('kpi-headcount-total');
+        if (headcountEl) {
+            headcountEl.textContent = this.formatNumber(kpis.headcount_total);
+        }
+
+        const masculinosEl = document.getElementById('kpi-colaboradores-masculinos');
+        if (masculinosEl) {
+            masculinosEl.textContent = this.formatQuantidadePercent(kpis.masculinos);
+        }
+
+        const femininosEl = document.getElementById('kpi-colaboradores-femininos');
+        if (femininosEl) {
+            femininosEl.textContent = this.formatQuantidadePercent(kpis.femininos);
+        }
+
+        const salarioMedioEl = document.getElementById('kpi-salario-medio');
+        if (salarioMedioEl) {
+            salarioMedioEl.textContent = this.formatCurrency(kpis.salario_medio);
+        }
+
+        const superiorEl = document.getElementById('kpi-superior-completo');
+        if (superiorEl) {
+            superiorEl.textContent = this.formatQuantidadePercent(kpis.superior_completo);
+        }
+
+        this.renderChartHeadcountDepartamento(graficos.headcount_departamento);
+        this.renderChartSalarioDepartamento(graficos.salario_departamento);
+        this.renderChartGenero(graficos.genero);
+        this.renderChartRaca(graficos.raca);
+        this.renderChartEscolaridade(graficos.escolaridade);
+        this.renderChartTempoMedioDepartamento(graficos.tempo_medio_departamento);
+        this.renderChartPiramideEtaria(graficos.piramide_etaria);
+    },
+
+    renderChartHeadcountDepartamento(dados = {}) {
+        const ctx = document.getElementById('chart-headcount-departamento');
+        if (!ctx) return;
+
+        if (this.charts.headcountDepartamento) {
+            this.charts.headcountDepartamento.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = this.getColorPalette(labels.length);
+
+        this.charts.headcountDepartamento = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Colaboradores',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.parsed.y ?? context.parsed} colaboradores`
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => (value > 0 ? value : '')
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartSalarioDepartamento(dados = {}) {
+        const ctx = document.getElementById('chart-salario-departamento');
+        if (!ctx) return;
+
+        if (this.charts.salarioDepartamento) {
+            this.charts.salarioDepartamento.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = this.getColorPalette(labels.length);
+
+        this.charts.salarioDepartamento = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Salário Médio',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => this.formatCurrency(context.parsed.y ?? context.parsed)
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => (value > 0 ? this.formatCurrency(value) : '')
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartGenero(dados = {}) {
+        const ctx = document.getElementById('chart-genero');
+        if (!ctx) return;
+
+        if (this.charts.genero) {
+            this.charts.genero.destroy();
+        }
+
+        const labels = dados.labels || ['Masculino', 'Feminino', 'Outros'];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = ['#0d6efd', '#d63384', '#6c757d'];
+        const total = values.reduce((sum, value) => sum + value, 0) || 1;
+
+        this.charts.genero = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    datalabels: {
+                        formatter: (value) => {
+                            if (!value) return '';
+                            const percent = (value / total) * 100;
+                            return this.formatPercent(percent, 1);
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartRaca(dados = {}) {
+        const ctx = document.getElementById('chart-raca');
+        if (!ctx) return;
+
+        if (this.charts.raca) {
+            this.charts.raca.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = this.getColorPalette(labels.length);
+        const total = values.reduce((sum, value) => sum + value, 0) || 1;
+
+        this.charts.raca = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    datalabels: {
+                        formatter: (value) => {
+                            if (!value) return '';
+                            const percent = (value / total) * 100;
+                            return this.formatPercent(percent, 1);
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartEscolaridade(dados = {}) {
+        const ctx = document.getElementById('chart-escolaridade');
+        if (!ctx) return;
+
+        if (this.charts.escolaridade) {
+            this.charts.escolaridade.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = this.getColorPalette(labels.length);
+
+        this.charts.escolaridade = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Colaboradores',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => (value > 0 ? value : '')
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartTempoMedioDepartamento(dados = {}) {
+        const ctx = document.getElementById('chart-tempo-medio-departamento');
+        if (!ctx) return;
+
+        if (this.charts.tempoMedioDepartamento) {
+            this.charts.tempoMedioDepartamento.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+        const colors = this.getColorPalette(labels.length);
+
+        this.charts.tempoMedioDepartamento = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Tempo médio (anos)',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${(context.parsed.y ?? context.parsed).toFixed(1)} anos`
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => (value > 0 ? `${value.toFixed(1)}a` : '')
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartPiramideEtaria(dados = {}) {
+        const ctx = document.getElementById('chart-piramide-etaria');
+        if (!ctx) return;
+
+        if (this.charts.piramideEtaria) {
+            this.charts.piramideEtaria.destroy();
+        }
+
+        const labels = dados.labels || ['18-24', '25-34', '35-44', '45-54', '55+'];
+        const masculino = (dados.masculino || []).map((value) => -Math.abs(Number(value) || 0));
+        const feminino = (dados.feminino || []).map((value) => Number(value) || 0);
+
+        this.charts.piramideEtaria = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Homens',
+                        data: masculino,
+                        backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                        borderRadius: 6,
+                        stack: 'piramide'
+                    },
+                    {
+                        label: 'Mulheres',
+                        data: feminino,
+                        backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                        borderRadius: 6,
+                        stack: 'piramide'
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${Math.abs(context.parsed.x || context.parsed)} colaboradores`
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'center',
+                        align: (context) => (context.dataset.label === 'Homens' ? 'right' : 'left'),
+                        formatter: (value) => {
+                            const absolute = Math.abs(value);
+                            return absolute > 0 ? absolute : '';
+                        }
+                    },
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: {
+                            callback: (value) => Math.abs(value),
+                            precision: 0
+                        }
+                    },
+                    y: {
+                        stacked: true
+                    }
+                }
+            }
+        });
+    },
+
+    // ========================================
+    // SEÇÃO 4: COMPLIANCE & EVENTOS OPERACIONAIS
+    // ========================================
+    renderSecaoCompliance(data = {}) {
+        const kpis = data?.kpis || {};
+        const graficos = data?.graficos || {};
+        const tabelas = data?.tabelas || {};
+
+        const examesPendentesEl = document.getElementById('kpi-exames-pendentes');
+        if (examesPendentesEl) {
+            examesPendentesEl.textContent = this.formatNumber(kpis.exames_pendentes);
+        }
+
+        const examesVencidosEl = document.getElementById('kpi-exames-vencidos');
+        if (examesVencidosEl) {
+            examesVencidosEl.textContent = this.formatNumber(kpis.exames_vencidos);
+        }
+
+        const eventosPendentesEl = document.getElementById('kpi-eventos-pendentes');
+        if (eventosPendentesEl) {
+            eventosPendentesEl.textContent = this.formatNumber(kpis.eventos_pendentes);
+        }
+
+        const pendenciasContabilidadeEl = document.getElementById('kpi-pendencias-contabilidade');
+        if (pendenciasContabilidadeEl) {
+            pendenciasContabilidadeEl.textContent = this.formatNumber(kpis.pendencias_contabilidade);
+        }
+
+        this.renderChartEventosStatus(graficos.eventos_por_status);
+        this.renderChartProximosEventos(graficos.proximos_eventos);
+        this.renderTableExamesPeriodicos(tabelas.exames_periodicos);
+        this.renderTablePendenciasContabilidade(tabelas.pendencias_contabilidade);
+    },
+
+    renderChartEventosStatus(dados = {}) {
+        const ctx = document.getElementById('chart-eventos-status');
+        if (!ctx) return;
+
+        if (this.charts.eventosStatus) {
+            this.charts.eventosStatus.destroy();
+        }
+
+        const labels = dados.labels || [];
+        const statusConfig = [
+            { key: 'pendente', label: 'Pendente', color: '#ffc107' },
+            { key: 'em_andamento', label: 'Em Andamento', color: '#0d6efd' },
+            { key: 'realizado', label: 'Realizado', color: '#28a745' },
+            { key: 'vencido', label: 'Vencido', color: '#dc3545' }
+        ];
+
+        const datasets = statusConfig.map(({ key, label, color }) => ({
+            label,
+            data: (dados.datasets?.[key] || []).map((value) => Number(value) || 0),
+            backgroundColor: color,
+            stack: 'status',
+            borderRadius: 4
+        }));
+
+        this.charts.eventosStatus = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `${context.dataset.label}: ${context.parsed.y ?? context.parsed}`
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'center',
+                        align: 'center',
+                        color: '#fff',
+                        formatter: (value) => (value > 0 ? value : '')
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    },
+
+    renderChartProximosEventos(dados = {}) {
+        const ctx = document.getElementById('chart-proximos-eventos');
+        if (!ctx) return;
+
+        if (this.charts.proximosEventos) {
+            this.charts.proximosEventos.destroy();
+        }
+
+        const rawLabels = dados.labels || [];
+        const labels = rawLabels.map((label) => this.formatDate(label));
+        const values = (dados.values || []).map((value) => Number(value) || 0);
+
+        this.charts.proximosEventos = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Eventos agendados',
+                        data: values,
+                        borderColor: '#6f42c1',
+                        backgroundColor: 'rgba(111, 66, 193, 0.2)',
+                        pointBackgroundColor: '#6f42c1',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        align: 'top',
+                        anchor: 'end',
+                        formatter: (value) => (value > 0 ? value : '')
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    },
+
+    renderTableExamesPeriodicos(exames = []) {
+        const tbody = document.querySelector('#table-exames-periodicos tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!exames || !exames.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">Nenhum exame periódico pendente no momento</td>
+                </tr>
+            `;
+            return;
+        }
+
+        exames.forEach((exame) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${exame.nome || 'N/A'}</td>
+                <td>${exame.cargo || 'N/A'}</td>
+                <td>${exame.departamento || 'N/A'}</td>
+                <td>${this.formatDate(exame.ultimo_exame)}</td>
+                <td>${this.formatDate(exame.proximo_exame)}</td>
+                <td>
+                    <span class="badge ${this.getStatusBadgeClass(exame.status)}">${this.formatStatusLabel(exame.status)}</span>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-primary" onclick="DashboardAnalitico.verEvento('${exame.evento_id || ''}')">
+                        <i class="mdi mdi-eye"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    renderTablePendenciasContabilidade(pendencias = []) {
+        const tbody = document.querySelector('#table-pendencias-contabilidade tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!pendencias || !pendencias.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">Nenhuma pendência contábil registrada</td>
+                </tr>
+            `;
+            return;
+        }
+
+        pendencias.forEach((item) => {
+            const diasPendente = item.dias_pendente != null ? `${item.dias_pendente} dia${item.dias_pendente === 1 ? '' : 's'}` : '--';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.colaborador || 'N/A'}</td>
+                <td>${item.tipo_evento || 'N/A'}</td>
+                <td>${this.formatDate(item.data_evento)}</td>
+                <td>${diasPendente}</td>
+                <td title="${item.descricao || 'Sem descrição'}">${item.descricao || 'Sem descrição'}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-secondary" onclick="DashboardAnalitico.verPendencia('${item.colaborador || ''}')">
+                        <i class="mdi mdi-open-in-new"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
     
     // ========================================
     // NAVEGAÇÃO ENTRE SEÇÕES
@@ -1015,6 +1627,102 @@ const DashboardAnalitico = {
     showError(message) {
         alert(message); // TODO: Implementar toast/notification system
     },
+
+    formatNumber(value, options = {}) {
+        if (value === null || value === undefined || value === '') {
+            return '--';
+        }
+        const numericValue = Number(value);
+        if (Number.isNaN(numericValue)) {
+            return '--';
+        }
+        return new Intl.NumberFormat('pt-BR', options).format(numericValue);
+    },
+
+    formatCurrency(value) {
+        if (value === null || value === undefined || value === '') {
+            return 'R$ 0,00';
+        }
+        const numericValue = Number(value);
+        if (Number.isNaN(numericValue)) {
+            return 'R$ 0,00';
+        }
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(numericValue);
+    },
+
+    formatPercent(value, fractionDigits = 1) {
+        if (value === null || value === undefined || value === '') {
+            return `0${fractionDigits > 0 ? ',0' : ''}%`;
+        }
+        const numericValue = Number(value);
+        if (Number.isNaN(numericValue)) {
+            return `0${fractionDigits > 0 ? ',0' : ''}%`;
+        }
+        return `${new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: fractionDigits,
+            maximumFractionDigits: fractionDigits
+        }).format(numericValue)}%`;
+    },
+
+    formatQuantidadePercent(info) {
+        if (info === null || info === undefined) {
+            return '--';
+        }
+
+        if (typeof info === 'number') {
+            return this.formatNumber(info);
+        }
+
+        const quantidade = info.quantidade ?? info.valor ?? info.total ?? 0;
+        const percentual = info.percentual ?? info.percent ?? null;
+
+        if (percentual === null || percentual === undefined) {
+            return this.formatNumber(quantidade);
+        }
+
+        return `${this.formatNumber(quantidade)} (${this.formatPercent(percentual)})`;
+    },
+
+    getColorPalette(count) {
+        const basePalette = [
+            '#6f42c1', '#0d6efd', '#20c997', '#ffc107', '#dc3545',
+            '#17a2b8', '#6610f2', '#fd7e14', '#198754', '#adb5bd'
+        ];
+
+        if (count <= basePalette.length) {
+            return basePalette.slice(0, count);
+        }
+
+        const colors = [];
+        for (let index = 0; index < count; index += 1) {
+            colors.push(basePalette[index % basePalette.length]);
+        }
+        return colors;
+    },
+
+    getStatusBadgeClass(status) {
+        if (!status) {
+            return 'badge-secondary';
+        }
+
+        const normalized = status.toString().toLowerCase();
+        if (normalized.includes('pendente')) return 'badge-warning';
+        if (normalized.includes('andamento')) return 'badge-info';
+        if (normalized.includes('realiz') || normalized.includes('conclu')) return 'badge-success';
+        if (normalized.includes('venc') || normalized.includes('atras')) return 'badge-danger';
+        return 'badge-secondary';
+    },
+
+    formatStatusLabel(status) {
+        if (!status) return 'Indefinido';
+        return status
+            .toString()
+            .replace(/_/g, ' ')
+            .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+    },
     
     formatDate(dateString) {
         if (!dateString) return 'N/A';
@@ -1038,6 +1746,20 @@ const DashboardAnalitico = {
     verVaga(vagaId) {
         console.log('Ver vaga:', vagaId);
         // TODO: Implementar visualização de vaga
+    },
+
+    verEvento(eventoId) {
+        if (!eventoId) {
+            console.log('Evento não disponível para visualização.');
+            return;
+        }
+        console.log('Ver evento:', eventoId);
+        // TODO: Implementar visualização detalhada de eventos
+    },
+
+    verPendencia(referencia) {
+        console.log('Ver pendência contábil:', referencia);
+        // TODO: Implementar visualização detalhada de pendências
     }
 };
 

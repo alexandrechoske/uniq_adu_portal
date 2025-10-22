@@ -138,6 +138,16 @@ def api_dados_dashboard():
         turnover_data = calcular_secao_turnover(
             periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
         )
+
+        # SeÃ§Ã£o 3: AdministraÃ§Ã£o de Pessoal
+        administracao_pessoal_data = calcular_secao_administracao_pessoal(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
+        )
+
+        # SeÃ§Ã£o 4: Compliance & Eventos Operacionais
+        compliance_data = calcular_secao_compliance_operacional(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
+        )
         
         print(f"âœ… Dashboard calculado com sucesso!")
         print(f"================================================\n")
@@ -151,6 +161,8 @@ def api_dados_dashboard():
                 },
                 'recrutamento': recrutamento_data,
                 'turnover': turnover_data,
+                'administracao_pessoal': administracao_pessoal_data,
+                'compliance': compliance_data,
                 'timestamp': datetime.now().isoformat()
             }
         })
@@ -1385,5 +1397,7 @@ from .routes_v2_functions import (
     calcular_desligamentos_por_tempo_casa_v2,
     calcular_turnover_por_faixa_etaria_v2,
     calcular_evolucao_turnover_v2,
-    calcular_tabela_desligamentos_recentes_v2
+    calcular_tabela_desligamentos_recentes_v2,
+    calcular_secao_administracao_pessoal,
+    calcular_secao_compliance_operacional
 )
