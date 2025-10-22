@@ -972,6 +972,13 @@
                         <span class="sidebar-text">Dashboard Executivo</span>
                     </a>
                     
+                    <a href="{{ url_for('dashboard_analitico_rh.dashboard_analitico') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('dashboard_analitico_rh.') %}active{% endif %}"
+                       title="Dashboard Analítico de RH">
+                        <i class="mdi mdi-chart-line"></i>
+                        <span class="sidebar-text">Dashboard Analítico</span>
+                    </a>
+                    
                     <a href="{{ url_for('colaboradores.lista_colaboradores') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('colaboradores.') %}active{% endif %}"
                        title="Gestão de Colaboradores">
