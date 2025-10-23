@@ -36,12 +36,16 @@ def allowed_file(filename):
 
 @carreiras_bp.route('/')
 def portal_vagas():
-    """Página pública com lista de vagas abertas"""
+    """Página pública com lista de vagas abertas (somente Unique)"""
     try:
-        # Buscar apenas vagas abertas
+        # ID da empresa Unique (portal público mostra apenas vagas da Unique)
+        UNIQUE_ID = 'dc984b7c-3156-43f7-a1bf-f7a0b77db535'
+        
+        # Buscar apenas vagas abertas da Unique
         response = supabase_admin.table('rh_vagas')\
             .select('id, titulo, localizacao, tipo_contratacao, data_abertura, descricao')\
             .eq('status', 'Aberta')\
+            .eq('empresa_controladora_id', UNIQUE_ID)\
             .order('data_abertura', desc=True)\
             .execute()
         

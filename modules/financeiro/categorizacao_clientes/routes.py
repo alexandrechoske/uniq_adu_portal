@@ -22,7 +22,7 @@ categorizacao_clientes_bp = Blueprint(
 
 @categorizacao_clientes_bp.route('/')
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def index():
     """Categorização de Clientes - Gestão de categorias e classificação de clientes"""
     try:
@@ -41,7 +41,7 @@ def index():
 
 @categorizacao_clientes_bp.route('/api/clientes')
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_clientes():
     """API para obter lista de clientes para categorização"""
     try:
@@ -116,7 +116,7 @@ def api_clientes():
 
 @categorizacao_clientes_bp.route('/api/categorias')
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_categorias():
     """API para obter lista de categorias disponíveis"""
     try:
@@ -163,7 +163,7 @@ def api_categorias():
 
 @categorizacao_clientes_bp.route('/api/salvar-categorizacao', methods=['POST'])
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_salvar_categorizacao():
     """API para salvar categorização de clientes"""
     try:
@@ -212,7 +212,7 @@ def api_salvar_categorizacao():
 
 @categorizacao_clientes_bp.route('/api/popular-tabelas', methods=['POST'])
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_popular_tabelas():
     """API para popular as tabelas de mapeamento conforme script SQL"""
     try:
@@ -260,7 +260,7 @@ def api_popular_tabelas():
 
 @categorizacao_clientes_bp.route('/api/estatisticas')
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_estatisticas():
     """API para obter estatísticas da categorização"""
     try:
@@ -305,7 +305,7 @@ def api_estatisticas():
 
 @categorizacao_clientes_bp.route('/api/clientes-nao-categorizados')
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_clientes_nao_categorizados():
     """API para obter lista de clientes com filtro de status e paginação (cache-first)."""
     try:
@@ -418,7 +418,7 @@ def api_clientes_nao_categorizados():
 
 @categorizacao_clientes_bp.route('/api/salvar-categorizacoes', methods=['POST'])
 @login_required
-@perfil_required('financeiro', 'categorizacao_clientes')
+@perfil_required('financeiro', 'categorizacao')
 def api_salvar_categorizacoes():
     """API para salvar categorizações em lote (upsert)."""
     try:

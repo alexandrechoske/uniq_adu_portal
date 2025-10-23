@@ -5,7 +5,9 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-theme.css') }}?v=1.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 {% endblock %}
 
 {% block content %}
@@ -280,26 +282,18 @@
                     </div>
 
                     <div class="row">
+                        {% if not is_editing %}
+                        <!-- Campo de salário aparece apenas no cadastro inicial -->
                         <div class="col-md-4 mb-3">
-                            <label class="form-label {% if not is_editing %}required{% endif %}">Salário Mensal</label>
-                            {% if is_editing %}
-                                <div class="form-control-plaintext fw-semibold">
-                                    {% if info_carreira.salario_mensal %}
-                                        R$ {{ '%.2f' | format(info_carreira.salario_mensal) }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </div>
-                                <small class="text-muted">Use o atalho "Reajustar Salário" na lista de colaboradores para alterar este valor.</small>
-                            {% else %}
-                                <div class="input-group">
-                                    <span class="input-group-text">R$</span>
-                                    <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" step="0.01" min="0" max="999999.99" value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}" placeholder="0.00" required>
-                                </div>
-                                <small class="text-muted">Campo obrigatório - informe apenas números</small>
-                            {% endif %}
+                            <label class="form-label required">Salário Mensal</label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" id="salario_mensal" name="salario_mensal" step="0.01" min="0" max="999999.99" value="{{ ultimo_historico.salario_mensal if ultimo_historico else '' }}" placeholder="0.00" required>
+                            </div>
+                            <small class="text-muted">Campo obrigatório - informe apenas números</small>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        {% endif %}
+                        <div class="col-md-{% if is_editing %}6{% else %}4{% endif %} mb-3">
                             <label class="form-label {% if not is_editing %}required{% endif %}">Tipo de Contrato</label>
                             {% if is_editing %}
                                 <input type="text" class="form-control bg-light" value="{{ info_carreira.tipo_contrato or 'Não informado' }}" readonly>
@@ -348,13 +342,17 @@
         <div class="rh-card mb-4">
             <div class="card-body">
                 {% set snapshot = info_atual or {} %}
+                {% set beneficios_view = snapshot.beneficios_view or {} %}
+                {% set remuneracao_view = beneficios_view.get('remuneracao_adicional', {}) %}
+                {% set beneficios_padrao_view = beneficios_view.get('beneficios_padrao', {}) %}
+                {% set remuneracao_items = remuneracao_view.get('items', []) %}
+                {% set beneficios_padrao_items = beneficios_padrao_view.get('items', []) %}
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0"><i class="mdi mdi-cash-multiple"></i> Remuneração e Benefícios</h5>
                     <button type="button"
                             class="btn btn-outline-primary btn-sm"
                             id="btnAlterarBeneficios"
                             data-beneficios='{{ snapshot.beneficios_jsonb | tojson | safe if snapshot.beneficios_jsonb else "{}" }}'
-                            data-catalogo='{{ beneficios_catalogo | tojson | safe }}'
                             data-colaborador-id="{{ colaborador.id }}"
                             data-nome="{{ colaborador.nome_completo }}"
                             data-salario="{{ snapshot.salario_mensal if snapshot.salario_mensal is not none else '' }}">
@@ -364,45 +362,63 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
-                        <small class="text-muted d-block">Salário Mensal Atual</small>
+                        <small class="text-muted d-block">Salário Base</small>
                         <strong>{{ snapshot.salario_formatado or '-' }}</strong>
                     </div>
                     <div class="col-md-4">
-                        <small class="text-muted d-block">Total de Benefícios</small>
-                        <strong>{{ snapshot.beneficios_total_formatado or 'R$ 0,00' }}</strong>
+                        <small class="text-muted d-block">Remuneração Adicional</small>
+                        <strong>{{ remuneracao_view.get('total_formatado', 'R$ 0,00') }}</strong>
                     </div>
                     <div class="col-md-4">
-                        <small class="text-muted d-block">Custo Total</small>
-                        <strong>{{ snapshot.total_remuneracao_formatado or (snapshot.salario_formatado if snapshot.salario_formatado else '-') }}</strong>
+                        <small class="text-muted d-block">Benefícios Padrão</small>
+                        <strong>{{ beneficios_padrao_view.get('total_formatado', 'R$ 0,00') }}</strong>
                     </div>
                 </div>
 
-                <hr class="my-3">
-
-                {% if snapshot.beneficios_lista %}
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Benefício</th>
-                                <th class="text-end">Valor Mensal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for beneficio in snapshot.beneficios_lista %}
-                            <tr>
-                                <td>{{ beneficio.label }}</td>
-                                <td class="text-end">{{ beneficio.valor_formatado }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 px-3">
+                    <div>
+                        <strong>Custo Total Mensal</strong>
+                        <div class="small text-muted mb-0">Salário + Remuneração Adicional + Benefícios</div>
+                    </div>
+                    <div class="h5 mb-0">{{ snapshot.total_remuneracao_formatado or (snapshot.salario_formatado if snapshot.salario_formatado else 'R$ 0,00') }}</div>
                 </div>
-                {% else %}
-                <p class="text-muted mb-0">
-                    <i class="mdi mdi-wallet-outline"></i> Nenhum benefício cadastrado para este colaborador.
-                </p>
-                {% endif %}
+
+                <div class="row mt-3 g-3">
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted fw-semibold small mb-2">Remuneração Adicional</h6>
+                        <div class="list-group list-group-flush rounded border">
+                            {% if remuneracao_items %}
+                                {% for item in remuneracao_items %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ item.label }}</span>
+                                    <span class="fw-semibold">{{ item.valor_formatado }}</span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="list-group-item text-muted">
+                                    <i class="mdi mdi-alert-circle-outline me-1"></i> Nenhuma remuneração adicional cadastrada.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-uppercase text-muted fw-semibold small mb-2">Pacote de Benefícios</h6>
+                        <div class="list-group list-group-flush rounded border">
+                            {% if beneficios_padrao_items %}
+                                {% for item in beneficios_padrao_items %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ item.label }}</span>
+                                    <span class="fw-semibold">{{ item.valor_formatado }}</span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="list-group-item text-muted">
+                                    <i class="mdi mdi-wallet-outline me-1"></i> Nenhum benefício padrão cadastrado.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -463,6 +479,62 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- Contatos de Emergência -->
+        <div class="rh-card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="mdi mdi-phone-alert"></i> Contatos de Emergência</h5>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="abrirModalContato()">
+                        <i class="mdi mdi-plus"></i> Adicionar Contato
+                    </button>
+                </div>
+                {% if contatos_emergencia %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome</th>
+                                <th>Telefone</th>
+                                <th>Parentesco</th>
+                                <th class="text-center" style="width: 110px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contato in contatos_emergencia %}
+                            <tr>
+                                <td>{{ contato.nome_contato }}</td>
+                                <td>{{ contato.telefone_contato or '-' }}</td>
+                                <td>{{ contato.parentesco or '-' }}</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button"
+                                                class="btn btn-outline-primary"
+                                                title="Editar"
+                                                data-contato='{{ contato | tojson | safe }}'
+                                                onclick="editarContato(this)">
+                                            <i class="mdi mdi-pencil"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline-danger"
+                                                title="Excluir"
+                                                onclick="confirmarRemocaoContato('{{ contato.id }}', '{{ contato.nome_contato }}')">
+                                            <i class="mdi mdi-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">
+                    <i class="mdi mdi-phone-off"></i> Nenhum contato de emergência cadastrado.
+                </p>
+                {% endif %}
+            </div>
+        </div>
         {% endif %}
 
         <!-- Botões de Ação -->
@@ -508,17 +580,50 @@
                             <textarea class="form-control" id="beneficiosDescricao" rows="2" placeholder="Ex: Reajuste anual do vale alimentação" required></textarea>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0"><i class="mdi mdi-format-list-bulleted"></i> Benefícios</h6>
-                        <button type="button" class="btn btn-outline-success btn-sm" id="btnAdicionarBeneficioLinha">
-                            <i class="mdi mdi-plus"></i> Adicionar Benefício
-                        </button>
+                    <div class="mb-4">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-cash-plus me-1"></i> Remuneração Adicional
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAjudaCusto">Ajuda de Custo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAjudaCusto" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAuxilioCreche">Auxílio Creche</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAuxilioCreche" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Informe os valores pagos mensalmente como remuneração adicional.</small>
                     </div>
 
-                    <div id="beneficiosLista" class="beneficios-lista"></div>
+                    <div class="mb-2">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-wallet-outline me-1"></i> Benefícios Padrão
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeAlimentacao">Vale Alimentação / Refeição</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioValeAlimentacao" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeTransporte">Vale Transporte</label>
+                                <input type="text" class="form-control" id="beneficioValeTransporte" placeholder="Ex: Sim ou 180,00">
+                                <small class="text-muted">Digite "Sim" quando o benefício for concedido sem desconto.</small>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="alert alert-warning mt-3 mb-0" id="beneficiosAviso" style="display: none;"></div>
+                    <div class="alert alert-warning mt-4 mb-0" id="beneficiosAviso" style="display: none;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -564,6 +669,41 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="btnSalvarDependente">
+                        <i class="mdi mdi-content-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Contato de Emergência -->
+<div class="modal fade" id="modalContato" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="mdi mdi-phone-plus"></i> <span id="tituloModalContato">Adicionar Contato de Emergência</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formContato">
+                <div class="modal-body">
+                    <input type="hidden" id="contatoId">
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Contato</label>
+                        <input type="text" class="form-control" id="contatoNome" placeholder="Nome completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="contatoTelefone" placeholder="(00) 00000-0000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parentesco</label>
+                        <input type="text" class="form-control" id="contatoParentesco" placeholder="Ex: Mãe, Pai, Cônjuge">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info text-white" id="btnSalvarContato">
                         <i class="mdi mdi-content-save"></i> Salvar
                     </button>
                 </div>

@@ -3,7 +3,9 @@
 {% block title %}Perfil do Colaborador - Departamento de Gestão de Pessoas{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-theme.css') }}?v=1.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.2">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 {% endblock %}
 
 {% block content %}
@@ -118,13 +120,18 @@
             <div class="rh-card mb-4">
                 <div class="card-body">
                     {% set snapshot = info_atual or {} %}
+                    {% set beneficios_view = snapshot.beneficios_view or {} %}
+                    {% set remuneracao_view = beneficios_view.get('remuneracao_adicional', {}) %}
+                    {% set beneficios_padrao_view = beneficios_view.get('beneficios_padrao', {}) %}
+                    {% set remuneracao_items = remuneracao_view.get('items', []) %}
+                    {% set beneficios_padrao_items = beneficios_padrao_view.get('items', []) %}
+
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0"><i class="mdi mdi-cash-multiple"></i> Remuneração e Benefícios</h5>
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
                                 id="btnAlterarBeneficios"
                                 data-beneficios='{{ snapshot.beneficios_jsonb | tojson | safe if snapshot.beneficios_jsonb else "{}" }}'
-                                data-catalogo='{{ beneficios_catalogo | tojson | safe }}'
                                 data-colaborador-id="{{ colaborador.id }}"
                                 data-nome="{{ colaborador.nome_completo }}"
                                 data-salario="{{ snapshot.salario_mensal if snapshot.salario_mensal is not none else '' }}">
@@ -134,45 +141,63 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <small class="text-muted d-block">Salário Mensal Atual</small>
+                            <small class="text-muted d-block">Salário Base</small>
                             <strong>{{ snapshot.salario_formatado or '-' }}</strong>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block">Total de Benefícios</small>
-                            <strong>{{ snapshot.beneficios_total_formatado or 'R$ 0,00' }}</strong>
+                            <small class="text-muted d-block">Remuneração Adicional</small>
+                            <strong>{{ remuneracao_view.get('total_formatado', 'R$ 0,00') }}</strong>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block">Custo Total</small>
-                            <strong>{{ snapshot.total_remuneracao_formatado or (snapshot.salario_formatado if snapshot.salario_formatado else '-') }}</strong>
+                            <small class="text-muted d-block">Benefícios Padrão</small>
+                            <strong>{{ beneficios_padrao_view.get('total_formatado', 'R$ 0,00') }}</strong>
                         </div>
                     </div>
 
-                    <hr class="my-3">
-
-                    {% if snapshot.beneficios_lista %}
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Benefício</th>
-                                    <th class="text-end">Valor Mensal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for beneficio in snapshot.beneficios_lista %}
-                                <tr>
-                                    <td>{{ beneficio.label }}</td>
-                                    <td class="text-end">{{ beneficio.valor_formatado }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 px-3">
+                        <div>
+                            <strong>Custo Total Mensal</strong>
+                            <div class="small text-muted mb-0">Salário + Remuneração Adicional + Benefícios</div>
+                        </div>
+                        <div class="h5 mb-0">{{ snapshot.total_remuneracao_formatado or (snapshot.salario_formatado if snapshot.salario_formatado else 'R$ 0,00') }}</div>
                     </div>
-                    {% else %}
-                    <p class="text-muted mb-0">
-                        <i class="mdi mdi-wallet-outline"></i> Nenhum benefício cadastrado para este colaborador.
-                    </p>
-                    {% endif %}
+
+                    <div class="row mt-3 g-3">
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-semibold small mb-2">Remuneração Adicional</h6>
+                            <div class="list-group list-group-flush rounded border">
+                                {% if remuneracao_items %}
+                                    {% for item in remuneracao_items %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ item.label }}</span>
+                                        <span class="fw-semibold">{{ item.valor_formatado }}</span>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="list-group-item text-muted">
+                                        <i class="mdi mdi-alert-circle-outline me-1"></i> Nenhuma remuneração adicional cadastrada.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-semibold small mb-2">Pacote de Benefícios</h6>
+                            <div class="list-group list-group-flush rounded border">
+                                {% if beneficios_padrao_items %}
+                                    {% for item in beneficios_padrao_items %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>{{ item.label }}</span>
+                                        <span class="fw-semibold">{{ item.valor_formatado }}</span>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="list-group-item text-muted">
+                                        <i class="mdi mdi-wallet-outline me-1"></i> Nenhum benefício padrão cadastrado.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -427,6 +452,9 @@
                             <div class="timeline-header">
                                 <div class="timeline-date">
                                     <i class="mdi mdi-calendar"></i> {{ evento.data_evento_br or evento.data_evento or '-' }}
+                                    {% if evento.hora_evento_br %}
+                                    <span class="ms-2 text-muted"><i class="mdi mdi-clock-outline"></i> {{ evento.hora_evento_br }}</span>
+                                    {% endif %}
                                 </div>
                                 <div class="timeline-type">
                                     {% if evento.tipo_evento == 'Admissão' %}
@@ -507,6 +535,60 @@
 
         <!-- Coluna Lateral -->
         <div class="col-md-4">
+            <!-- Foto de Perfil -->
+            <div class="rh-card mb-4">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">
+                        <i class="mdi mdi-camera"></i> Foto de Perfil
+                    </h5>
+                    
+                    <!-- Foto atual ou placeholder -->
+                    <div class="mb-3 position-relative" style="max-width: 200px; margin: 0 auto;">
+                        {% if colaborador.foto_colab %}
+                            <img id="fotoColaborador" 
+                                 src="{{ colaborador.foto_colab }}" 
+                                 alt="{{ colaborador.nome_completo }}"
+                                 class="img-fluid rounded-circle mb-3"
+                                 style="width: 200px; height: 200px; object-fit: cover; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        {% else %}
+                            <div id="fotoPlaceholder" class="mb-3" style="width: 200px; height: 200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <div class="text-center text-white">
+                                    <i class="mdi mdi-account-circle" style="font-size: 80px;"></i>
+                                    <div class="small mt-2">Sem foto</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Botões de ação -->
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                class="btn btn-outline-primary btn-sm"
+                                onclick="document.getElementById('inputFoto').click()">
+                            <i class="mdi mdi-upload"></i> {{ 'Alterar Foto' if colaborador.foto_colab else 'Upload de Foto' }}
+                        </button>
+                        {% if colaborador.foto_colab %}
+                        <button type="button" 
+                                class="btn btn-outline-danger btn-sm"
+                                onclick="deletarFoto('{{ colaborador.id }}')">
+                            <i class="mdi mdi-trash-can"></i> Remover Foto
+                        </button>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Input file oculto -->
+                    <input type="file" 
+                           id="inputFoto"
+                           accept="image/jpeg,image/png,image/gif"
+                           style="display: none;"
+                           onchange="uploadFoto(this, '{{ colaborador.id }}')">
+                    
+                    <small class="text-muted d-block mt-2">
+                        <i class="mdi mdi-information-outline"></i> JPG, PNG ou GIF - Máx 5MB
+                    </small>
+                </div>
+            </div>
+
             <!-- Status e Info Rápida -->
             <div class="rh-card mb-4">
                 <div class="card-body">
@@ -555,7 +637,16 @@
                     <h5 class="mb-3"><i class="mdi mdi-phone"></i> Contato</h5>
                     <div class="mb-2">
                         <strong>Telefone:</strong><br>
-                        <span class="text-muted">{{ colaborador.tel_contato }}</span>
+                        {% if colaborador.tel_contato %}
+                            <a href="https://wa.me/55{{ colaborador.tel_contato|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '') }}" 
+                               target="_blank" 
+                               class="text-success text-decoration-none"
+                               title="Abrir conversa no WhatsApp">
+                                <i class="mdi mdi-whatsapp"></i> {{ colaborador.tel_contato }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -566,7 +657,13 @@
             <div class="rh-card mb-4">
                 <div class="card-body">
                     <h5 class="mb-3"><i class="mdi mdi-map-marker"></i> Endereço</h5>
-                    <p class="mb-0 text-muted">{{ colaborador.endereco_completo }}</p>
+                    <p class="mb-2 text-muted">{{ colaborador.endereco_completo }}</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ colaborador.endereco_completo|urlencode }}" 
+                       target="_blank" 
+                       class="btn btn-sm btn-outline-primary"
+                       title="Abrir no Google Maps">
+                        <i class="mdi mdi-map-search"></i> Ver no Mapa
+                    </a>
                 </div>
             </div>
             {% endif %}
@@ -600,17 +697,50 @@
                             <textarea class="form-control" id="beneficiosDescricao" rows="2" placeholder="Ex: Reajuste anual do vale alimentação" required></textarea>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0"><i class="mdi mdi-format-list-bulleted"></i> Benefícios</h6>
-                        <button type="button" class="btn btn-outline-success btn-sm" id="btnAdicionarBeneficioLinha">
-                            <i class="mdi mdi-plus"></i> Adicionar Benefício
-                        </button>
+                    <div class="mb-4">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-cash-plus me-1"></i> Remuneração Adicional
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAjudaCusto">Ajuda de Custo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAjudaCusto" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioAuxilioCreche">Auxílio Creche</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioAuxilioCreche" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">Informe os valores pagos mensalmente como remuneração adicional.</small>
                     </div>
 
-                    <div id="beneficiosLista" class="beneficios-lista"></div>
+                    <div class="mb-2">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="mdi mdi-wallet-outline me-1"></i> Benefícios Padrão
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeAlimentacao">Vale Alimentação / Refeição</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    <input type="number" class="form-control" id="beneficioValeAlimentacao" min="0" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1" for="beneficioValeTransporte">Vale Transporte</label>
+                                <input type="text" class="form-control" id="beneficioValeTransporte" placeholder="Ex: Sim ou 180,00">
+                                <small class="text-muted">Digite "Sim" quando o benefício for concedido sem desconto.</small>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="alert alert-warning mt-3 mb-0" id="beneficiosAviso" style="display: none;"></div>
+                    <div class="alert alert-warning mt-4 mb-0" id="beneficiosAviso" style="display: none;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -701,6 +831,150 @@
 
 <script>
 window.RH_BENEFICIOS_CATALOGO = JSON.parse('{{ beneficios_catalogo | tojson | safe }}');
+
+// ========================================
+// UPLOAD E DELEÇÃO DE FOTO DE PERFIL
+// ========================================
+
+/**
+ * Faz upload da foto do colaborador
+ */
+async function uploadFoto(input, colaboradorId) {
+    if (!input.files || input.files.length === 0) {
+        return;
+    }
+    
+    const file = input.files[0];
+    
+    // Validação de tamanho (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('❌ Arquivo muito grande! Tamanho máximo: 5MB');
+        input.value = '';
+        return;
+    }
+    
+    // Validação de tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('❌ Formato inválido! Use apenas JPG, PNG ou GIF');
+        input.value = '';
+        return;
+    }
+    
+    // Encontrar o botão de upload
+    const uploadBtn = document.querySelector('button[onclick*="inputFoto"]');
+    const originalText = uploadBtn.innerHTML;
+    
+    try {
+        // Mostrar loading
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Enviando...';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(
+            `/rh/colaboradores/api/foto/upload/${colaboradorId}`,
+            {
+                method: 'POST',
+                body: formData
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Criar ou atualizar a imagem
+            const fotoImg = document.getElementById('fotoColaborador');
+            const placeholder = document.getElementById('fotoPlaceholder');
+            
+            if (fotoImg) {
+                // Se já existe imagem, atualizar src
+                fotoImg.src = data.url + '?t=' + Date.now(); // Cache busting
+            } else if (placeholder) {
+                // Se é placeholder, substituir por imagem real
+                placeholder.outerHTML = `
+                    <img id="fotoColaborador" 
+                         src="${data.url}?t=${Date.now()}"
+                         alt="Foto do colaborador"
+                         class="img-fluid rounded-circle mb-3"
+                         style="width: 200px; height: 200px; object-fit: cover; border: 4px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                `;
+            }
+            
+            alert('✅ Foto enviada com sucesso!');
+            
+            // Recarregar para atualizar botões
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('❌ Erro: ' + data.message);
+        }
+    } catch (error) {
+        alert('❌ Erro ao enviar foto: ' + error.message);
+        console.error('Erro no upload:', error);
+    } finally {
+        // Restaurar botão
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+        input.value = ''; // Limpar input
+    }
+}
+
+/**
+ * Deleta a foto do colaborador
+ */
+async function deletarFoto(colaboradorId) {
+    if (!confirm('⚠️ Tem certeza que deseja remover a foto de perfil?')) {
+        return;
+    }
+    
+    // Encontrar o botão de deletar
+    const deleteBtn = document.querySelector('button[onclick*="deletarFoto"]');
+    const originalText = deleteBtn ? deleteBtn.innerHTML : '';
+    
+    try {
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Removendo...';
+        }
+        
+        const response = await fetch(
+            `/rh/colaboradores/api/foto/delete/${colaboradorId}`,
+            {
+                method: 'DELETE'
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Foto removida com sucesso!');
+            
+            // Recarregar página para atualizar UI
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            alert('❌ Erro: ' + data.message);
+            
+            if (deleteBtn) {
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = originalText;
+            }
+        }
+    } catch (error) {
+        alert('❌ Erro ao deletar foto: ' + error.message);
+        console.error('Erro na deleção:', error);
+        
+        if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
+    }
+}
 </script>
 <script src="{{ url_for('colaboradores.static', filename='colaboradores/colaboradores.js') }}"></script>
 {% endblock %}

@@ -41,10 +41,13 @@ const MODULOS_SISTEMA = {
         color: 'primary',
         pages: [
             { code: 'dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
+            { code: 'dashboard_operacional', name: 'Dashboard Operacional', icon: 'mdi-chart-box' },
             { code: 'dashboard_resumido', name: 'Dashboard Importações', icon: 'mdi-chart-bar' },
             { code: 'documentos', name: 'Conferência Documental', icon: 'mdi-file-document' },
             { code: 'relatorio', name: 'Exportação de Relatórios', icon: 'mdi-file-chart' },
-            { code: 'agente', name: 'Agente UniQ', icon: 'mdi-robot' }
+            { code: 'agente', name: 'Agente UniQ', icon: 'mdi-robot' },
+            { code: 'materiais', name: 'Análise de Materiais', icon: 'mdi-package' },
+            { code: 'ajuste_status', name: 'Ajuste de Status', icon: 'mdi-pencil' }
         ]
     },
     fin: {
@@ -52,10 +55,14 @@ const MODULOS_SISTEMA = {
         icon: 'mdi-currency-usd',
         color: 'success',
         pages: [
-            { code: 'fin_dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
+            { code: 'dashboard_executivo', name: 'Dashboard Executivo', icon: 'mdi-chart-pie' },
             { code: 'fluxo_caixa', name: 'Fluxo de Caixa', icon: 'mdi-cash-flow' },
             { code: 'despesas', name: 'Despesas', icon: 'mdi-receipt' },
-            { code: 'faturamento', name: 'Faturamento', icon: 'mdi-file-invoice-dollar' }
+            { code: 'faturamento', name: 'Faturamento', icon: 'mdi-file-invoice-dollar' },
+            { code: 'conciliacao_lancamentos', name: 'Conciliação Bancária', icon: 'mdi-bank-check' },
+            { code: 'categorizacao', name: 'Categorização de Clientes', icon: 'mdi-tag-multiple' },
+            { code: 'projecoes', name: 'Projeções e Metas', icon: 'mdi-chart-line' },
+            { code: 'export_bases', name: 'Exportação de Bases', icon: 'mdi-database-export' }
         ]
     },
     rh: {
@@ -68,7 +75,9 @@ const MODULOS_SISTEMA = {
             { code: 'estrutura_cargos', name: 'Cargos', icon: 'mdi-briefcase' },
             { code: 'estrutura_departamentos', name: 'Departamentos', icon: 'mdi-office-building' },
             { code: 'recrutamento', name: 'Recrutamento e Seleção', icon: 'mdi-account-search' },
-            { code: 'desempenho', name: 'Avaliação de Desempenho', icon: 'mdi-star' }
+            { code: 'desempenho', name: 'Avaliação de Desempenho', icon: 'mdi-star' },
+            { code: 'carreiras', name: 'Gestão de Carreiras', icon: 'mdi-timeline-text' },
+            { code: 'dashboard_analitico', name: 'Dashboard Analítico', icon: 'mdi-chart-scatter' }
         ]
     }
     // Future modules (exp: Exportação, con: Consultoria) will be added when implemented

@@ -923,24 +923,34 @@ async function confirmarRemocaoContato(contatoId, nomeContato) {
 function inicializarBeneficiosPerfil() {
     const modalElement = document.getElementById('modalAlterarBeneficios');
     const form = document.getElementById('formAlterarBeneficios');
-    const lista = document.getElementById('beneficiosLista');
     const aviso = document.getElementById('beneficiosAviso');
-    const btnAdicionar = document.getElementById('btnAdicionarBeneficioLinha');
     const dataInput = document.getElementById('beneficiosData');
     const descricaoInput = document.getElementById('beneficiosDescricao');
     const colaboradorIdInput = document.getElementById('beneficiosColaboradorId');
     const nomeSpan = document.getElementById('beneficiosColaboradorNome');
     const btnAlterar = document.getElementById('btnAlterarBeneficios');
 
-    if (!modalElement || !form || !lista || !btnAdicionar || !colaboradorIdInput || !nomeSpan) {
+    const campoAjudaCusto = document.getElementById('beneficioAjudaCusto');
+    const campoAuxilioCreche = document.getElementById('beneficioAuxilioCreche');
+    const campoValeAlimentacao = document.getElementById('beneficioValeAlimentacao');
+    const campoValeTransporte = document.getElementById('beneficioValeTransporte');
+
+    if (!modalElement || !form || !colaboradorIdInput || !nomeSpan) {
         return;
     }
 
-    const catalogo = Array.isArray(window.RH_BENEFICIOS_CATALOGO) ? window.RH_BENEFICIOS_CATALOGO.slice() : [];
-    if (!catalogo.some(item => item.slug === 'outros')) {
-        catalogo.push({ slug: 'outros', label: 'Outro Benefício' });
+    function limparAviso() {
+        if (!aviso) return;
+        aviso.style.display = 'none';
+        aviso.textContent = '';
     }
-    const catalogSlugSet = new Set(catalogo.map(item => item.slug));
+
+    function exibirAviso(mensagem, tipo = 'warning') {
+        if (!aviso) return;
+        aviso.className = `alert alert-${tipo} mt-4 mb-0`;
+        aviso.textContent = mensagem;
+        aviso.style.display = 'block';
+    }
 
     if (dataInput) {
         dataInput.addEventListener('change', () => {
@@ -956,249 +966,212 @@ function inicializarBeneficiosPerfil() {
         });
     }
 
-    function limparAviso() {
-        if (!aviso) return;
-        aviso.style.display = 'none';
-        aviso.textContent = '';
-    }
+    [campoAjudaCusto, campoAuxilioCreche, campoValeAlimentacao].forEach(campo => {
+        if (!campo) return;
+        campo.addEventListener('input', () => {
+            campo.classList.remove('is-invalid');
+            limparAviso();
+        });
+    });
 
-    function exibirAviso(mensagem, tipo = 'warning') {
-        if (!aviso) return;
-        aviso.className = `alert alert-${tipo} mt-3 mb-0`;
-        aviso.textContent = mensagem;
-        aviso.style.display = 'block';
-    }
-
-    function formatarSlugParaLabel(slug) {
-        if (!slug) return '';
-        return slug
-            .toString()
-            .split(/[-_]/)
-            .filter(Boolean)
-            .map(parte => parte.charAt(0).toUpperCase() + parte.slice(1))
-            .join(' ');
+    if (campoValeTransporte) {
+        campoValeTransporte.addEventListener('input', () => {
+            campoValeTransporte.classList.remove('is-invalid');
+            limparAviso();
+        });
     }
 
     function obterDatasetBase() {
         const container = document.getElementById('colaboradorPerfil');
         if (!container) {
-            return {};
+            return {
+                colaboradorId: '',
+                nome: '',
+                salario: '',
+                beneficios: '{}'
+            };
         }
 
         return {
             colaboradorId: container.dataset.colaboradorId || '',
             nome: container.dataset.nome || '',
             salario: container.dataset.salario || '',
-            beneficios: container.dataset.beneficios || ''
+            beneficios: container.dataset.beneficios || '{}'
         };
     }
 
     const datasetBase = obterDatasetBase();
+    const REMUNERACAO_SLUGS = new Set([
+        'ajuda_de_custo',
+        'auxilio_creche',
+        'auxilio_moradia',
+        'auxilio_combustivel',
+        'auxilio_alimentacao',
+        'bonus_resultados',
+        'gratificacao'
+    ]);
 
-    function montarSelectOptions(select, selectedValue) {
-        if (!select) return;
+    function normalizarEstrutura(raw) {
+        const estruturaVazia = { remuneracao_adicional: {}, beneficios_padrao: {} };
+        if (!raw) {
+            return estruturaVazia;
+        }
 
-        select.innerHTML = '';
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'Selecione...';
-        select.appendChild(placeholder);
-
-        catalogo.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.slug;
-            option.textContent = item.label;
-            if (selectedValue && item.slug === selectedValue) {
-                option.selected = true;
+        let fonte = raw;
+        if (typeof raw === 'string') {
+            const texto = raw.trim();
+            if (!texto) {
+                return estruturaVazia;
             }
-            select.appendChild(option);
-        });
-    }
-
-    function criarLinhaBeneficio(config = {}) {
-        const linha = document.createElement('div');
-        linha.className = 'beneficio-item border rounded-3 p-3 mb-2 bg-light';
-        linha.innerHTML = `
-            <div class="row g-2 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label mb-1">Tipo de Benefício</label>
-                    <select class="form-select beneficio-select"></select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label mb-1">Valor Mensal</label>
-                    <div class="input-group">
-                        <span class="input-group-text">R$</span>
-                        <input type="number" class="form-control beneficio-valor" min="0" step="0.01" placeholder="0,00">
-                    </div>
-                </div>
-                <div class="col-md-3 text-md-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100 beneficio-remover">
-                        <i class="mdi mdi-trash-can"></i> Remover
-                    </button>
-                </div>
-                <div class="col-12 mt-2 beneficio-custom-wrapper d-none">
-                    <label class="form-label mb-1">Descreva o benefício</label>
-                    <input type="text" class="form-control beneficio-custom-label" placeholder="Ex: Bônus de produtividade">
-                </div>
-            </div>
-        `;
-
-        const select = linha.querySelector('.beneficio-select');
-        const valorInput = linha.querySelector('.beneficio-valor');
-        const removerBtn = linha.querySelector('.beneficio-remover');
-        const customWrapper = linha.querySelector('.beneficio-custom-wrapper');
-        const customInput = linha.querySelector('.beneficio-custom-label');
-
-        montarSelectOptions(select, config.slug);
-
-        if (valorInput && config.valor !== undefined && config.valor !== null && config.valor !== '') {
-            const valorNumerico = parseFloat(config.valor);
-            if (!Number.isNaN(valorNumerico)) {
-                valorInput.value = valorNumerico;
+            try {
+                fonte = JSON.parse(texto);
+            } catch (error) {
+                console.warn('[RH] Estrutura de benefícios inválida recebida:', error);
+                return estruturaVazia;
             }
         }
 
-        if (config.customLabel && customInput) {
-            customInput.value = config.customLabel;
+        if (!fonte || typeof fonte !== 'object' || Array.isArray(fonte)) {
+            return estruturaVazia;
         }
 
-        function atualizarEstadoCustom() {
-            const selecionado = select.value;
-            const deveMostrarCustom = selecionado === 'outros' || (selecionado && !catalogSlugSet.has(selecionado));
-            if (deveMostrarCustom) {
-                customWrapper.classList.remove('d-none');
-                customInput.required = true;
+        if (Object.prototype.hasOwnProperty.call(fonte, 'remuneracao_adicional') || Object.prototype.hasOwnProperty.call(fonte, 'beneficios_padrao')) {
+            return {
+                remuneracao_adicional: Object.assign({}, fonte.remuneracao_adicional || {}),
+                beneficios_padrao: Object.assign({}, fonte.beneficios_padrao || {})
+            };
+        }
+
+        const resultado = { remuneracao_adicional: {}, beneficios_padrao: {} };
+        Object.entries(fonte).forEach(([slug, valor]) => {
+            if (REMUNERACAO_SLUGS.has(slug)) {
+                resultado.remuneracao_adicional[slug] = valor;
             } else {
-                customWrapper.classList.add('d-none');
-                customInput.required = false;
-                customInput.value = deveMostrarCustom ? customInput.value : '';
+                resultado.beneficios_padrao[slug] = valor;
             }
-        }
-
-        atualizarEstadoCustom();
-
-        select.addEventListener('change', () => {
-            select.classList.remove('is-invalid');
-            limparAviso();
-            atualizarEstadoCustom();
         });
-
-        valorInput.addEventListener('input', () => {
-            valorInput.classList.remove('is-invalid');
-            limparAviso();
-        });
-
-        if (customInput) {
-            customInput.addEventListener('input', () => {
-                customInput.classList.remove('is-invalid');
-                limparAviso();
-            });
-        }
-
-        removerBtn.addEventListener('click', () => {
-            linha.remove();
-            limparAviso();
-        });
-
-        return linha;
+        return resultado;
     }
 
-    function adicionarLinha(config = {}) {
-        const linha = criarLinhaBeneficio(config);
-        lista.appendChild(linha);
-        const select = linha.querySelector('.beneficio-select');
-        if (select) {
-            select.focus();
-        }
-    }
-
-    function carregarBeneficios(fonte) {
-        lista.innerHTML = '';
-        const normalizados = normalizarBeneficios(fonte) || {};
-        const entradas = Object.entries(normalizados);
-
-        if (entradas.length === 0) {
-            adicionarLinha();
+    function atribuirValorNumerico(input, valor) {
+        if (!input) return;
+        if (valor === undefined || valor === null || valor === '') {
+            input.value = '';
             return;
         }
-
-        entradas.forEach(([slug, valor]) => {
-            const ehCatalogo = catalogSlugSet.has(slug);
-            const configLinha = {
-                slug: ehCatalogo ? slug : 'outros',
-                valor: valor,
-                customLabel: ehCatalogo ? '' : formatarSlugParaLabel(slug)
-            };
-            adicionarLinha(configLinha);
-        });
+        if (typeof valor === 'number') {
+            input.value = Number(valor).toFixed(2);
+            return;
+        }
+        const convertido = Number.parseFloat(String(valor).replace(/\./g, '').replace(',', '.'));
+        if (Number.isNaN(convertido)) {
+            input.value = '';
+        } else {
+            input.value = convertido.toFixed(2);
+        }
     }
 
-    function coletarBeneficiosDoFormulario() {
-        const linhas = lista.querySelectorAll('.beneficio-item');
-        const beneficios = [];
-        const erros = new Set();
-        const chaves = new Set();
+    function atribuirValorLivre(input, valor) {
+        if (!input) return;
+        if (valor === undefined || valor === null) {
+            input.value = '';
+            return;
+        }
+        if (typeof valor === 'number') {
+            input.value = Number(valor).toFixed(2);
+            return;
+        }
+        input.value = valor;
+    }
 
-        linhas.forEach(linha => {
-            const select = linha.querySelector('.beneficio-select');
-            const valorInput = linha.querySelector('.beneficio-valor');
-            const customInput = linha.querySelector('.beneficio-custom-label');
-            const customWrapper = linha.querySelector('.beneficio-custom-wrapper');
+    function preencherCampos(estrutura) {
+        if (campoAjudaCusto) {
+            campoAjudaCusto.dataset.slug = 'ajuda_de_custo';
+            atribuirValorNumerico(campoAjudaCusto, estrutura.remuneracao_adicional.ajuda_de_custo);
+        }
 
-            [select, valorInput, customInput].forEach(elemento => elemento && elemento.classList.remove('is-invalid'));
+        if (campoAuxilioCreche) {
+            campoAuxilioCreche.dataset.slug = 'auxilio_creche';
+            atribuirValorNumerico(campoAuxilioCreche, estrutura.remuneracao_adicional.auxilio_creche);
+        }
 
-            const slugSelecionado = select ? select.value : '';
-            const valorBruto = valorInput ? valorInput.value : '';
-            const valorFloat = valorBruto !== '' ? parseFloat(valorBruto) : NaN;
-            const customTexto = customInput ? customInput.value.trim() : '';
+        if (campoValeAlimentacao) {
+            const slugAlimentacao = Object.prototype.hasOwnProperty.call(estrutura.beneficios_padrao, 'vale_alimentacao')
+                ? 'vale_alimentacao'
+                : (Object.prototype.hasOwnProperty.call(estrutura.beneficios_padrao, 'vale_refeicao') ? 'vale_refeicao' : 'vale_alimentacao');
+            campoValeAlimentacao.dataset.slug = slugAlimentacao;
+            atribuirValorNumerico(campoValeAlimentacao, estrutura.beneficios_padrao[slugAlimentacao]);
+        }
 
-            if (!slugSelecionado) {
-                erros.add('Selecione o tipo de benefício para todas as linhas.');
-                if (select) select.classList.add('is-invalid');
-                return;
+        if (campoValeTransporte) {
+            campoValeTransporte.dataset.slug = 'vale_transporte';
+            atribuirValorLivre(campoValeTransporte, estrutura.beneficios_padrao.vale_transporte);
+        }
+    }
+
+    function coletarEstruturaDoFormulario() {
+        const erros = [];
+        const remuneracao = {};
+        const beneficiosPadrao = {};
+
+        function extrairNumero(input, label) {
+            if (!input) return null;
+            const bruto = input.value;
+            if (bruto === '' || bruto === null || bruto === undefined) {
+                return null;
             }
-
-            if (!Number.isFinite(valorFloat) || valorFloat <= 0) {
-                erros.add('Informe valores positivos para todos os benefícios.');
-                if (valorInput) valorInput.classList.add('is-invalid');
-                return;
+            const valor = Number.parseFloat(bruto);
+            if (!Number.isFinite(valor) || valor <= 0) {
+                erros.push(`Informe um valor válido para ${label}.`);
+                input.classList.add('is-invalid');
+                return undefined;
             }
+            return Number(valor.toFixed(2));
+        }
 
-            const item = { valor: Number(valorFloat.toFixed(2)) };
-            let chaveUnica = slugSelecionado;
+        const valorAjuda = extrairNumero(campoAjudaCusto, 'Ajuda de Custo');
+        if (typeof valorAjuda === 'number') {
+            remuneracao.ajuda_de_custo = valorAjuda;
+        }
 
-            if (slugSelecionado === 'outros' || !catalogSlugSet.has(slugSelecionado)) {
-                if (!customTexto) {
-                    erros.add('Descreva os benefícios personalizados.');
-                    if (customInput) customInput.classList.add('is-invalid');
-                    if (customWrapper) customWrapper.classList.remove('d-none');
-                    return;
+        const valorCreche = extrairNumero(campoAuxilioCreche, 'Auxílio Creche');
+        if (typeof valorCreche === 'number') {
+            remuneracao.auxilio_creche = valorCreche;
+        }
+
+        const valorValeAlimentacao = extrairNumero(campoValeAlimentacao, 'Vale Alimentação / Refeição');
+        if (typeof valorValeAlimentacao === 'number') {
+            const slugValeAlimentacao = (campoValeAlimentacao && campoValeAlimentacao.dataset.slug) || 'vale_alimentacao';
+            beneficiosPadrao[slugValeAlimentacao] = valorValeAlimentacao;
+        }
+
+        if (campoValeTransporte) {
+            const bruto = campoValeTransporte.value ? campoValeTransporte.value.trim() : '';
+            if (bruto) {
+                const normalizado = Number.parseFloat(bruto.replace(/\./g, '').replace(',', '.'));
+                if (!Number.isNaN(normalizado)) {
+                    if (normalizado <= 0) {
+                        erros.push('Informe um valor positivo para Vale Transporte ou deixe o campo em branco.');
+                        campoValeTransporte.classList.add('is-invalid');
+                    } else {
+                        beneficiosPadrao.vale_transporte = Number(normalizado.toFixed(2));
+                    }
+                } else {
+                    beneficiosPadrao.vale_transporte = bruto;
                 }
-
-                item.nome = customTexto;
-                chaveUnica = `custom:${customTexto.toLowerCase()}`;
-            } else {
-                item.slug = slugSelecionado;
             }
+        }
 
-            if (chaves.has(chaveUnica)) {
-                erros.add('Evite duplicar o mesmo benefício.');
-                if (select) select.classList.add('is-invalid');
-                return;
-            }
+        const possuiBeneficios = Object.keys(remuneracao).length > 0 || Object.keys(beneficiosPadrao).length > 0;
+        if (!possuiBeneficios) {
+            erros.push('Informe ao menos um benefício para registrar a alteração.');
+        }
 
-            chaves.add(chaveUnica);
-            beneficios.push(item);
-        });
-
-        return { beneficios, erros: Array.from(erros) };
+        return {
+            estrutura: { remuneracao_adicional: remuneracao, beneficios_padrao: beneficiosPadrao },
+            erros
+        };
     }
-
-    btnAdicionar.addEventListener('click', event => {
-        event.preventDefault();
-        limparAviso();
-        adicionarLinha();
-    });
 
     async function prepararEMostrarModalBeneficios(config = {}) {
         limparAviso();
@@ -1213,7 +1186,7 @@ function inicializarBeneficiosPerfil() {
             colaboradorId,
             nome: config.nome,
             salario: config.salario,
-            beneficios: config.beneficios
+            beneficios: config.beneficios !== undefined ? config.beneficios : datasetBase.beneficios
         });
 
         colaboradorIdInput.value = colaboradorId;
@@ -1227,8 +1200,8 @@ function inicializarBeneficiosPerfil() {
             descricaoInput.value = '';
         }
 
-        const beneficiosFonte = config.beneficios !== undefined ? config.beneficios : contexto.beneficios;
-        carregarBeneficios(beneficiosFonte);
+        const estrutura = normalizarEstrutura(config.beneficios !== undefined ? config.beneficios : contexto.beneficios);
+        preencherCampos(estrutura);
 
         const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
         modal.show();
@@ -1270,28 +1243,25 @@ function inicializarBeneficiosPerfil() {
             return;
         }
 
-        const { beneficios, erros } = coletarBeneficiosDoFormulario();
+        const { estrutura, erros } = coletarEstruturaDoFormulario();
 
         if (erros.length > 0) {
             exibirAviso(erros.join(' '));
             return;
         }
 
-        if (beneficios.length === 0) {
-            exibirAviso('Adicione ao menos um benefício com valor positivo.');
-            return;
-        }
-
         const payload = {
             data_evento: dataEvento,
             descricao,
-            beneficios
+            beneficios: estrutura
         };
 
         const btnSalvar = document.getElementById('btnSalvarBeneficios');
-        const textoOriginal = btnSalvar.innerHTML;
-        btnSalvar.disabled = true;
-        btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+        const textoOriginal = btnSalvar ? btnSalvar.innerHTML : '';
+        if (btnSalvar) {
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+        }
 
         try {
             const response = await fetch(`/rh/colaboradores/api/colaboradores/${colaboradorId}/alterar-beneficios`, {
@@ -1312,10 +1282,13 @@ function inicializarBeneficiosPerfil() {
             console.error('[RH] Falha ao alterar benefícios:', error);
             exibirAviso(error.message || 'Ocorreu um erro ao comunicar com o servidor.');
         } finally {
-            btnSalvar.disabled = false;
-            btnSalvar.innerHTML = textoOriginal;
+            if (btnSalvar) {
+                btnSalvar.disabled = false;
+                btnSalvar.innerHTML = textoOriginal;
+            }
         }
     });
+
     window.abrirModalBeneficios = async function(colaboradorId, nomeColaborador) {
         if (!colaboradorId) {
             mostrarAlerta('Colaborador não identificado para alteração de benefícios.', 'danger');

@@ -6,9 +6,10 @@
 .dashboard-executivo-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 1.25rem;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: #f8f9fa;
+    min-height: 100vh;
 }
 
 /* ========================================
@@ -527,7 +528,7 @@
 
 @media (max-width: 768px) {
     .dashboard-executivo-container {
-        padding: 15px;
+        padding: 1rem;
     }
     
     .filter-row {
