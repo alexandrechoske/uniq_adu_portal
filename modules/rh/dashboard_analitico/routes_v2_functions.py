@@ -1360,26 +1360,51 @@ def calcular_secao_compliance_operacional(periodo_inicio, periodo_fim, departame
             if proximo_evento and 0 <= (proximo_evento - hoje).days <= 30:
                 eventos_timeline[_format_iso_date(proximo_evento)] += 1
 
-            if 'exame' in tipo_evento.lower():
-                if status_norm == 'pendente':
-                    kpi_exames_pendentes += 1
-                if status_norm == 'vencido' or (proximo_evento and proximo_evento < hoje and status_norm != 'realizado'):
-                    kpi_exames_vencidos += 1
-
+            # Lógica específica para Exames Periódicos
+            if tipo_evento == 'Exame Periódico':
                 colab = colaboradores_permitidos.get(str(evento.get('colaborador_id')))
-                if colab:
-                    exames_periodicos_tabela.append({
-                        'colaborador_id': colab.get('id'),
-                        'nome': colab.get('nome_completo', 'Colaborador'),
-                        'cargo': cargos_map.get(str(colab.get('cargo_id')), 'N/A'),
-                        'departamento': departamentos_map.get(str(colab.get('departamento_id')), 'N/A'),
-                        'ultimo_exame': _format_iso_date(data_realizada),
-                        'proximo_exame': _format_iso_date(proximo_evento),
-                        'status': status_norm,
-                        'evento_id': evento.get('id')
-                    })
+                if not colab:
+                    continue
+                
+                # Apenas processar colaboradores ativos
+                if colab.get('status') != 'Ativo':
+                    continue
 
-        exames_periodicos_tabela.sort(key=lambda item: item.get('proximo_exame') or '')
+                # Calcular próximo exame: último exame + 365 dias
+                ultimo_exame = _coletar_data(evento, ['data_inicio', 'data_evento'])
+                if not ultimo_exame:
+                    continue
+                
+                from datetime import timedelta
+                proximo_exame_calculado = ultimo_exame + timedelta(days=365)
+                
+                # Determinar status baseado na data do próximo exame
+                dias_para_vencer = (proximo_exame_calculado - hoje).days
+                
+                if dias_para_vencer < 0:
+                    status_exame = 'Vencido'
+                    kpi_exames_vencidos += 1
+                elif dias_para_vencer <= 30:
+                    status_exame = 'Alerta'
+                    kpi_exames_pendentes += 1
+                else:
+                    # Não incluir exames em dia (> 30 dias) na tabela de compliance
+                    continue
+                
+                exames_periodicos_tabela.append({
+                    'colaborador_id': colab.get('id'),
+                    'nome': colab.get('nome_completo', 'Colaborador'),
+                    'cargo': cargos_map.get(str(colab.get('cargo_id')), 'N/A'),
+                    'departamento': departamentos_map.get(str(colab.get('departamento_id')), 'N/A'),
+                    'ultimo_exame': _format_iso_date(ultimo_exame),
+                    'proximo_exame': _format_iso_date(proximo_exame_calculado),
+                    'status': status_exame,
+                    'dias_para_vencer': dias_para_vencer,
+                    'evento_id': evento.get('id')
+                })
+
+        # Ordenar por urgência: mais vencidos primeiro
+        exames_periodicos_tabela.sort(key=lambda item: item.get('dias_para_vencer', 0))
 
         response_pendencias = supabase.table('rh_historico_colaborador')\
             .select('id, colaborador_id, tipo_evento, data_evento, status_contabilidade, descricao_e_motivos')\

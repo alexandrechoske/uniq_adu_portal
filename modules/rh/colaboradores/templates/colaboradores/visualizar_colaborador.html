@@ -637,7 +637,16 @@
                     <h5 class="mb-3"><i class="mdi mdi-phone"></i> Contato</h5>
                     <div class="mb-2">
                         <strong>Telefone:</strong><br>
-                        <span class="text-muted">{{ colaborador.tel_contato }}</span>
+                        {% if colaborador.tel_contato %}
+                            <a href="https://wa.me/55{{ colaborador.tel_contato|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '') }}" 
+                               target="_blank" 
+                               class="text-success text-decoration-none"
+                               title="Abrir conversa no WhatsApp">
+                                <i class="mdi mdi-whatsapp"></i> {{ colaborador.tel_contato }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -648,7 +657,13 @@
             <div class="rh-card mb-4">
                 <div class="card-body">
                     <h5 class="mb-3"><i class="mdi mdi-map-marker"></i> Endereço</h5>
-                    <p class="mb-0 text-muted">{{ colaborador.endereco_completo }}</p>
+                    <p class="mb-2 text-muted">{{ colaborador.endereco_completo }}</p>
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ colaborador.endereco_completo|urlencode }}" 
+                       target="_blank" 
+                       class="btn btn-sm btn-outline-primary"
+                       title="Abrir no Google Maps">
+                        <i class="mdi mdi-map-search"></i> Ver no Mapa
+                    </a>
                 </div>
             </div>
             {% endif %}

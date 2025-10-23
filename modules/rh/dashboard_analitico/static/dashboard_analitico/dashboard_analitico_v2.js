@@ -1736,6 +1736,7 @@ const DashboardAnalitico = {
         }
 
         const normalized = status.toString().toLowerCase();
+        if (normalized.includes('alerta')) return 'badge-warning';
         if (normalized.includes('pendente')) return 'badge-warning';
         if (normalized.includes('andamento')) return 'badge-info';
         if (normalized.includes('realiz') || normalized.includes('conclu')) return 'badge-success';
