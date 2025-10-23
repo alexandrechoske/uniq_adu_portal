@@ -159,6 +159,52 @@ material_info = material_cleaner.clean_material(raw_material_text)
 - Cache validation through manual login flow testing
 
 When implementing new features, always consider the cache-first architecture, role-based filtering, and Brazilian date format handling patterns established in the existing codebase.
+
+## Profile & Access Control System (Módulo de Usuários)
+
+### Página de Perfis de Acesso
+Located in: `modules/usuarios/templates/perfis.html`
+
+The profile system controls user access to specific pages within modules. All available pages are stored in the `module_pages` table in Supabase.
+
+### Adding New Routes to Profile System
+
+**IMPORTANTE**: Whenever you create a new route/page, you MUST add it to the `module_pages` table so it appears in the profile creation UI.
+
+**Steps to add a new page:**
+
+1. **Create your route** in the appropriate module (e.g., `modules/financeiro/new_feature/routes.py`)
+2. **Test the route** to ensure it works
+3. **Generate SQL INSERT** using the template:
+```sql
+INSERT INTO "public"."module_pages" 
+("id", "module_id", "page_code", "page_name", "description", "route_path", "icon_class", "sort_order", "is_active", "requires_special_permission", "created_at", "updated_at") 
+VALUES (
+  'UUID_v4_HERE', 
+  'module_id', 
+  'page_code_identifier', 
+  'Display Name',
+  'Brief description',
+  '/module/route-path',
+  'mdi-icon-class',
+  N,  -- sort order number
+  true,
+  false,
+  NOW(),
+  NOW()
+);
+```
+4. **Execute INSERT** in Supabase SQL Editor
+5. **Verify** that the new page appears in "Usuários > Perfis > Novo Perfil" modal
+
+### Current Pages (23 total)
+- **Importação**: 7 pages (dashboard_executivo, dashboard_resumido, documentos, relatorio, agente, materiais, dashboard_operacional)
+- **Financeiro**: 8 pages (fin_dashboard_executivo, fluxo_caixa, despesas, faturamento, **conciliacao**, categorizacao, projecoes, export_bases)
+- **RH**: 8 pages (dashboard, colaboradores, estrutura_cargos, estrutura_departamentos, recrutamento, desempenho, carreiras, dashboard_analitico)
+
+### Reference Guide
+See `docs/GUIA_PAGINAS_PERFIS.md` for complete mapping and maintenance instructions.
+
 Se for testar, utilize método via API pois a página exige login.
 SEMPRE CRIE ARQUIVOS COM O PREFIXO `test_` PARA TESTES.
 SEMPRE DELETE OS ARQUIVOS QUE CRIOU PARA TESTAR. ( delete os arquivos com o PREFIXO `test_` )
