@@ -1132,6 +1132,11 @@ def calcular_secao_administracao_pessoal(periodo_inicio, periodo_fim, departamen
         if outros_escolaridade:
             escolaridade_labels.append('Outros')
             escolaridade_values.append(outros_escolaridade)
+        
+        # Ordenar de forma descendente (maior para menor)
+        escolaridade_pairs = sorted(zip(escolaridade_labels, escolaridade_values), key=lambda item: item[1], reverse=True)
+        escolaridade_labels = [item[0] for item in escolaridade_pairs]
+        escolaridade_values = [item[1] for item in escolaridade_pairs]
 
         headcount_ordenado = sorted(headcount_departamento.items(), key=lambda item: item[1], reverse=True)
         headcount_ordenado = headcount_ordenado[:8]

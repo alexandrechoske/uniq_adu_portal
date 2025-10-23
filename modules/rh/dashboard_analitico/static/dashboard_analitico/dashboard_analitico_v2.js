@@ -1168,7 +1168,9 @@ const DashboardAnalitico = {
                             if (!value) return '';
                             const percent = (value / total) * 100;
                             return this.formatPercent(percent, 1);
-                        }
+                        },
+                        color: '#000000',
+                        font: { weight: 'bold', size: 12 }
                     }
                 }
             }
@@ -1210,7 +1212,9 @@ const DashboardAnalitico = {
                             if (!value) return '';
                             const percent = (value / total) * 100;
                             return this.formatPercent(percent, 1);
-                        }
+                        },
+                        color: '#000000',
+                        font: { weight: 'bold', size: 12 }
                     }
                 }
             }
@@ -1291,6 +1295,7 @@ const DashboardAnalitico = {
                 ]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
@@ -1298,7 +1303,7 @@ const DashboardAnalitico = {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                const valor = context.parsed.y ?? context.parsed;
+                                const valor = context.parsed.x ?? context.parsed;
                                 return `${this.formatNumber(valor, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} meses`;
                             }
                         }
@@ -1310,7 +1315,7 @@ const DashboardAnalitico = {
                     }
                 },
                 scales: {
-                    y: {
+                    x: {
                         beginAtZero: true,
                         ticks: {
                             precision: 0
@@ -1378,7 +1383,12 @@ const DashboardAnalitico = {
                         formatter: (value) => {
                             const absolute = Math.abs(value);
                             return absolute > 0 ? absolute : '';
-                        }
+                        },
+                        color: '#ffffff',
+                        font: { weight: 'bold' },
+                        backgroundColor: (context) => context.dataset.backgroundColor,
+                        padding: 4,
+                        borderRadius: 3
                     },
                     legend: { position: 'bottom' }
                 },
