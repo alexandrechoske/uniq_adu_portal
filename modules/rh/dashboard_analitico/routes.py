@@ -1,32 +1,33 @@
-"""
-Rotas - Dashboard Executivo RH
-Endpoints para visualização de indicadores executivos de RH
+﻿"""
+Rotas - Dashboard AnalÃ­tico RH
+Endpoints para anÃ¡lises detalhadas e mÃ©tricas analÃ­ticas de RH
 
-Dashboard Executivo (Visão da Diretoria):
-- 5 KPIs Principais: Headcount, Turnover, Tempo Médio Contratação, Vagas Abertas, Custo Total
-- 4 Gráficos: Evolução Headcount, Admissões vs Desligamentos, Turnover por Departamento, Vagas Abertas por Mais Tempo
+Dashboard AnalÃ­tico (AnÃ¡lises Detalhadas):
+- KPIs AnalÃ­ticos
+- GrÃ¡ficos Detalhados de AnÃ¡lises
+- MÃ©tricas AvanÃ§adas e CorrelaÃ§Ãµes
 """
 
 from flask import render_template, jsonify, request
 from modules.auth.routes import login_required
 from decorators.perfil_decorators import perfil_required
-from . import dashboard_rh_bp
+from . import dashboard_analitico_rh_bp
 from extensions import supabase_admin as supabase
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 
 # ========================================
-# PÁGINAS HTML
+# PÃGINAS HTML
 # ========================================
 
-@dashboard_rh_bp.route('/')
+@dashboard_analitico_rh_bp.route('/')
 @login_required
 @perfil_required('rh', 'dashboard')
-def dashboard_executivo():
+def dashboard_analitico():
     """
-    Página principal do Dashboard Executivo de RH
-    Exibe indicadores e métricas consolidadas
+    PÃ¡gina principal do Dashboard AnalÃ­tico de RH
+    Exibe anÃ¡lises detalhadas e mÃ©tricas analÃ­ticas
     """
     try:
         # Carregar departamentos para o filtro
@@ -39,59 +40,184 @@ def dashboard_executivo():
         }
         
         return render_template(
-            'dashboard/dashboard_executivo.html',
+            'dashboard_analitico/dashboard_analitico_v2.html',
             dados=dados_dashboard
         )
         
     except Exception as e:
-        print(f"❌ Erro ao carregar dashboard executivo: {str(e)}")
+        print(f"âŒ Erro ao carregar dashboard analÃ­tico: {str(e)}")
         return render_template(
-            'dashboard/dashboard_executivo.html',
+            'dashboard_analitico/dashboard_analitico_v2.html',
             error=str(e)
         ), 500
 
 
 # ========================================
-# APIs REST
+# APIs REST - Dashboard AnalÃ­tico v2.0
 # ========================================
 
-@dashboard_rh_bp.route('/api/dados', methods=['GET'])
+@dashboard_analitico_rh_bp.route('/api/filtros/departamentos', methods=['GET'])
+@login_required
+@perfil_required('rh', 'dashboard')
+def api_filtros_departamentos():
+    """API: Retorna lista de departamentos para filtro"""
+    try:
+        response = supabase.table('rh_departamentos')\
+            .select('id, nome_departamento')\
+            .order('nome_departamento')\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'departamentos': response.data if response.data else []
+        })
+    except Exception as e:
+        print(f"âŒ Erro ao carregar departamentos: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@dashboard_analitico_rh_bp.route('/api/filtros/cargos', methods=['GET'])
+@login_required
+@perfil_required('rh', 'dashboard')
+def api_filtros_cargos():
+    """API: Retorna lista de cargos para filtro"""
+    try:
+        response = supabase.table('rh_cargos')\
+            .select('id, nome_cargo')\
+            .order('nome_cargo')\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'cargos': response.data if response.data else []
+        })
+    except Exception as e:
+        print(f"âŒ Erro ao carregar cargos: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@dashboard_analitico_rh_bp.route('/api/dados', methods=['GET'])
 @login_required
 @perfil_required('rh', 'dashboard')
 def api_dados_dashboard():
     """
-    API: Retorna dados consolidados do dashboard
+    API: Retorna dados consolidados do dashboard analÃ­tico v2.0
     Query Params:
-        - periodo_inicio: data início (YYYY-MM-DD)
+        - periodo_inicio: data inÃ­cio (YYYY-MM-DD)
         - periodo_fim: data fim (YYYY-MM-DD)
-        - departamentos: array de IDs de departamentos (opcional)
+        - departamentos[]: array de IDs de departamentos (opcional)
+        - cargos[]: array de IDs de cargos (opcional)
+        - status: 'todos', 'ativo', 'inativo' (opcional)
     """
     try:
-        # Obter parâmetros de filtro
+        # Obter parÃ¢metros de filtro
         periodo_inicio = request.args.get('periodo_inicio')
         periodo_fim = request.args.get('periodo_fim')
         departamentos_ids = request.args.getlist('departamentos[]')
+        cargos_ids = request.args.getlist('cargos[]')
+        status_filter = request.args.get('status', 'todos')
         
-        # Definir período padrão se não fornecido (Este Ano)
+        # Definir perÃ­odo padrÃ£o se nÃ£o fornecido (Este Ano)
         if not periodo_inicio or not periodo_fim:
             hoje = datetime.now()
             periodo_inicio = f"{hoje.year}-01-01"
             periodo_fim = hoje.strftime('%Y-%m-%d')
         
-        print(f"\n📊 ========== DASHBOARD EXECUTIVO RH ==========")
-        print(f"📊 Período: {periodo_inicio} a {periodo_fim}")
-        print(f"📊 Departamentos filtrados: {departamentos_ids if departamentos_ids else 'Todos'}")
+        print(f"\nðŸ“Š ========== DASHBOARD ANALÃTICO RH V2.0 ==========")
+        print(f"ðŸ“Š PerÃ­odo: {periodo_inicio} a {periodo_fim}")
+        print(f"ðŸ“Š Departamentos: {departamentos_ids if departamentos_ids else 'Todos'}")
+        print(f"ðŸ“Š Cargos: {cargos_ids if cargos_ids else 'Todos'}")
+        print(f"ðŸ“Š Status: {status_filter}")
+        
+        # SeÃ§Ã£o 1: Recrutamento & SeleÃ§Ã£o
+        recrutamento_data = calcular_secao_recrutamento(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids
+        )
+        
+        # SeÃ§Ã£o 2: Turnover & RetenÃ§Ã£o
+        turnover_data = calcular_secao_turnover(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
+        )
+
+        # SeÃ§Ã£o 3: AdministraÃ§Ã£o de Pessoal
+        administracao_pessoal_data = calcular_secao_administracao_pessoal(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
+        )
+
+        # SeÃ§Ã£o 4: Compliance & Eventos Operacionais
+        compliance_data = calcular_secao_compliance_operacional(
+            periodo_inicio, periodo_fim, departamentos_ids, cargos_ids, status_filter
+        )
+        
+        print(f"âœ… Dashboard calculado com sucesso!")
+        print(f"================================================\n")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'periodo': {
+                    'inicio': periodo_inicio,
+                    'fim': periodo_fim
+                },
+                'recrutamento': recrutamento_data,
+                'turnover': turnover_data,
+                'administracao_pessoal': administracao_pessoal_data,
+                'compliance': compliance_data,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"âŒ Erro na API de dados do dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+# ========================================
+# APIs REST - Dashboard Executivo (Mantido para compatibilidade)
+# ========================================
+
+@dashboard_analitico_rh_bp.route('/api/dados_old', methods=['GET'])
+@login_required
+@perfil_required('rh', 'dashboard')
+def api_dados_dashboard_old():
+    """
+    API: Retorna dados consolidados do dashboard analÃ­tico (versÃ£o antiga)
+    Query Params:
+        - periodo_inicio: data inÃ­cio (YYYY-MM-DD)
+        - periodo_fim: data fim (YYYY-MM-DD)
+        - departamentos: array de IDs de departamentos (opcional)
+    """
+    try:
+        # Obter parÃ¢metros de filtro
+        periodo_inicio = request.args.get('periodo_inicio')
+        periodo_fim = request.args.get('periodo_fim')
+        departamentos_ids = request.args.getlist('departamentos[]')
+        
+        # Definir perÃ­odo padrÃ£o se nÃ£o fornecido (Este Ano)
+        if not periodo_inicio or not periodo_fim:
+            hoje = datetime.now()
+            periodo_inicio = f"{hoje.year}-01-01"
+            periodo_fim = hoje.strftime('%Y-%m-%d')
+        
+        print(f"\nðŸ“Š ========== DASHBOARD ANALÃTICO RH ==========")
+        print(f"ðŸ“Š PerÃ­odo: {periodo_inicio} a {periodo_fim}")
+        print(f"ðŸ“Š Departamentos filtrados: {departamentos_ids if departamentos_ids else 'Todos'}")
         
         # Calcular KPIs
         kpis = calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids)
         
-        # Calcular dados para gráficos
+        # Calcular dados para grÃ¡ficos
         graficos = calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids)
         
         # Calcular dados para tabelas
         tabelas = calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids)
         
-        print(f"✅ Dashboard calculado com sucesso!")
+        print(f"âœ… Dashboard calculado com sucesso!")
         print(f"========================================\n")
         
         return jsonify({
@@ -109,7 +235,7 @@ def api_dados_dashboard():
         })
         
     except Exception as e:
-        print(f"❌ Erro na API de dados do dashboard: {str(e)}")
+        print(f"âŒ Erro na API de dados do dashboard: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -118,12 +244,12 @@ def api_dados_dashboard():
         }), 500
 
 
-@dashboard_rh_bp.route('/api/refresh', methods=['POST'])
+@dashboard_analitico_rh_bp.route('/api/refresh', methods=['POST'])
 @login_required
 @perfil_required('rh', 'dashboard')
 def api_refresh_dados():
     """
-    API: Força atualização dos dados do dashboard
+    API: ForÃ§a atualizaÃ§Ã£o dos dados do dashboard analÃ­tico
     """
     try:
         return jsonify({
@@ -133,7 +259,7 @@ def api_refresh_dados():
         })
         
     except Exception as e:
-        print(f"❌ Erro ao atualizar dados: {str(e)}")
+        print(f"âŒ Erro ao atualizar dados: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -141,7 +267,7 @@ def api_refresh_dados():
 
 
 # ========================================
-# FUNÇÕES DE CÁLCULO - KPIs
+# FUNÃ‡Ã•ES DE CÃLCULO - KPIs
 # ========================================
 
 def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
@@ -151,16 +277,16 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     KPIs:
     1. Headcount - Total de colaboradores ativos
     2. Turnover - Taxa de rotatividade (%)
-    3. Tempo Médio Contratação - Dias para fechar vagas
+    3. Tempo MÃ©dio ContrataÃ§Ã£o - Dias para fechar vagas
     4. Vagas Abertas - Total de vagas em aberto
-    5. Custo Salários - Soma dos salários mensais (folha pura)
-    6. Custo Benefícios - Soma dos benefícios mensais
-    7. Custo Total - Salários + Benefícios
-    8. Média Candidatos - Média de candidatos por vaga
-    9. Tempo Médio de Casa - Tempo médio de permanência
-    10. Idade Média - Idade média dos colaboradores
+    5. Custo SalÃ¡rios - Soma dos salÃ¡rios mensais (folha pura)
+    6. Custo BenefÃ­cios - Soma dos benefÃ­cios mensais
+    7. Custo Total - SalÃ¡rios + BenefÃ­cios
+    8. MÃ©dia Candidatos - MÃ©dia de candidatos por vaga
+    9. Tempo MÃ©dio de Casa - Tempo mÃ©dio de permanÃªncia
+    10. Idade MÃ©dia - Idade mÃ©dia dos colaboradores
     """
-    print("\n🚀 Calculando KPIs do Dashboard Executivo...")
+    print("\nðŸš€ Calculando KPIs do Dashboard Executivo...")
     
     kpis = {}
     
@@ -170,25 +296,25 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     # KPI 2: Turnover (Taxa de Rotatividade)
     kpis['turnover'] = calcular_kpi_turnover(periodo_inicio, periodo_fim, kpis['headcount']['valor'])
     
-    # KPI 3: Tempo Médio de Contratação
+    # KPI 3: Tempo MÃ©dio de ContrataÃ§Ã£o
     kpis['tempo_contratacao'] = calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim)
     
     # KPI 4: Vagas Abertas
     kpis['vagas_abertas'] = calcular_kpi_vagas_abertas()
     
-    # KPI 5, 6, 7: Custos (Salários, Benefícios e Total)
+    # KPI 5, 6, 7: Custos (SalÃ¡rios, BenefÃ­cios e Total)
     custos = calcular_kpi_custo_total()
     kpis['custo_salarios'] = {
         'valor': custos['custo_salarios'],
         'variacao': 0,
-        'label': 'Custo Salários (Folha)',
+        'label': 'Custo SalÃ¡rios (Folha)',
         'icone': 'mdi-currency-usd',
         'cor': '#28a745'
     }
     kpis['custo_beneficios'] = {
         'valor': custos['custo_beneficios'],
         'variacao': 0,
-        'label': 'Custo Benefícios',
+        'label': 'Custo BenefÃ­cios',
         'icone': 'mdi-gift',
         'cor': '#17a2b8'
     }
@@ -200,16 +326,16 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
         'cor': '#fd7e14'
     }
     
-    # KPI 8: Média de Candidatos por Vaga
+    # KPI 8: MÃ©dia de Candidatos por Vaga
     kpis['media_candidatos'] = calcular_kpi_media_candidatos()
     
-    # KPI 9: Tempo Médio de Casa
+    # KPI 9: Tempo MÃ©dio de Casa
     kpis['tempo_medio_casa'] = calcular_kpi_tempo_medio_casa()
     
-    # KPI 10: Idade Média
+    # KPI 10: Idade MÃ©dia
     kpis['idade_media'] = calcular_kpi_idade_media()
     
-    print("✅ KPIs calculados com sucesso!\n")
+    print("âœ… KPIs calculados com sucesso!\n")
     return kpis
 
 
@@ -217,7 +343,7 @@ def calcular_kpi_headcount():
     """
     KPI 1: Headcount - Total de Colaboradores Ativos
     
-    Lógica:
+    LÃ³gica:
     - COUNT(*) WHERE status = 'Ativo' AND data_desligamento IS NULL
     """
     try:
@@ -229,7 +355,7 @@ def calcular_kpi_headcount():
         
         headcount = response.count if response.count is not None else 0
         
-        print(f"   ✅ Headcount: {headcount}")
+        print(f"   âœ… Headcount: {headcount}")
         
         return {
             'valor': headcount,
@@ -239,7 +365,7 @@ def calcular_kpi_headcount():
             'cor': '#6f42c1'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular headcount: {str(e)}")
+        print(f"   âŒ Erro ao calcular headcount: {str(e)}")
         return {
             'valor': 0,
             'variacao': 0,
@@ -253,15 +379,15 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
     """
     KPI 2: Turnover - Taxa de Rotatividade (%)
     
-    Fórmula:
-    - Turnover (%) = (Desligamentos no Período / Headcount Médio) × 100
+    FÃ³rmula:
+    - Turnover (%) = (Desligamentos no PerÃ­odo / Headcount MÃ©dio) Ã— 100
     
-    Lógica:
+    LÃ³gica:
     - Usar data_desligamento da tabela rh_colaboradores
-    - NÃO usar histórico (pode ter múltiplos registros)
+    - NÃƒO usar histÃ³rico (pode ter mÃºltiplos registros)
     """
     try:
-        # Contar desligamentos no período usando data_desligamento
+        # Contar desligamentos no perÃ­odo usando data_desligamento
         response_demissoes = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
             .not_.is_('data_desligamento', 'null')\
@@ -271,13 +397,13 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
         
         desligamentos = response_demissoes.count if response_demissoes.count is not None else 0
         
-        # Calcular turnover (usar headcount atual como aproximação do médio)
+        # Calcular turnover (usar headcount atual como aproximaÃ§Ã£o do mÃ©dio)
         if headcount_atual == 0:
             turnover_taxa = 0
         else:
             turnover_taxa = (desligamentos / headcount_atual) * 100
         
-        print(f"   ✅ Turnover: {turnover_taxa:.1f}% ({desligamentos} desligamentos / {headcount_atual} headcount)")
+        print(f"   âœ… Turnover: {turnover_taxa:.1f}% ({desligamentos} desligamentos / {headcount_atual} headcount)")
         
         return {
             'valor': round(turnover_taxa, 1),
@@ -287,7 +413,7 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
             'cor': '#dc3545' if turnover_taxa > 10 else '#28a745'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular turnover: {str(e)}")
+        print(f"   âŒ Erro ao calcular turnover: {str(e)}")
         return {
             'valor': 0,
             'variacao': 0,
@@ -299,13 +425,13 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
 
 def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
     """
-    KPI 3: Tempo Médio de Contratação (Dias)
+    KPI 3: Tempo MÃ©dio de ContrataÃ§Ã£o (Dias)
     
-    Fórmula:
-    - AVG(data_fechamento - data_abertura) para vagas fechadas no período
+    FÃ³rmula:
+    - AVG(data_fechamento - data_abertura) para vagas fechadas no perÃ­odo
     """
     try:
-        # Buscar vagas fechadas no período
+        # Buscar vagas fechadas no perÃ­odo
         response_vagas = supabase.table('rh_vagas')\
             .select('data_abertura, data_fechamento')\
             .eq('status', 'Fechada')\
@@ -317,16 +443,16 @@ def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
         vagas = response_vagas.data if response_vagas.data else []
         
         if not vagas:
-            print(f"   ⚠️  Tempo Contratação: Nenhuma vaga fechada no período")
+            print(f"   âš ï¸  Tempo ContrataÃ§Ã£o: Nenhuma vaga fechada no perÃ­odo")
             return {
                 'valor': 0,
                 'variacao': 0,
-                'label': 'Tempo Médio Contratação (dias)',
+                'label': 'Tempo MÃ©dio ContrataÃ§Ã£o (dias)',
                 'icone': 'mdi-clock-outline',
                 'cor': '#17a2b8'
             }
         
-        # Calcular diferença em dias
+        # Calcular diferenÃ§a em dias
         total_dias = 0
         count_vagas = 0
         
@@ -344,21 +470,21 @@ def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
         
         tempo_medio = round(total_dias / count_vagas) if count_vagas > 0 else 0
         
-        print(f"   ✅ Tempo Médio Contratação: {tempo_medio} dias ({count_vagas} vagas fechadas)")
+        print(f"   âœ… Tempo MÃ©dio ContrataÃ§Ã£o: {tempo_medio} dias ({count_vagas} vagas fechadas)")
         
         return {
             'valor': tempo_medio,
             'variacao': 0,
-            'label': 'Tempo Médio Contratação (dias)',
+            'label': 'Tempo MÃ©dio ContrataÃ§Ã£o (dias)',
             'icone': 'mdi-clock-outline',
             'cor': '#ffc107' if tempo_medio > 30 else '#28a745'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular tempo de contratação: {str(e)}")
+        print(f"   âŒ Erro ao calcular tempo de contrataÃ§Ã£o: {str(e)}")
         return {
             'valor': 0,
             'variacao': 0,
-            'label': 'Tempo Médio Contratação (dias)',
+            'label': 'Tempo MÃ©dio ContrataÃ§Ã£o (dias)',
             'icone': 'mdi-clock-outline',
             'cor': '#17a2b8'
         }
@@ -366,7 +492,7 @@ def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
 
 def calcular_kpi_vagas_abertas():
     """
-    KPI 4: Vagas Abertas - Total de Posições em Aberto
+    KPI 4: Vagas Abertas - Total de PosiÃ§Ãµes em Aberto
     """
     try:
         response = supabase.table('rh_vagas')\
@@ -376,7 +502,7 @@ def calcular_kpi_vagas_abertas():
         
         vagas_abertas = response.count if response.count is not None else 0
         
-        print(f"   ✅ Vagas Abertas: {vagas_abertas}")
+        print(f"   âœ… Vagas Abertas: {vagas_abertas}")
         
         return {
             'valor': vagas_abertas,
@@ -386,7 +512,7 @@ def calcular_kpi_vagas_abertas():
             'cor': '#6f42c1'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular vagas abertas: {str(e)}")
+        print(f"   âŒ Erro ao calcular vagas abertas: {str(e)}")
         return {
             'valor': 0,
             'variacao': 0,
@@ -398,14 +524,14 @@ def calcular_kpi_vagas_abertas():
 
 def calcular_kpi_media_candidatos():
     """
-    KPI 6: Média de Candidatos por Vaga
+    KPI 6: MÃ©dia de Candidatos por Vaga
     
-    Fórmula:
+    FÃ³rmula:
     - Total de candidatos / Total de vagas com candidatos
     - Considera apenas vagas que receberam candidaturas
     """
     try:
-        print(f"   🔍 Calculando média de candidatos por vaga")
+        print(f"   ðŸ” Calculando mÃ©dia de candidatos por vaga")
         
         # Buscar total de candidatos
         response_candidatos = supabase.table('rh_candidatos')\
@@ -415,41 +541,41 @@ def calcular_kpi_media_candidatos():
         total_candidatos = response_candidatos.count if response_candidatos.count is not None else 0
         candidatos_data = response_candidatos.data if response_candidatos.data else []
         
-        print(f"   📊 Total de candidatos: {total_candidatos}")
+        print(f"   ðŸ“Š Total de candidatos: {total_candidatos}")
         
-        # Contar vagas únicas que receberam candidaturas
+        # Contar vagas Ãºnicas que receberam candidaturas
         vagas_com_candidatos = set()
         for candidato in candidatos_data:
             if candidato.get('vaga_id'):
                 vagas_com_candidatos.add(candidato['vaga_id'])
         
         total_vagas = len(vagas_com_candidatos)
-        print(f"   📊 Total de vagas com candidatos: {total_vagas}")
+        print(f"   ðŸ“Š Total de vagas com candidatos: {total_vagas}")
         
-        # Calcular média
+        # Calcular mÃ©dia
         if total_vagas > 0:
             media = round(total_candidatos / total_vagas, 1)
         else:
-            print(f"   ⚠️  Média Candidatos: Nenhuma vaga com candidatos encontrada")
+            print(f"   âš ï¸  MÃ©dia Candidatos: Nenhuma vaga com candidatos encontrada")
             media = 0
         
-        print(f"   ✅ Média de Candidatos por Vaga: {media}")
+        print(f"   âœ… MÃ©dia de Candidatos por Vaga: {media}")
         
         return {
             'valor': media,
             'variacao': 0,
-            'label': 'Média Candidatos/Vaga',
+            'label': 'MÃ©dia Candidatos/Vaga',
             'icone': 'mdi-account-multiple-outline',
             'cor': '#20c997' if media >= 5 else '#ffc107'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular média de candidatos: {str(e)}")
+        print(f"   âŒ Erro ao calcular mÃ©dia de candidatos: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
             'valor': 0,
             'variacao': 0,
-            'label': 'Média Candidatos/Vaga',
+            'label': 'MÃ©dia Candidatos/Vaga',
             'icone': 'mdi-account-multiple-outline',
             'cor': '#17a2b8'
         }
@@ -457,16 +583,16 @@ def calcular_kpi_media_candidatos():
 
 def calcular_kpi_tempo_medio_casa():
     """
-    KPI 7: Tempo Médio de Casa (Anos)
+    KPI 7: Tempo MÃ©dio de Casa (Anos)
     
-    Fórmula:
+    FÃ³rmula:
     - Para cada colaborador ativo, calcular: data_atual - data_admissao
-    - Retornar a média em anos
+    - Retornar a mÃ©dia em anos
     """
     try:
-        print(f"   🔍 Calculando tempo médio de casa")
+        print(f"   ðŸ” Calculando tempo mÃ©dio de casa")
         
-        # Buscar colaboradores ativos com data de admissão
+        # Buscar colaboradores ativos com data de admissÃ£o
         response = supabase.table('rh_colaboradores')\
             .select('id, data_admissao')\
             .eq('status', 'Ativo')\
@@ -475,14 +601,14 @@ def calcular_kpi_tempo_medio_casa():
             .execute()
         
         colaboradores = response.data if response.data else []
-        print(f"   📊 Total de colaboradores ativos com data de admissão: {len(colaboradores)}")
+        print(f"   ðŸ“Š Total de colaboradores ativos com data de admissÃ£o: {len(colaboradores)}")
         
         if not colaboradores:
-            print(f"   ⚠️  Tempo Médio de Casa: Nenhum colaborador ativo encontrado")
+            print(f"   âš ï¸  Tempo MÃ©dio de Casa: Nenhum colaborador ativo encontrado")
             return {
                 'valor': 0,
                 'variacao': 0,
-                'label': 'Tempo Médio de Casa',
+                'label': 'Tempo MÃ©dio de Casa',
                 'icone': 'mdi-history',
                 'cor': '#6f42c1',
                 'unidade': 'anos'
@@ -501,33 +627,33 @@ def calcular_kpi_tempo_medio_casa():
                     tempo_anos = tempo_dias / 365.25  # Considera anos bissextos
                     tempos_casa.append(tempo_anos)
                 except Exception as ex:
-                    print(f"      ⚠️ Erro ao processar data de admissão: {data_admissao_str} - {str(ex)}")
+                    print(f"      âš ï¸ Erro ao processar data de admissÃ£o: {data_admissao_str} - {str(ex)}")
                     continue
         
         if not tempos_casa:
-            print(f"   ⚠️  Tempo Médio de Casa: Nenhuma data válida processada")
+            print(f"   âš ï¸  Tempo MÃ©dio de Casa: Nenhuma data vÃ¡lida processada")
             tempo_medio = 0
         else:
             tempo_medio = round(sum(tempos_casa) / len(tempos_casa), 1)
         
-        print(f"   ✅ Tempo Médio de Casa: {tempo_medio} anos ({len(tempos_casa)} colaboradores processados)")
+        print(f"   âœ… Tempo MÃ©dio de Casa: {tempo_medio} anos ({len(tempos_casa)} colaboradores processados)")
         
         return {
             'valor': tempo_medio,
             'variacao': 0,
-            'label': 'Tempo Médio de Casa',
+            'label': 'Tempo MÃ©dio de Casa',
             'icone': 'mdi-history',
             'cor': '#6f42c1',
             'unidade': 'anos'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular tempo médio de casa: {str(e)}")
+        print(f"   âŒ Erro ao calcular tempo mÃ©dio de casa: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
             'valor': 0,
             'variacao': 0,
-            'label': 'Tempo Médio de Casa',
+            'label': 'Tempo MÃ©dio de Casa',
             'icone': 'mdi-history',
             'cor': '#6f42c1',
             'unidade': 'anos'
@@ -536,14 +662,14 @@ def calcular_kpi_tempo_medio_casa():
 
 def calcular_kpi_idade_media():
     """
-    KPI 8: Idade Média dos Colaboradores (Anos)
+    KPI 8: Idade MÃ©dia dos Colaboradores (Anos)
     
-    Fórmula:
+    FÃ³rmula:
     - Para cada colaborador ativo, calcular: data_atual - data_nascimento
-    - Retornar a média em anos
+    - Retornar a mÃ©dia em anos
     """
     try:
-        print(f"   🔍 Calculando idade média dos colaboradores")
+        print(f"   ðŸ” Calculando idade mÃ©dia dos colaboradores")
         
         # Buscar colaboradores ativos com data de nascimento
         response = supabase.table('rh_colaboradores')\
@@ -554,14 +680,14 @@ def calcular_kpi_idade_media():
             .execute()
         
         colaboradores = response.data if response.data else []
-        print(f"   📊 Total de colaboradores ativos com data de nascimento: {len(colaboradores)}")
+        print(f"   ðŸ“Š Total de colaboradores ativos com data de nascimento: {len(colaboradores)}")
         
         if not colaboradores:
-            print(f"   ⚠️  Idade Média: Nenhum colaborador ativo encontrado")
+            print(f"   âš ï¸  Idade MÃ©dia: Nenhum colaborador ativo encontrado")
             return {
                 'valor': 0,
                 'variacao': 0,
-                'label': 'Idade Média',
+                'label': 'Idade MÃ©dia',
                 'icone': 'mdi-cake-variant',
                 'cor': '#6f42c1',
                 'unidade': 'anos'
@@ -579,39 +705,39 @@ def calcular_kpi_idade_media():
                     idade_dias = (hoje - data_nascimento).days
                     idade_anos = idade_dias / 365.25  # Considera anos bissextos
                     
-                    # Validar idade razoável (entre 18 e 80 anos)
+                    # Validar idade razoÃ¡vel (entre 18 e 80 anos)
                     if 18 <= idade_anos <= 80:
                         idades.append(idade_anos)
                     else:
-                        print(f"      ⚠️ Idade fora do range válido ignorada: {idade_anos:.1f} anos")
+                        print(f"      âš ï¸ Idade fora do range vÃ¡lido ignorada: {idade_anos:.1f} anos")
                 except Exception as ex:
-                    print(f"      ⚠️ Erro ao processar data de nascimento: {data_nascimento_str} - {str(ex)}")
+                    print(f"      âš ï¸ Erro ao processar data de nascimento: {data_nascimento_str} - {str(ex)}")
                     continue
         
         if not idades:
-            print(f"   ⚠️  Idade Média: Nenhuma data válida processada")
+            print(f"   âš ï¸  Idade MÃ©dia: Nenhuma data vÃ¡lida processada")
             idade_media = 0
         else:
             idade_media = round(sum(idades) / len(idades))
         
-        print(f"   ✅ Idade Média: {idade_media} anos ({len(idades)} colaboradores processados)")
+        print(f"   âœ… Idade MÃ©dia: {idade_media} anos ({len(idades)} colaboradores processados)")
         
         return {
             'valor': idade_media,
             'variacao': 0,
-            'label': 'Idade Média',
+            'label': 'Idade MÃ©dia',
             'icone': 'mdi-cake-variant',
             'cor': '#6f42c1',
             'unidade': 'anos'
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular idade média: {str(e)}")
+        print(f"   âŒ Erro ao calcular idade mÃ©dia: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
             'valor': 0,
             'variacao': 0,
-            'label': 'Idade Média',
+            'label': 'Idade MÃ©dia',
             'icone': 'mdi-cake-variant',
             'cor': '#6f42c1',
             'unidade': 'anos'
@@ -620,31 +746,31 @@ def calcular_kpi_idade_media():
 
 def calcular_kpi_custo_total():
     """
-    KPI 5, 6, 7: Custos de Pessoal (Salários, Benefícios e Total)
+    KPI 5, 6, 7: Custos de Pessoal (SalÃ¡rios, BenefÃ­cios e Total)
     
     Retorna 3 valores separados:
-    - custo_salarios: Soma dos salários mensais
-    - custo_beneficios: Soma de todos os benefícios (calculados pela view)
-    - custo_total: Salários + Benefícios
+    - custo_salarios: Soma dos salÃ¡rios mensais
+    - custo_beneficios: Soma de todos os benefÃ­cios (calculados pela view)
+    - custo_total: SalÃ¡rios + BenefÃ­cios
     
-    Lógica:
-    - Usa a view vw_colaboradores_atual que já tem total_beneficios calculado
-    - View já traz último salário e benefícios de cada colaborador ativo
+    LÃ³gica:
+    - Usa a view vw_colaboradores_atual que jÃ¡ tem total_beneficios calculado
+    - View jÃ¡ traz Ãºltimo salÃ¡rio e benefÃ­cios de cada colaborador ativo
     """
     try:
-        print(f"   🔍 Buscando custos da view vw_colaboradores_atual...")
+        print(f"   ðŸ” Buscando custos da view vw_colaboradores_atual...")
         
-        # 🔥 OTIMIZAÇÃO: Usar view que já calcula tudo
+        # ðŸ”¥ OTIMIZAÃ‡ÃƒO: Usar view que jÃ¡ calcula tudo
         response = supabase.table('vw_colaboradores_atual')\
             .select('salario_mensal, total_beneficios')\
             .execute()
         
         colaboradores = response.data if response.data else []
         
-        print(f"   📊 Total de colaboradores ativos: {len(colaboradores)}")
+        print(f"   ðŸ“Š Total de colaboradores ativos: {len(colaboradores)}")
         
         if not colaboradores:
-            print(f"   ⚠️  Custos: Nenhum colaborador ativo encontrado")
+            print(f"   âš ï¸  Custos: Nenhum colaborador ativo encontrado")
             return {
                 'custo_salarios': 0,
                 'custo_beneficios': 0,
@@ -663,7 +789,7 @@ def calcular_kpi_custo_total():
             print(f"      Colaborador {idx+1}: salario={colab.get('salario_mensal')}, beneficios={colab.get('total_beneficios')}")
         
         for colab in colaboradores:
-            # Processar salário
+            # Processar salÃ¡rio
             salario_mensal = colab.get('salario_mensal')
             if salario_mensal:
                 try:
@@ -671,9 +797,9 @@ def calcular_kpi_custo_total():
                     custo_salarios += valor_salario
                     colaboradores_com_salario += 1
                 except (ValueError, TypeError) as e:
-                    print(f"      ⚠️ Erro ao converter salário: {salario_mensal}")
+                    print(f"      âš ï¸ Erro ao converter salÃ¡rio: {salario_mensal}")
             
-            # Processar benefícios (já calculados pela view)
+            # Processar benefÃ­cios (jÃ¡ calculados pela view)
             total_beneficios = colab.get('total_beneficios')
             if total_beneficios:
                 try:
@@ -682,16 +808,16 @@ def calcular_kpi_custo_total():
                         custo_beneficios += valor_beneficios
                         colaboradores_com_beneficios += 1
                 except (ValueError, TypeError) as e:
-                    print(f"      ⚠️ Erro ao converter benefícios: {total_beneficios}")
+                    print(f"      âš ï¸ Erro ao converter benefÃ­cios: {total_beneficios}")
         
         custo_total = custo_salarios + custo_beneficios
         
-        print(f"   ✅ Custo Salários: R$ {custo_salarios:,.2f} ({colaboradores_com_salario} colaboradores)")
-        print(f"   ✅ Custo Benefícios: R$ {custo_beneficios:,.2f} ({colaboradores_com_beneficios} colaboradores)")
-        print(f"   ✅ Custo Total: R$ {custo_total:,.2f}")
+        print(f"   âœ… Custo SalÃ¡rios: R$ {custo_salarios:,.2f} ({colaboradores_com_salario} colaboradores)")
+        print(f"   âœ… Custo BenefÃ­cios: R$ {custo_beneficios:,.2f} ({colaboradores_com_beneficios} colaboradores)")
+        print(f"   âœ… Custo Total: R$ {custo_total:,.2f}")
         
         if custo_salarios == 0 and len(colaboradores) > 0:
-            print(f"   ⚠️  ATENÇÃO: Nenhum salário encontrado! Verifique se os dados estão corretos.")
+            print(f"   âš ï¸  ATENÃ‡ÃƒO: Nenhum salÃ¡rio encontrado! Verifique se os dados estÃ£o corretos.")
         
         return {
             'custo_salarios': custo_salarios,
@@ -699,7 +825,7 @@ def calcular_kpi_custo_total():
             'custo_total': custo_total
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular custos: {str(e)}")
+        print(f"   âŒ Erro ao calcular custos: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -710,24 +836,24 @@ def calcular_kpi_custo_total():
 
 
 # ========================================
-# FUNÇÕES DE CÁLCULO - GRÁFICOS
+# FUNÃ‡Ã•ES DE CÃLCULO - GRÃFICOS
 # ========================================
 
 def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
     """
-    Calcula os gráficos principais do Dashboard Executivo
+    Calcula os grÃ¡ficos principais do Dashboard Executivo
     
-    Gráficos:
-    1. Evolução do Headcount (Linha - 12 meses)
-    2. Admissões vs Desligamentos (Barras agrupadas)
+    GrÃ¡ficos:
+    1. EvoluÃ§Ã£o do Headcount (Linha - 12 meses)
+    2. AdmissÃµes vs Desligamentos (Barras agrupadas)
     3. Turnover por Departamento (Barras - Top 5)
-    4. Distribuição por Departamento (Pizza)
+    4. DistribuiÃ§Ã£o por Departamento (Pizza)
     """
-    print("🚀 Calculando Gráficos do Dashboard Executivo...")
+    print("ðŸš€ Calculando GrÃ¡ficos do Dashboard Executivo...")
     
     graficos = {}
     
-    # Gráfico 1 e 2: Evolução e Admissões/Desligamentos (usam mesmos dados)
+    # GrÃ¡fico 1 e 2: EvoluÃ§Ã£o e AdmissÃµes/Desligamentos (usam mesmos dados)
     dados_evolucao = calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim)
     graficos['evolucao_headcount'] = dados_evolucao
     graficos['admissoes_desligamentos'] = {
@@ -738,33 +864,33 @@ def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
         }
     }
     
-    # Gráfico 3: Turnover por Departamento (Top 5)
+    # GrÃ¡fico 3: Turnover por Departamento (Top 5)
     graficos['turnover_departamento'] = calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim)
     
-    # Gráfico 4: Distribuição por Departamento
+    # GrÃ¡fico 4: DistribuiÃ§Ã£o por Departamento
     graficos['distribuicao_departamento'] = calcular_grafico_distribuicao_departamento()
     
-    print("✅ Gráficos calculados com sucesso!\n")
+    print("âœ… GrÃ¡ficos calculados com sucesso!\n")
     return graficos
 
 
 def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
     """
-    Gráfico 1: Evolução do Headcount (Linha - 12 meses)
+    GrÃ¡fico 1: EvoluÃ§Ã£o do Headcount (Linha - 12 meses)
     
     Datasets:
-    - Headcount no final de cada mês
-    - Admissões no mês
-    - Desligamentos no mês
+    - Headcount no final de cada mÃªs
+    - AdmissÃµes no mÃªs
+    - Desligamentos no mÃªs
     
-    Otimização:
-    - Buscar TODOS os eventos do período de uma vez
-    - Agrupar em Python (O(n) ao invés de 24 queries)
+    OtimizaÃ§Ã£o:
+    - Buscar TODOS os eventos do perÃ­odo de uma vez
+    - Agrupar em Python (O(n) ao invÃ©s de 24 queries)
     """
     try:
-        print(f"   🔍 Calculando evolução de headcount para período {periodo_inicio} a {periodo_fim}")
+        print(f"   ðŸ” Calculando evoluÃ§Ã£o de headcount para perÃ­odo {periodo_inicio} a {periodo_fim}")
         
-        # Gerar lista de meses no período
+        # Gerar lista de meses no perÃ­odo
         data_inicio = datetime.strptime(periodo_inicio, '%Y-%m-%d')
         data_fim = datetime.strptime(periodo_fim, '%Y-%m-%d')
         
@@ -774,9 +900,9 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
             meses.append(current.strftime('%Y-%m'))
             current += relativedelta(months=1)
         
-        print(f"   📊 Total de meses a processar: {len(meses)}")
+        print(f"   ðŸ“Š Total de meses a processar: {len(meses)}")
         
-        # 🔥 OTIMIZAÇÃO: Buscar todas as admissões do período de uma vez
+        # ðŸ”¥ OTIMIZAÃ‡ÃƒO: Buscar todas as admissÃµes do perÃ­odo de uma vez
         response_admissoes = supabase.table('rh_colaboradores')\
             .select('data_admissao')\
             .not_.is_('data_admissao', 'null')\
@@ -784,7 +910,7 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
             .lte('data_admissao', periodo_fim)\
             .execute()
         
-        # 🔥 OTIMIZAÇÃO: Buscar todos os desligamentos do período de uma vez
+        # ðŸ”¥ OTIMIZAÃ‡ÃƒO: Buscar todos os desligamentos do perÃ­odo de uma vez
         response_desligamentos = supabase.table('rh_colaboradores')\
             .select('data_desligamento')\
             .not_.is_('data_desligamento', 'null')\
@@ -792,21 +918,21 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
             .lte('data_desligamento', periodo_fim)\
             .execute()
         
-        print(f"   📊 Admissões encontradas: {len(response_admissoes.data or [])}")
-        print(f"   📊 Desligamentos encontrados: {len(response_desligamentos.data or [])}")
+        print(f"   ðŸ“Š AdmissÃµes encontradas: {len(response_admissoes.data or [])}")
+        print(f"   ðŸ“Š Desligamentos encontrados: {len(response_desligamentos.data or [])}")
         
         # DEBUG: Mostrar primeiras 3 datas de cada tipo
         if response_admissoes.data:
-            print(f"   🔍 Primeiras 3 admissões:")
+            print(f"   ðŸ” Primeiras 3 admissÃµes:")
             for i, adm in enumerate(response_admissoes.data[:3]):
                 print(f"      {i+1}. {adm.get('data_admissao')}")
         
         if response_desligamentos.data:
-            print(f"   🔍 Primeiros 3 desligamentos:")
+            print(f"   ðŸ” Primeiros 3 desligamentos:")
             for i, desl in enumerate(response_desligamentos.data[:3]):
                 print(f"      {i+1}. {desl.get('data_desligamento')}")
         
-        # Agrupar eventos por mês em Python
+        # Agrupar eventos por mÃªs em Python
         admissoes_por_mes = defaultdict(int)
         desligamentos_por_mes = defaultdict(int)
         
@@ -822,8 +948,8 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
                 mes = data_desligamento[:7]  # YYYY-MM
                 desligamentos_por_mes[mes] += 1
         
-        # Buscar headcount inicial (antes do período)
-        # Contar colaboradores admitidos antes do período_inicio e que ainda estavam ativos
+        # Buscar headcount inicial (antes do perÃ­odo)
+        # Contar colaboradores admitidos antes do perÃ­odo_inicio e que ainda estavam ativos
         response_headcount_inicial = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
             .lt('data_admissao', periodo_inicio)\
@@ -831,7 +957,7 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
             .execute()
         
         headcount_inicial = response_headcount_inicial.count if response_headcount_inicial.count is not None else 0
-        print(f"   📊 Headcount inicial (antes de {periodo_inicio}): {headcount_inicial}")
+        print(f"   ðŸ“Š Headcount inicial (antes de {periodo_inicio}): {headcount_inicial}")
         
         # Montar arrays de dados calculando headcount progressivo
         labels = []
@@ -841,13 +967,13 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
         
         headcount_acumulado = headcount_inicial
         
-        # Retornar meses no formato YYYY-MM (JavaScript fará a formatação para legibilidade)
+        # Retornar meses no formato YYYY-MM (JavaScript farÃ¡ a formataÃ§Ã£o para legibilidade)
         for mes in meses:
             try:
                 admissoes_mes = admissoes_por_mes.get(mes, 0)
                 desligamentos_mes = desligamentos_por_mes.get(mes, 0)
                 
-                # Calcular headcount progressivo: headcount anterior + admissões - desligamentos
+                # Calcular headcount progressivo: headcount anterior + admissÃµes - desligamentos
                 headcount_acumulado = headcount_acumulado + admissoes_mes - desligamentos_mes
                 
                 labels.append(mes)  # Formato: "2024-10"
@@ -855,20 +981,20 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
                 admissoes_data.append(admissoes_mes)
                 desligamentos_data.append(desligamentos_mes)
             except Exception as ex:
-                print(f"      ⚠️ Erro ao processar mês {mes}: {str(ex)}")
+                print(f"      âš ï¸ Erro ao processar mÃªs {mes}: {str(ex)}")
                 continue
         
-        print(f"   ✅ Evolução Headcount: {len(labels)} meses processados")
+        print(f"   âœ… EvoluÃ§Ã£o Headcount: {len(labels)} meses processados")
         print(f"      Headcount inicial: {headcount_inicial}")
         print(f"      Headcount final: {headcount_data[-1] if headcount_data else 0}")
-        print(f"      Total admissões período: {sum(admissoes_data)}")
-        print(f"      Total desligamentos período: {sum(desligamentos_data)}")
-        print(f"      Variação líquida: {sum(admissoes_data) - sum(desligamentos_data)}")
+        print(f"      Total admissÃµes perÃ­odo: {sum(admissoes_data)}")
+        print(f"      Total desligamentos perÃ­odo: {sum(desligamentos_data)}")
+        print(f"      VariaÃ§Ã£o lÃ­quida: {sum(admissoes_data) - sum(desligamentos_data)}")
         
         # Log detalhado dos primeiros 3 meses
-        print(f"      Detalhamento por mês (primeiros 3):")
+        print(f"      Detalhamento por mÃªs (primeiros 3):")
         for i in range(min(3, len(labels))):
-            print(f"         {labels[i]}: Admissões={admissoes_data[i]}, Demissões={desligamentos_data[i]}")
+            print(f"         {labels[i]}: AdmissÃµes={admissoes_data[i]}, DemissÃµes={desligamentos_data[i]}")
         
         return {
             'labels': labels,
@@ -879,7 +1005,7 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
             }
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular evolução headcount: {str(e)}")
+        print(f"   âŒ Erro ao calcular evoluÃ§Ã£o headcount: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -894,19 +1020,19 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
 
 def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
     """
-    Gráfico 3: Turnover por Departamento (Barras - Top 5)
+    GrÃ¡fico 3: Turnover por Departamento (Barras - Top 5)
     
-    Lógica:
+    LÃ³gica:
     - Para cada departamento, calcular turnover (%)
-    - Turnover = (Desligamentos / Headcount do Depto) × 100
+    - Turnover = (Desligamentos / Headcount do Depto) Ã— 100
     - Ordenar por turnover DESC e pegar Top 5
     
-    Otimização:
-    - Buscar todos os históricos de uma vez
-    - Mapear colaborador → departamento em Python
+    OtimizaÃ§Ã£o:
+    - Buscar todos os histÃ³ricos de uma vez
+    - Mapear colaborador â†’ departamento em Python
     """
     try:
-        print(f"   🔍 Calculando turnover por departamento para período {periodo_inicio} a {periodo_fim}")
+        print(f"   ðŸ” Calculando turnover por departamento para perÃ­odo {periodo_inicio} a {periodo_fim}")
         
         # Buscar departamentos
         response_deps = supabase.table('rh_departamentos')\
@@ -914,13 +1040,13 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
             .execute()
         
         departamentos = response_deps.data if response_deps.data else []
-        print(f"   📊 Total de departamentos encontrados: {len(departamentos)}")
+        print(f"   ðŸ“Š Total de departamentos encontrados: {len(departamentos)}")
         
         if not departamentos:
-            print(f"   ⚠️  Turnover por Departamento: Nenhum departamento encontrado")
+            print(f"   âš ï¸  Turnover por Departamento: Nenhum departamento encontrado")
             return {'labels': [], 'data': []}
         
-        # Buscar colaboradores demitidos no período
+        # Buscar colaboradores demitidos no perÃ­odo
         response_demitidos = supabase.table('rh_colaboradores')\
             .select('id')\
             .not_.is_('data_desligamento', 'null')\
@@ -929,27 +1055,27 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
             .execute()
         
         colaboradores_demitidos_ids = [c['id'] for c in (response_demitidos.data or [])]
-        print(f"   📊 Colaboradores demitidos no período: {len(colaboradores_demitidos_ids)}")
+        print(f"   ðŸ“Š Colaboradores demitidos no perÃ­odo: {len(colaboradores_demitidos_ids)}")
         
-        # 🔥 OTIMIZAÇÃO: Buscar TODOS os históricos de uma vez
+        # ðŸ”¥ OTIMIZAÃ‡ÃƒO: Buscar TODOS os histÃ³ricos de uma vez
         response_hist = supabase.table('rh_historico_colaborador')\
             .select('colaborador_id, departamento_id')\
             .not_.is_('departamento_id', 'null')\
             .order('data_evento', desc=True)\
             .execute()
         
-        print(f"   📊 Total de registros no histórico: {len(response_hist.data or [])}")
+        print(f"   ðŸ“Š Total de registros no histÃ³rico: {len(response_hist.data or [])}")
         
-        # Mapear colaborador → departamento (último registro)
+        # Mapear colaborador â†’ departamento (Ãºltimo registro)
         colaborador_dept_map = {}
         for hist in (response_hist.data or []):
             colab_id = hist['colaborador_id']
             if colab_id not in colaborador_dept_map:
                 colaborador_dept_map[colab_id] = hist['departamento_id']
         
-        print(f"   📊 Colaboradores mapeados para departamentos: {len(colaborador_dept_map)}")
+        print(f"   ðŸ“Š Colaboradores mapeados para departamentos: {len(colaborador_dept_map)}")
         
-        # Contar demissões por departamento
+        # Contar demissÃµes por departamento
         demissoes_por_dept = defaultdict(int)
         for colab_id in colaboradores_demitidos_ids:
             dept_id = colaborador_dept_map.get(colab_id)
@@ -986,7 +1112,7 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
         labels = [d['departamento'] for d in dados_turnover_sorted]
         data = [d['turnover'] for d in dados_turnover_sorted]
         
-        print(f"   ✅ Turnover por Departamento: Top {len(labels)}")
+        print(f"   âœ… Turnover por Departamento: Top {len(labels)}")
         print(f"      Departamentos com maior turnover: {labels}")
         print(f"      Valores de turnover (%): {data}")
         for d in dados_turnover_sorted:
@@ -997,7 +1123,7 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
             'data': data
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular turnover por departamento: {str(e)}")
+        print(f"   âŒ Erro ao calcular turnover por departamento: {str(e)}")
         import traceback
         traceback.print_exc()
         return {'labels': [], 'data': []}
@@ -1005,14 +1131,14 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
 
 def calcular_grafico_distribuicao_departamento():
     """
-    Gráfico 4: Distribuição de Colaboradores por Departamento (Pizza)
+    GrÃ¡fico 4: DistribuiÃ§Ã£o de Colaboradores por Departamento (Pizza)
     
-    Lógica:
+    LÃ³gica:
     - Contar colaboradores ativos por departamento
     - Retornar labels (nomes dos departamentos) e data (quantidades)
     """
     try:
-        print(f"   🔍 Calculando distribuição por departamento")
+        print(f"   ðŸ” Calculando distribuiÃ§Ã£o por departamento")
         
         # Buscar departamentos
         response_deps = supabase.table('rh_departamentos')\
@@ -1020,13 +1146,13 @@ def calcular_grafico_distribuicao_departamento():
             .execute()
         
         departamentos = response_deps.data if response_deps.data else []
-        print(f"   📊 Total de departamentos: {len(departamentos)}")
+        print(f"   ðŸ“Š Total de departamentos: {len(departamentos)}")
         
         if not departamentos:
-            print(f"   ⚠️  Distribuição por Departamento: Nenhum departamento encontrado")
+            print(f"   âš ï¸  DistribuiÃ§Ã£o por Departamento: Nenhum departamento encontrado")
             return {'labels': [], 'data': []}
         
-        # Buscar histórico de todos os colaboradores ativos
+        # Buscar histÃ³rico de todos os colaboradores ativos
         response_colabs = supabase.table('rh_colaboradores')\
             .select('id')\
             .eq('status', 'Ativo')\
@@ -1034,13 +1160,13 @@ def calcular_grafico_distribuicao_departamento():
             .execute()
         
         colaboradores_ids = [c['id'] for c in (response_colabs.data or [])]
-        print(f"   📊 Total de colaboradores ativos: {len(colaboradores_ids)}")
+        print(f"   ðŸ“Š Total de colaboradores ativos: {len(colaboradores_ids)}")
         
         if not colaboradores_ids:
-            print(f"   ⚠️  Distribuição por Departamento: Nenhum colaborador ativo")
+            print(f"   âš ï¸  DistribuiÃ§Ã£o por Departamento: Nenhum colaborador ativo")
             return {'labels': [], 'data': []}
         
-        # Buscar último departamento de cada colaborador
+        # Buscar Ãºltimo departamento de cada colaborador
         response_hist = supabase.table('rh_historico_colaborador')\
             .select('colaborador_id, departamento_id')\
             .in_('colaborador_id', colaboradores_ids)\
@@ -1048,9 +1174,9 @@ def calcular_grafico_distribuicao_departamento():
             .order('data_evento', desc=True)\
             .execute()
         
-        print(f"   📊 Registros no histórico: {len(response_hist.data or [])}")
+        print(f"   ðŸ“Š Registros no histÃ³rico: {len(response_hist.data or [])}")
         
-        # Mapear colaborador → departamento (último registro)
+        # Mapear colaborador â†’ departamento (Ãºltimo registro)
         colaborador_dept_map = {}
         for hist in (response_hist.data or []):
             colab_id = hist['colaborador_id']
@@ -1062,10 +1188,10 @@ def calcular_grafico_distribuicao_departamento():
         for dept_id in colaborador_dept_map.values():
             dept_counts[dept_id] += 1
         
-        # Criar mapa de ID → Nome do departamento
+        # Criar mapa de ID â†’ Nome do departamento
         dept_map = {d['id']: d['nome_departamento'] for d in departamentos}
         
-        # Montar dados do gráfico
+        # Montar dados do grÃ¡fico
         labels = []
         data = []
         
@@ -1081,7 +1207,7 @@ def calcular_grafico_distribuicao_departamento():
             labels = list(labels)
             data = list(data)
         
-        print(f"   ✅ Distribuição por Departamento: {len(labels)} departamentos")
+        print(f"   âœ… DistribuiÃ§Ã£o por Departamento: {len(labels)} departamentos")
         print(f"      Departamentos: {labels}")
         print(f"      Quantidades: {data}")
         
@@ -1090,14 +1216,14 @@ def calcular_grafico_distribuicao_departamento():
             'data': data
         }
     except Exception as e:
-        print(f"   ❌ Erro ao calcular distribuição por departamento: {str(e)}")
+        print(f"   âŒ Erro ao calcular distribuiÃ§Ã£o por departamento: {str(e)}")
         import traceback
         traceback.print_exc()
         return {'labels': [], 'data': []}
 
 
 # ========================================
-# FUNÇÕES DE CÁLCULO - TABELAS
+# FUNÃ‡Ã•ES DE CÃLCULO - TABELAS
 # ========================================
 
 def calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids=None):
@@ -1107,14 +1233,14 @@ def calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids=None):
     Tabelas:
     1. Vagas Abertas por Mais Tempo (Top 5)
     """
-    print("🚀 Calculando Tabelas do Dashboard Executivo...")
+    print("ðŸš€ Calculando Tabelas do Dashboard Executivo...")
     
     tabelas = {}
     
     # Tabela 1: Vagas Abertas por Mais Tempo
     tabelas['vagas_abertas_mais_tempo'] = calcular_tabela_vagas_abertas_mais_tempo()
     
-    print("✅ Tabelas calculadas com sucesso!\n")
+    print("âœ… Tabelas calculadas com sucesso!\n")
     return tabelas
 
 
@@ -1123,7 +1249,7 @@ def calcular_tabela_vagas_abertas_mais_tempo():
     Tabela 1: Vagas Abertas por Mais Tempo (Top 5)
     
     Colunas:
-    - Título da Vaga
+    - TÃ­tulo da Vaga
     - Cargo
     - Departamento
     - Data Abertura
@@ -1132,7 +1258,7 @@ def calcular_tabela_vagas_abertas_mais_tempo():
     Mostra TODAS as vagas abertas, priorizando as mais antigas
     """
     try:
-        print(f"   🔍 Buscando vagas abertas por mais tempo")
+        print(f"   ðŸ” Buscando vagas abertas por mais tempo")
         
         # USAR A MESMA QUERY DO KPI - apenas status 'Aberta'
         response_vagas = supabase.table('rh_vagas')\
@@ -1141,16 +1267,16 @@ def calcular_tabela_vagas_abertas_mais_tempo():
             .execute()
         
         todas_vagas = response_vagas.data if response_vagas.data else []
-        print(f"   📊 Total de vagas com status 'Aberta': {len(todas_vagas)}")
+        print(f"   ðŸ“Š Total de vagas com status 'Aberta': {len(todas_vagas)}")
         
-        # Contar quantas têm data_abertura
+        # Contar quantas tÃªm data_abertura
         vagas_com_data = [v for v in todas_vagas if v.get('data_abertura')]
         vagas_sem_data = [v for v in todas_vagas if not v.get('data_abertura')]
-        print(f"   📊 Vagas COM data_abertura: {len(vagas_com_data)}")
-        print(f"   ⚠️  Vagas SEM data_abertura: {len(vagas_sem_data)}")
+        print(f"   ðŸ“Š Vagas COM data_abertura: {len(vagas_com_data)}")
+        print(f"   âš ï¸  Vagas SEM data_abertura: {len(vagas_sem_data)}")
         
         if not todas_vagas:
-            print(f"   ⚠️  Nenhuma vaga aberta encontrada")
+            print(f"   âš ï¸  Nenhuma vaga aberta encontrada")
             return []
         
         # Buscar nomes dos cargos
@@ -1166,7 +1292,7 @@ def calcular_tabela_vagas_abertas_mais_tempo():
             for cargo in (response_cargos.data or []):
                 cargos_map[cargo['id']] = cargo['nome_cargo']
             
-            print(f"   📊 Cargos mapeados: {len(cargos_map)}")
+            print(f"   ðŸ“Š Cargos mapeados: {len(cargos_map)}")
         
         # Buscar nomes dos departamentos
         departamentos_ids = [v['departamento_id'] for v in todas_vagas if v.get('departamento_id')]
@@ -1181,19 +1307,19 @@ def calcular_tabela_vagas_abertas_mais_tempo():
             for dept in (response_deps.data or []):
                 departamentos_map[dept['id']] = dept['nome_departamento']
             
-            print(f"   📊 Departamentos mapeados: {len(departamentos_map)}")
+            print(f"   ðŸ“Š Departamentos mapeados: {len(departamentos_map)}")
         
-        # Calcular dias em aberto E FILTRAR por 15 dias mínimos
+        # Calcular dias em aberto E FILTRAR por 15 dias mÃ­nimos
         hoje = datetime.now()
         tabela_vagas = []
-        DIAS_MINIMOS = 15  # Filtro: apenas vagas abertas há mais de 15 dias
+        DIAS_MINIMOS = 15  # Filtro: apenas vagas abertas hÃ¡ mais de 15 dias
         
         for vaga in todas_vagas:
             data_abertura_str = vaga.get('data_abertura', '')
             
-            # Se não tem data de abertura, pular
+            # Se nÃ£o tem data de abertura, pular
             if not data_abertura_str:
-                print(f"      ⚠️ Vaga sem data_abertura: {vaga.get('titulo')} (ID: {vaga.get('id')})")
+                print(f"      âš ï¸ Vaga sem data_abertura: {vaga.get('titulo')} (ID: {vaga.get('id')})")
                 continue
             
             try:
@@ -1204,7 +1330,7 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                 if dias_aberta < DIAS_MINIMOS:
                     continue
                 
-                # Determinar status de urgência
+                # Determinar status de urgÃªncia
                 if dias_aberta > 60:
                     status_urgencia = 'alta'
                 elif dias_aberta > 30:
@@ -1214,10 +1340,10 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                 
                 tabela_vagas.append({
                     'id': vaga.get('id'),
-                    'titulo': vaga.get('titulo', 'Sem título'),
-                    'cargo': cargos_map.get(vaga.get('cargo_id'), 'Não especificado'),
-                    'departamento': departamentos_map.get(vaga.get('departamento_id'), 'Não especificado'),
-                    'localizacao': vaga.get('localizacao', 'Não especificado'),
+                    'titulo': vaga.get('titulo', 'Sem tÃ­tulo'),
+                    'cargo': cargos_map.get(vaga.get('cargo_id'), 'NÃ£o especificado'),
+                    'departamento': departamentos_map.get(vaga.get('departamento_id'), 'NÃ£o especificado'),
+                    'localizacao': vaga.get('localizacao', 'NÃ£o especificado'),
                     'data_abertura': data_abertura.strftime('%d/%m/%Y'),
                     'dias_aberto': dias_aberta,
                     'status_urgencia': status_urgencia,
@@ -1225,21 +1351,53 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                     'candidatos_score_alto': 0  # TODO: buscar candidatos com score > 80
                 })
             except Exception as ex:
-                    print(f"      ⚠️ Erro ao processar vaga {vaga.get('id')}: {str(ex)}")
+                    print(f"      âš ï¸ Erro ao processar vaga {vaga.get('id')}: {str(ex)}")
                     continue
         
         # Ordenar por dias_aberto DESC e pegar Top 5
         tabela_vagas_sorted = sorted(tabela_vagas, key=lambda x: x['dias_aberto'], reverse=True)[:5]
         
-        print(f"   � Vagas filtradas (>{DIAS_MINIMOS} dias): {len(tabela_vagas)}")
-        print(f"   ✅ Top 5 vagas mais antigas: {len(tabela_vagas_sorted)}")
+        print(f"   ï¿½ Vagas filtradas (>{DIAS_MINIMOS} dias): {len(tabela_vagas)}")
+        print(f"   âœ… Top 5 vagas mais antigas: {len(tabela_vagas_sorted)}")
         for v in tabela_vagas_sorted:
             print(f"      {v['titulo']}: {v['dias_aberto']} dias ({v['status_urgencia']})")
         
         return tabela_vagas_sorted
         
     except Exception as e:
-        print(f"   ❌ Erro ao calcular vagas abertas mais tempo: {str(e)}")
+        print(f"   âŒ Erro ao calcular vagas abertas mais tempo: {str(e)}")
         import traceback
         traceback.print_exc()
         return []
+
+
+
+
+# ========================================
+# IMPORTAR FUNÇÕES DO DASHBOARD ANALÍTICO V2.0
+# ========================================
+from .routes_v2_functions import (
+    calcular_secao_recrutamento,
+    calcular_secao_turnover,
+    calcular_tempo_medio_contratacao_v2,
+    calcular_vagas_abertas_v2,
+    calcular_vagas_fechadas_v2,
+    calcular_vagas_canceladas_v2,
+    calcular_tempo_contratacao_por_cargo_v2,
+    calcular_tempo_contratacao_por_departamento_v2,
+    calcular_evolucao_vagas_v2,
+    calcular_tabela_vagas_abertas_v2,
+    calcular_turnover_geral_v2,
+    calcular_total_desligamentos_v2,
+    calcular_total_admissoes_v2,
+    calcular_tempo_medio_permanencia_v2,
+    calcular_headcount_atual_v2,
+    calcular_turnover_por_departamento_v2,
+    calcular_turnover_por_cargo_v2,
+    calcular_desligamentos_por_tempo_casa_v2,
+    calcular_turnover_por_faixa_etaria_v2,
+    calcular_evolucao_turnover_v2,
+    calcular_tabela_desligamentos_recentes_v2,
+    calcular_secao_administracao_pessoal,
+    calcular_secao_compliance_operacional
+)

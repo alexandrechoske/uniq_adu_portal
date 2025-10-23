@@ -3,8 +3,10 @@
 {% block title %}Gestão de Vagas - RH{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-theme.css') }}?v=1.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='rh/colaboradores/colaboradores.css') }}?v=2.4">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-tables.css') }}?v=3.6">
 <style>
 /* ============================================================================
    ESTILOS ESPECÍFICOS DA GESTÃO DE VAGAS - RECRUTAMENTO
@@ -386,7 +388,7 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
             </ol>
         </nav>
         <div class="actions-buttons">
-            <button class="btn btn-recrutamento-primary" data-bs-toggle="modal" data-bs-target="#modalVaga" onclick="abrirModalNovaVaga()">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVaga" onclick="abrirModalNovaVaga()">
                 <i class="mdi mdi-plus"></i> Nova Vaga
             </button>
         </div>
@@ -504,7 +506,7 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
                 
                 <!-- Botão Limpar -->
                 <div class="col-md-1">
-                    <button class="btn btn-outline-secondary w-100" onclick="limparFiltrosVagas()" 
+                    <button class="btn btn-secondary w-100" onclick="limparFiltrosVagas()" 
                             data-bs-toggle="tooltip" title="Limpar filtros">
                         <i class="mdi mdi-eraser"></i>
                     </button>
@@ -548,29 +550,29 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
         <div class="card-body p-0">
             {% if vagas|length > 0 %}
             <div class="table-responsive">
-                <table class="table mb-0" id="tabelaVagas">
-                    <thead class="rh-table-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important; color: white !important;">
+                <table class="table rh-table mb-0" id="tabelaVagas">
+                    <thead class="rh-table-header">
                         <tr>
-                            <th style="width: 3%; color: white !important;" class="text-center">#</th>
-                            <th style="width: 25%; color: white !important;" class="sortable" data-column="titulo" data-type="text">
+                            <th style="width: 3%;" class="text-center">#</th>
+                            <th style="width: 25%;" class="sortable" data-column="titulo" data-type="text">
                                 Título da Vaga
                             </th>
-                            <th style="width: 10%; color: white !important;" class="sortable" data-column="status" data-type="text">
+                            <th style="width: 10%;" class="sortable" data-column="status" data-type="text">
                                 Status
                             </th>
-                            <th style="width: 8%; color: white !important;" class="text-center sortable" data-column="candidatos" data-type="number">
+                            <th style="width: 8%;" class="text-center sortable" data-column="candidatos" data-type="number">
                                 Candidatos
                             </th>
-                            <th style="width: 10%; color: white !important;" class="sortable" data-column="data" data-type="date">
+                            <th style="width: 10%;" class="sortable" data-column="data" data-type="date">
                                 Data Abertura
                             </th>
-                            <th style="width: 12%; color: white !important;" class="sortable" data-column="localizacao" data-type="text">
+                            <th style="width: 12%;" class="sortable" data-column="localizacao" data-type="text">
                                 Localização
                             </th>
-                            <th style="width: 17%; color: white !important;" class="sortable" data-column="tipo" data-type="text">
+                            <th style="width: 17%;" class="sortable" data-column="tipo" data-type="text">
                                 Tipo Contratação
                             </th>
-                            <th style="width: 15%; color: white !important;" class="text-center">Ações</th>
+                            <th style="width: 15%;" class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -695,7 +697,7 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
 <div class="modal fade" id="modalVaga" tabindex="-1" aria-labelledby="modalVagaLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <h5 class="modal-title" id="modalVagaLabel">Nova Vaga</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -894,7 +896,7 @@ table#tabelaVagas > thead.rh-table-header > tr > th,
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="mdi mdi-close"></i> Cancelar
                 </button>
-                <button type="button" class="btn btn-recrutamento-primary" onclick="salvarVaga()">
+                <button type="button" class="btn btn-primary" onclick="salvarVaga()">
                     <i class="mdi mdi-content-save"></i> Salvar Vaga
                 </button>
             </div>
@@ -1203,7 +1205,7 @@ function visualizarVaga(vagaId) {
                 <div class="modal fade" id="modalVisualizarVaga" tabindex="-1">
                     <div class="modal-dialog modal-xl">
                         <div class="modal-content">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white;">
+                            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                 <h5 class="modal-title">
                                     <i class="mdi mdi-briefcase-eye me-2"></i>
                                     ${vaga.titulo || 'Detalhes da Vaga'}

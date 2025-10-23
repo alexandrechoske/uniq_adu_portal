@@ -1,0 +1,185 @@
+/* 🏢 Estilos do Seletor de Empresa */
+
+.empresa-selector-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.empresa-selector-label {
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.empresa-selector-dropdown {
+    position: relative;
+}
+
+.empresa-selector-btn {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+    min-width: 160px;
+    justify-content: space-between;
+}
+
+.empresa-selector-btn:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.empresa-selector-btn:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.empresa-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Cores específicas por empresa */
+.empresa-badge-unique {
+    background-color: #1e40af;
+}
+
+.empresa-badge-dux {
+    background-color: #7c3aed;
+}
+
+.empresa-badge-onset {
+    background-color: #059669;
+}
+
+.empresa-badge-cercargo {
+    background-color: #dc2626;
+}
+
+.empresa-selector-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+}
+
+.empresa-selector-menu.show {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.empresa-selector-item {
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: background-color 0.15s;
+}
+
+.empresa-selector-item:hover {
+    background-color: #f3f4f6;
+}
+
+.empresa-selector-item.selected {
+    background-color: #eff6ff;
+}
+
+.empresa-selector-item.selected .empresa-badge {
+    font-weight: 700;
+}
+
+.empresa-selector-item i.fa-check {
+    color: #10b981;
+    font-size: 14px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .empresa-selector-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    
+    .empresa-selector-dropdown {
+        width: 100%;
+    }
+    
+    .empresa-selector-btn {
+        width: 100%;
+    }
+    
+    .empresa-selector-menu {
+        width: 100%;
+    }
+}
+
+/* Integração com DataTables */
+.dataTables_wrapper .empresa-selector-wrapper {
+    float: left;
+    margin-right: 20px;
+}
+
+/* Loading state */
+.empresa-selector-btn.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.empresa-selector-btn.loading::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #d1d5db;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

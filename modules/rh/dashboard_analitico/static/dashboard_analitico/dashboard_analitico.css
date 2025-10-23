@@ -1,9 +1,9 @@
-/* Dashboard Executivo RH - Custom Styles
- * Baseado no Dashboard Executivo Financeiro
+/* Dashboard Analítico RH - Custom Styles
+ * Cópia do Dashboard Executivo RH
  * Adaptado para o módulo de Recursos Humanos com cor roxa (#6f42c1)
  */
 
-.dashboard-executivo-container {
+.dashboard-analitico-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 1.25rem;
@@ -527,7 +527,7 @@
 }
 
 @media (max-width: 768px) {
-    .dashboard-executivo-container {
+    .dashboard-analitico-container {
         padding: 1rem;
     }
     

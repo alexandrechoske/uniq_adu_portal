@@ -1,0 +1,811 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Analítico RH - Portal UniSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='rh/css/rh-theme.css') }}?v=1.0">
+<link rel="stylesheet" href="{{ url_for('dashboard_analitico_rh.static', filename='dashboard_analitico/dashboard_analitico_v2.css') }}?v=2.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-analitico-container">
+    <!-- Actions Bar with Breadcrumb -->
+    <div class="actions-bar module-header-rh">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Recursos Humanos', 'icon': 'mdi mdi-account-group'},
+                {'name': 'Dashboard Analítico', 'icon': 'mdi mdi-chart-line'}
+            ], 'rh') }}
+        </div>
+        <div class="actions-right">
+            <button id="btn-refresh" class="btn btn-light">
+                <i class="mdi mdi-refresh"></i>
+                Atualizar Dados
+            </button>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando dados analíticos...</p>
+        </div>
+    </div>
+    
+    <!-- Filtros Globais -->
+    <div class="filter-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="periodo-filter">
+                    <i class="mdi mdi-calendar-range"></i>
+                    Período
+                </label>
+                <select id="periodo-filter" class="form-select">
+                    <option value="este_ano" selected>Este Ano (2025)</option>
+                    <option value="ultimos_12_meses">Últimos 12 Meses</option>
+                    <option value="este_mes">Este Mês</option>
+                    <option value="trimestre_atual">Trimestre Atual</option>
+                    <option value="ano_anterior">Ano Anterior (2024)</option>
+                    <option value="personalizado">Personalizado...</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="custom-date-group" style="display: none;">
+                <label for="data-inicio">Data Início</label>
+                <input type="date" id="data-inicio" class="form-control">
+            </div>
+            
+            <div class="filter-group" id="custom-date-end-group" style="display: none;">
+                <label for="data-fim">Data Fim</label>
+                <input type="date" id="data-fim" class="form-control">
+            </div>
+            
+            <div class="filter-group">
+                <label for="departamento-multiselect">
+                    <i class="mdi mdi-office-building"></i>
+                    Departamento
+                </label>
+                <div class="multi-select-container" data-filter="departamento" data-placeholder="Todos os departamentos">
+                    <div class="multi-select-header" id="departamento-multiselect" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="multi-select-placeholder">Todos os departamentos</span>
+                        <i class="mdi mdi-chevron-down"></i>
+                    </div>
+                    <div class="multi-select-dropdown" id="departamento-dropdown" aria-hidden="true">
+                        <div class="multi-select-search">
+                            <i class="mdi mdi-magnify"></i>
+                            <input type="text" id="departamento-search" placeholder="Buscar departamento...">
+                        </div>
+                        <div class="multi-select-options" id="departamento-options">
+                            <p class="multi-select-empty">Nenhum departamento disponível</p>
+                        </div>
+                        <div class="multi-select-footer">
+                            <button type="button" class="btn-link" data-action="clear" data-target="departamento">
+                                <i class="mdi mdi-filter-remove"></i>
+                                Limpar
+                            </button>
+                            <button type="button" class="btn-link" data-action="close" data-target="departamento">
+                                <i class="mdi mdi-check"></i>
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label for="cargo-multiselect">
+                    <i class="mdi mdi-briefcase"></i>
+                    Cargo
+                </label>
+                <div class="multi-select-container" data-filter="cargo" data-placeholder="Todos os cargos">
+                    <div class="multi-select-header" id="cargo-multiselect" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="multi-select-placeholder">Todos os cargos</span>
+                        <i class="mdi mdi-chevron-down"></i>
+                    </div>
+                    <div class="multi-select-dropdown" id="cargo-dropdown" aria-hidden="true">
+                        <div class="multi-select-search">
+                            <i class="mdi mdi-magnify"></i>
+                            <input type="text" id="cargo-search" placeholder="Buscar cargo...">
+                        </div>
+                        <div class="multi-select-options" id="cargo-options">
+                            <p class="multi-select-empty">Nenhum cargo disponível</p>
+                        </div>
+                        <div class="multi-select-footer">
+                            <button type="button" class="btn-link" data-action="clear" data-target="cargo">
+                                <i class="mdi mdi-filter-remove"></i>
+                                Limpar
+                            </button>
+                            <button type="button" class="btn-link" data-action="close" data-target="cargo">
+                                <i class="mdi mdi-check"></i>
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label for="status-filter">
+                    <i class="mdi mdi-account-check"></i>
+                    Status
+                </label>
+                <select id="status-filter" class="form-select">
+                    <option value="todos" selected>Todos</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <button id="btn-apply-filters" class="btn btn-primary">
+                    <i class="mdi mdi-filter-check"></i>
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navegação por Abas/Seções -->
+    <div class="dashboard-tabs">
+        <button class="tab-btn active" data-section="recrutamento">
+            <i class="mdi mdi-account-search"></i>
+            Recrutamento & Seleção
+        </button>
+        <button class="tab-btn" data-section="turnover">
+            <i class="mdi mdi-sync"></i>
+            Turnover & Retenção
+        </button>
+        <button class="tab-btn" data-section="pessoal">
+            <i class="mdi mdi-account-group"></i>
+            Administração de Pessoal
+        </button>
+        <button class="tab-btn" data-section="compliance">
+            <i class="mdi mdi-clipboard-check"></i>
+            Compliance
+        </button>
+    </div>
+    
+    <!-- SEÇÃO 1: RECRUTAMENTO & SELEÇÃO -->
+    <div id="section-recrutamento" class="dashboard-section active">
+        <h2 class="section-title">
+            <i class="mdi mdi-account-search"></i>
+            Recrutamento & Seleção
+        </h2>
+        
+        <!-- KPIs Recrutamento -->
+        <div class="kpi-grid-analytic">
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-clock-outline" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Tempo Médio de Contratação</p>
+                    <p class="kpi-value" id="kpi-tempo-contratacao">--</p>
+                    <p class="kpi-trend">dias</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-briefcase-clock" style="color: #6f42c1;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Vagas Abertas</p>
+                    <p class="kpi-value" id="kpi-vagas-abertas">--</p>
+                    <p class="kpi-trend">no momento</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-check-circle" style="color: #28a745;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Vagas Fechadas</p>
+                    <p class="kpi-value" id="kpi-vagas-fechadas">--</p>
+                    <p class="kpi-trend">no período</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-close-circle" style="color: #ffc107;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Vagas Canceladas</p>
+                    <p class="kpi-value" id="kpi-vagas-canceladas">--</p>
+                    <p class="kpi-trend">no período</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos Recrutamento -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Tempo Médio de Contratação por Cargo
+                    </h3>
+                    <p class="chart-subtitle">Identifica quais cargos demoram mais para preencher</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-tempo-cargo"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts-row">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Tempo Médio por Departamento
+                    </h3>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-tempo-departamento"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-line"></i>
+                        Evolução de Vagas no Tempo
+                    </h3>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-evolucao-vagas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabela Operacional - Vagas Abertas -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-table"></i>
+                    Vagas em Aberto (Controle Operacional)
+                </h3>
+                <div class="table-actions">
+                    <input type="text" id="search-vagas" class="table-search" placeholder="Buscar vaga...">
+                </div>
+            </div>
+            <div class="table-body">
+                <table id="table-vagas-abertas" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Título da Vaga</th>
+                            <th>Cargo</th>
+                            <th>Departamento</th>
+                            <th>Data Abertura</th>
+                            <th class="text-center">Dias em Aberto</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="6" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando vagas...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SEÇÃO 2: TURNOVER & RETENÇÃO -->
+    <div id="section-turnover" class="dashboard-section">
+        <h2 class="section-title">
+            <i class="mdi mdi-sync"></i>
+            Turnover & Retenção
+        </h2>
+        
+        <!-- KPIs Turnover -->
+        <div class="kpi-grid-analytic-wide">
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
+                    <i class="mdi mdi-sync-alert" style="color: #dc3545;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Turnover Geral</p>
+                    <p class="kpi-value" id="kpi-turnover-geral">--</p>
+                    <p class="kpi-trend">últimos 12 meses</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(253, 126, 20, 0.15);">
+                    <i class="mdi mdi-account-arrow-right" style="color: #fd7e14;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Desligamentos</p>
+                    <p class="kpi-value" id="kpi-desligamentos">--</p>
+                    <p class="kpi-trend">no período</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-account-arrow-left" style="color: #28a745;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Admissões</p>
+                    <p class="kpi-value" id="kpi-admissoes">--</p>
+                    <p class="kpi-trend">no período</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(23, 162, 184, 0.15);">
+                    <i class="mdi mdi-calendar-clock" style="color: #17a2b8;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Tempo Médio de Permanência</p>
+                    <p class="kpi-value" id="kpi-tempo-permanencia">--</p>
+                    <p class="kpi-trend">anos</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-icon-container" style="background: rgba(108, 117, 125, 0.15);">
+                    <i class="mdi mdi-account-check" style="color: #6c757d;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Saldo Líquido</p>
+                    <p class="kpi-value" id="kpi-saldo-liquido">--</p>
+                    <p class="kpi-trend">admissões - desligamentos</p>
+                </div>
+            </div>
+            
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-account-multiple" style="color: #6f42c1;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Headcount Atual</p>
+                    <p class="kpi-value" id="kpi-headcount-atual">--</p>
+                    <p class="kpi-trend">colaboradores ativos</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos Principais Turnover -->
+        <div class="charts-row">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Turnover por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Todos os departamentos</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-turnover-departamento"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Turnover por Cargo
+                    </h3>
+                    <p class="chart-subtitle">Top 10 cargos</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-turnover-cargo"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gráficos Críticos -->
+        <div class="charts-row">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Desligamentos por Tempo de Casa
+                    </h3>
+                    <p class="chart-subtitle">⚠️ Identifica problemas de onboarding</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-tempo-casa"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Turnover por Faixa Etária
+                    </h3>
+                    <p class="chart-subtitle">Distribuição por idade</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-faixa-etaria"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-line"></i>
+                        Evolução do Turnover ao Longo do Tempo
+                    </h3>
+                    <p class="chart-subtitle">Turnover mensal dos últimos 12 meses</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-evolucao-turnover"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabela Operacional - Desligamentos Recentes -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-table"></i>
+                    Desligamentos Recentes (Últimos 30 dias)
+                </h3>
+                <div class="table-actions">
+                    <input type="text" id="search-desligamentos" class="table-search" placeholder="Buscar colaborador...">
+
+                </div>
+            </div>
+            <div class="table-body">
+                <table id="table-desligamentos" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cargo</th>
+                            <th>Departamento</th>
+                            <th>Data Admissão</th>
+                            <th>Data Desligamento</th>
+                            <th class="text-center">Tempo de Casa</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="7" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando desligamentos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SEÇÃO 3: ADMINISTRAÇÃO DE PESSOAL -->
+    <div id="section-pessoal" class="dashboard-section">
+        <h2 class="section-title">
+            <i class="mdi mdi-account-group"></i>
+            Administração de Pessoal
+        </h2>
+
+        <!-- KPIs Administração de Pessoal -->
+        <div class="kpi-grid-analytic">
+            <div class="kpi-card kpi-primary">
+                <div class="kpi-icon-container" style="background: rgba(111, 66, 193, 0.15);">
+                    <i class="mdi mdi-account-group" style="color: #6f42c1;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Headcount Total</p>
+                    <p class="kpi-value" id="kpi-headcount-total">--</p>
+                    <p class="kpi-trend">colaboradores ativos</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-gender-male" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Colaboradores Masculinos</p>
+                    <p class="kpi-value" id="kpi-colaboradores-masculinos">--</p>
+                    <p class="kpi-trend">quantidade e percentual</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-gender-female" style="color: #ffc107;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Colaboradoras Femininas</p>
+                    <p class="kpi-value" id="kpi-colaboradores-femininos">--</p>
+                    <p class="kpi-trend">quantidade e percentual</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-success">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-cash-multiple" style="color: #28a745;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Salário Médio Geral</p>
+                    <p class="kpi-value" id="kpi-salario-medio">--</p>
+                    <p class="kpi-trend">remuneração mensal</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-icon-container" style="background: rgba(108, 117, 125, 0.15);">
+                    <i class="mdi mdi-school" style="color: #6c757d;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Superior Completo</p>
+                    <p class="kpi-value" id="kpi-superior-completo">--</p>
+                    <p class="kpi-trend">colaboradores com formação</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Administração -->
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Headcount por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Distribuição atual por área</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-headcount-departamento"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-cash-multiple"></i>
+                        Salário Médio por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Remuneração média mensal</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-salario-departamento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-donut"></i>
+                        Distribuição por Gênero
+                    </h3>
+                    <p class="chart-subtitle">Representatividade atual</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-genero"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-palette"></i>
+                        Distribuição por Raça/Cor
+                    </h3>
+                    <p class="chart-subtitle">Indicador de diversidade</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-raca"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Distribuição por Escolaridade
+                    </h3>
+                    <p class="chart-subtitle">Fundamental | Médio | Superior | Pós</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-escolaridade"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-timer-sand"></i>
+                        Tempo Médio de Empresa por Departamento
+                    </h3>
+                    <p class="chart-subtitle">Médias em meses</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-tempo-medio-departamento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-areaspline"></i>
+                        Pirâmide Etária por Gênero
+                    </h3>
+                    <p class="chart-subtitle">Homens à esquerda, mulheres à direita</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-piramide-etaria"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEÇÃO 4: COMPLIANCE & EVENTOS OPERACIONAIS -->
+    <div id="section-compliance" class="dashboard-section">
+        <h2 class="section-title">
+            <i class="mdi mdi-clipboard-check"></i>
+            Compliance & Eventos Operacionais
+        </h2>
+
+        <!-- KPIs Compliance -->
+        <div class="kpi-grid-analytic">
+            <div class="kpi-card kpi-warning">
+                <div class="kpi-icon-container" style="background: rgba(255, 193, 7, 0.15);">
+                    <i class="mdi mdi-alert-circle" style="color: #ffc107;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Exames Pendentes</p>
+                    <p class="kpi-value" id="kpi-exames-pendentes">--</p>
+                    <p class="kpi-trend">colaboradores aguardando</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-danger">
+                <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
+                    <i class="mdi mdi-close-octagon" style="color: #dc3545;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Exames Vencidos</p>
+                    <p class="kpi-value" id="kpi-exames-vencidos">--</p>
+                    <p class="kpi-trend">colaboradores em atraso</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-info">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-calendar-clock" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Eventos Pendentes</p>
+                    <p class="kpi-value" id="kpi-eventos-pendentes">--</p>
+                    <p class="kpi-trend">pendentes ou em andamento</p>
+                </div>
+            </div>
+
+            <div class="kpi-card kpi-secondary">
+                <div class="kpi-icon-container" style="background: rgba(108, 117, 125, 0.15);">
+                    <i class="mdi mdi-briefcase-alert" style="color: #6c757d;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Pendências Contabilidade</p>
+                    <p class="kpi-value" id="kpi-pendencias-contabilidade">--</p>
+                    <p class="kpi-trend">eventos aguardando baixa</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos Compliance -->
+        <div class="charts-row two-cols">
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-chart-bar"></i>
+                        Eventos por Status
+                    </h3>
+                    <p class="chart-subtitle">Barras empilhadas por tipo</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-eventos-status"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-half">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="mdi mdi-calendar-multiselect"></i>
+                        Próximos Eventos (30 dias)
+                    </h3>
+                    <p class="chart-subtitle">Timeline de atividades</p>
+                </div>
+                <div class="chart-body">
+                    <canvas id="chart-proximos-eventos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Exames Periódicos -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-table"></i>
+                    Controle de Exames Periódicos
+                </h3>
+            </div>
+            <div class="table-body">
+                <table id="table-exames-periodicos" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cargo</th>
+                            <th>Departamento</th>
+                            <th>Último Exame</th>
+                            <th>Próximo Exame</th>
+                            <th>Status</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="7" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando controles de exames...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabela de Pendências Contabilidade -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 class="table-title">
+                    <i class="mdi mdi-briefcase-account"></i>
+                    Pendências Contabilidade
+                </h3>
+            </div>
+            <div class="table-body">
+                <table id="table-pendencias-contabilidade" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Colaborador</th>
+                            <th>Tipo Evento</th>
+                            <th>Data Evento</th>
+                            <th>Dias Pendente</th>
+                            <th>Descrição</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="loading-row">
+                            <td colspan="6" class="text-center">
+                                <i class="mdi mdi-loading mdi-spin"></i>
+                                Carregando pendências contábeis...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="{{ url_for('dashboard_analitico_rh.static', filename='dashboard_analitico/dashboard_analitico_v2.js') }}?v=2.0"></script>
+{% endblock %}

@@ -1,7 +1,7 @@
 /**
- * Dashboard Executivo RH - JavaScript
- * Baseado no Dashboard Executivo Financeiro
- * Versão: 3.0 - Implementação Completa
+ * Dashboard Analítico RH - JavaScript
+ * Análises detalhadas e métricas analíticas de RH
+ * Versão: 1.0 - Cópia do Dashboard Executivo (a ser customizado)
  */
 
 // ========================================
@@ -18,7 +18,7 @@ let chartDispersaoTempoSalario = null;
 // ========================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📊 Dashboard Executivo RH - Inicializado (v3.0)');
+    console.log('📊 Dashboard Analítico RH - Inicializado (v1.0)');
     
     // Inicializar componentes
     inicializarFiltros();
@@ -203,7 +203,7 @@ async function carregarDadosDashboard() {
             params.append('departamentos[]', departamento);
         }
         
-        const response = await fetch(`/rh/dashboard/api/dados?${params.toString()}`, {
+        const response = await fetch(`/rh/dashboard-analitico/api/dados?${params.toString()}`, {
             credentials: 'same-origin'
         });
         

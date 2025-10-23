@@ -279,10 +279,15 @@ def gestao_candidatos(vaga_id):
 def api_list_vagas():
     """API: Listar todas as vagas"""
     try:
-        response = supabase_admin.table('rh_vagas')\
-            .select('*')\
-            .order('data_abertura', desc=True)\
-            .execute()
+        empresa_id = request.args.get('empresa_id')  # NOVO: Filtro por empresa
+        
+        query = supabase_admin.table('rh_vagas').select('*')
+        
+        # NOVO: Filtrar por empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.order('data_abertura', desc=True).execute()
         
         vagas = response.data if response.data else []
         
