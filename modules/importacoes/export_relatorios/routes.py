@@ -68,7 +68,9 @@ TABLE_COLUMNS = [
     'ref_unique','ref_importador','cnpj_importador','importador','modal','container','data_embarque',
     'data_chegada','transit_time_real','pais_procedencia','urf_despacho','exportador_fornecedor',
     'numero_di','data_registro','canal','data_desembaraco','mercadoria','data_abertura',
-    'status_sistema','status_timeline','url_bandeira','despesas_processo','documentos'
+    'status_sistema','status_timeline','url_bandeira','despesas_processo','produtos_processo',
+    'data_desova','limite_primeiro_periodo','limite_segundo_periodo','dias_extras_armazenagem',
+    'valor_despesas_extras','documentos'
 ]
 
 DATE_FIELDS = [c for c in TABLE_COLUMNS if c.startswith('data_')]

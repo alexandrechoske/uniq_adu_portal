@@ -296,6 +296,34 @@ document.addEventListener('DOMContentLoaded',()=>{
             td.innerHTML = '<span class="text-gray-400 text-xs">Sem despesas</span>';
           }
         }
+        else if(c === 'produtos_processo') {
+          const produtos = normalizeJsonList(val);
+          if (produtos.length > 0) {
+            td.innerHTML = `<span class="produto-badge">${produtos.length} produto${produtos.length > 1 ? 's' : ''}</span>`;
+            const tooltipText = produtos.map(p => {
+              const ncm = p.ncm || '-';
+              const qtd = p.quantidade || '-';
+              const un = p.unidade_medida || '';
+              const vlr = p.valor_unitario || '-';
+              return `NCM: ${ncm} | Qtd: ${qtd} ${un} | Valor Unit: ${vlr}`;
+            }).join('\n');
+            td.title = tooltipText;
+          } else {
+            td.innerHTML = '<span class="text-gray-400 text-xs">Sem produtos</span>';
+          }
+        }
+        else if(c === 'dias_extras_armazenagem') {
+          if (val && !isNaN(val)) {
+            const dias = parseInt(val);
+            td.textContent = `${dias} dia${dias !== 1 ? 's' : ''}`;
+            if (dias > 0) {
+              td.style.color = '#dc2626'; // Vermelho se houver dias extras
+              td.style.fontWeight = '500';
+            }
+          } else {
+            td.innerHTML = '<span class="text-gray-400 text-xs">-</span>';
+          }
+        }
         // Formatação especial para diferentes tipos de dados
         else if(c.includes('valor') && val && !isNaN(val)) {
           val = parseFloat(val).toLocaleString('pt-BR', {
