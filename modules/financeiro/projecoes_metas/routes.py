@@ -20,7 +20,7 @@ projecoes_metas_bp = Blueprint(
 
 @projecoes_metas_bp.route('/')
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def index():
     """Projeções e Metas - Planejamento e controle de metas financeiras"""
     try:
@@ -39,7 +39,7 @@ def index():
 
 @projecoes_metas_bp.route('/api/dados')
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def api_dados():
     """API para obter dados de metas e projeções da tabela fin_metas_projecoes"""
     try:
@@ -92,7 +92,7 @@ def api_dados():
 
 @projecoes_metas_bp.route('/api/criar', methods=['POST'])
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def api_criar():
     """API para criar nova meta/projeção"""
     try:
@@ -182,7 +182,7 @@ def api_criar():
 
 @projecoes_metas_bp.route('/api/criar-lote', methods=['POST'])
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def api_criar_lote():
     """API para criar múltiplas metas/projeções de uma vez"""
     try:
@@ -318,7 +318,7 @@ def api_criar_lote():
 
 @projecoes_metas_bp.route('/api/atualizar/<int:item_id>', methods=['PUT'])
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def api_atualizar(item_id):
     """API para atualizar meta/projeção existente"""
     try:
@@ -408,7 +408,7 @@ def api_atualizar(item_id):
 
 @projecoes_metas_bp.route('/api/excluir/<int:item_id>', methods=['DELETE'])
 @login_required
-@perfil_required('financeiro', 'projecoes_metas')
+@perfil_required('financeiro', 'projecoes')
 def api_excluir(item_id):
     """API para excluir meta/projeção"""
     try:
