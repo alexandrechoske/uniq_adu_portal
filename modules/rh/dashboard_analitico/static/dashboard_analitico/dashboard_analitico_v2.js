@@ -1275,6 +1275,7 @@ const DashboardAnalitico = {
         const labels = dados.labels || [];
         const values = (dados.values || []).map((value) => Number(value) || 0);
         const colors = this.getColorPalette(labels.length);
+        const hasData = values.some((value) => value > 0);
 
         this.charts.tempoMedioDepartamento = new Chart(ctx, {
             type: 'bar',
@@ -1282,7 +1283,7 @@ const DashboardAnalitico = {
                 labels,
                 datasets: [
                     {
-                        label: 'Tempo médio (anos)',
+                        label: 'Tempo médio (meses)',
                         data: values,
                         backgroundColor: colors,
                         borderRadius: 6
@@ -1296,22 +1297,32 @@ const DashboardAnalitico = {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (context) => `${(context.parsed.y ?? context.parsed).toFixed(1)} anos`
+                            label: (context) => {
+                                const valor = context.parsed.y ?? context.parsed;
+                                return `${this.formatNumber(valor, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} meses`;
+                            }
                         }
                     },
                     datalabels: {
                         anchor: 'end',
                         align: 'end',
-                        formatter: (value) => (value > 0 ? `${value.toFixed(1)}a` : '')
+                        formatter: (value) => (value > 0 ? `${value.toFixed(1)}m` : '')
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
                     }
                 }
             }
         });
+
+        if (!hasData) {
+            console.info('[Dashboard] Tempo médio por departamento sem dados disponíveis.');
+        }
     },
 
     renderChartPiramideEtaria(dados = {}) {
@@ -1323,8 +1334,12 @@ const DashboardAnalitico = {
         }
 
         const labels = dados.labels || ['18-24', '25-34', '35-44', '45-54', '55+'];
-        const masculino = (dados.masculino || []).map((value) => -Math.abs(Number(value) || 0));
-        const feminino = (dados.feminino || []).map((value) => Number(value) || 0);
+        const masculinoValores = (dados.masculino || []).map((value) => Math.abs(Number(value) || 0));
+        const femininoValores = (dados.feminino || []).map((value) => Math.abs(Number(value) || 0));
+        const masculino = masculinoValores.map((value) => -value);
+        const feminino = femininoValores.map((value) => value);
+        const maxAbsValue = Math.max(...masculinoValores, ...femininoValores, 0);
+        const axisMax = Math.max(1, Math.ceil((maxAbsValue || 0) * 1.1));
 
         this.charts.piramideEtaria = new Chart(ctx, {
             type: 'bar',
@@ -1370,6 +1385,8 @@ const DashboardAnalitico = {
                 scales: {
                     x: {
                         stacked: true,
+                        min: -axisMax,
+                        max: axisMax,
                         ticks: {
                             callback: (value) => Math.abs(value),
                             precision: 0

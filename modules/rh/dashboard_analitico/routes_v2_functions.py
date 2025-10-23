@@ -101,9 +101,10 @@ def _parse_date(value):
         formatos = ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%d/%m/%Y']
         for formato in formatos:
             try:
-                return datetime.strptime(texto[:len(formato)], formato)
+                return datetime.strptime(texto, formato)
             except ValueError:
                 continue
+    
     return None
 
 
@@ -1103,8 +1104,9 @@ def calcular_secao_administracao_pessoal(periodo_inicio, periodo_fim, departamen
             admissao = _parse_date(colab.get('data_admissao'))
             fim_vinculo = _parse_date(colab.get('data_desligamento')) or hoje
             if admissao and fim_vinculo >= admissao:
-                meses = (fim_vinculo.year - admissao.year) * 12 + (fim_vinculo.month - admissao.month)
-                tempo_empresa_departamento[departamento_nome].append(max(meses / 12, 0))
+                delta = relativedelta(fim_vinculo, admissao)
+                meses_totais = (delta.years * 12) + delta.months + (delta.days / 30.4375)
+                tempo_empresa_departamento[departamento_nome].append(max(meses_totais, 0))
 
             nascimento = _parse_date(colab.get('data_nascimento'))
             if nascimento:
@@ -1151,8 +1153,13 @@ def calcular_secao_administracao_pessoal(periodo_inicio, periodo_fim, departamen
         for depto, tempos in tempo_empresa_departamento.items():
             if tempos:
                 tempo_departamento_labels.append(depto)
-                tempo_departamento_values.append(round(sum(tempos) / len(tempos), 2))
-        tempo_pairs = sorted(zip(tempo_departamento_labels, tempo_departamento_values), key=lambda item: item[1], reverse=True)[:8]
+                tempo_departamento_values.append(round(sum(tempos) / len(tempos), 1))
+
+        tempo_pairs = sorted(
+            zip(tempo_departamento_labels, tempo_departamento_values),
+            key=lambda item: item[1],
+            reverse=True
+        )[:8]
         tempo_departamento_labels = [item[0] for item in tempo_pairs]
         tempo_departamento_values = [item[1] for item in tempo_pairs]
 
@@ -1209,6 +1216,9 @@ def calcular_secao_administracao_pessoal(periodo_inicio, periodo_fim, departamen
                 }
             }
         }
+
+        print("📈 [SEÇÃO 3] Tempo médio por departamento:", list(zip(tempo_departamento_labels, tempo_departamento_values)))
+        print("📊 [SEÇÃO 3] Pirâmide etária - masculino:", piramide_masculino, "| feminino:", piramide_feminino)
 
         print("✅ [SEÇÃO 3] Administração de Pessoal calculada com sucesso!")
         return resultado
@@ -1312,7 +1322,7 @@ def calcular_secao_compliance_operacional(periodo_inicio, periodo_fim, departame
         colaboradores_ids = set(colaboradores_permitidos.keys())
 
         response_eventos = supabase.table('rh_eventos_colaborador')\
-            .select('id, colaborador_id, tipo_evento, status, status_evento, situacao, data_evento, data_prevista, proximo_evento, data_proximo_exame, descricao, observacoes')\
+            .select('id, colaborador_id, tipo_evento, status, data_inicio, data_fim, descricao, dados_adicionais_jsonb')\
             .execute()
 
         eventos = [
@@ -1338,8 +1348,9 @@ def calcular_secao_compliance_operacional(periodo_inicio, periodo_fim, departame
 
             eventos_por_tipo[tipo_evento][status_norm] += 1
 
-            data_realizada = _coletar_data(evento, ['data_evento', 'data_realizacao'])
-            proximo_evento = _coletar_data(evento, ['proximo_evento', 'data_prevista', 'data_proximo_exame'])
+            # Adaptar para nova estrutura: data_inicio é a data principal, data_fim é opcional
+            data_realizada = _coletar_data(evento, ['data_inicio', 'data_evento', 'data_realizacao'])
+            proximo_evento = _coletar_data(evento, ['data_fim', 'proximo_evento', 'data_prevista', 'data_proximo_exame'])
 
             if proximo_evento and 0 <= (proximo_evento - hoje).days <= 30:
                 eventos_timeline[_format_iso_date(proximo_evento)] += 1
