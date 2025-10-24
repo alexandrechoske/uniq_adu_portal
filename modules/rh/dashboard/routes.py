@@ -161,14 +161,16 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     10. Idade Média - Idade média dos colaboradores
     """
     print("\n🚀 Calculando KPIs do Dashboard Executivo...")
+    if departamentos_ids:
+        print(f"   🔍 Filtrando KPIs por departamentos: {departamentos_ids}")
     
     kpis = {}
     
-    # KPI 1: Headcount (Colaboradores Ativos)
-    kpis['headcount'] = calcular_kpi_headcount()
+    # KPI 1: Headcount (Colaboradores Ativos) - COM FILTRO
+    kpis['headcount'] = calcular_kpi_headcount(departamentos_ids)
     
-    # KPI 2: Turnover (Taxa de Rotatividade)
-    kpis['turnover'] = calcular_kpi_turnover(periodo_inicio, periodo_fim, kpis['headcount']['valor'])
+    # KPI 2: Turnover (Taxa de Rotatividade) - COM FILTRO
+    kpis['turnover'] = calcular_kpi_turnover(periodo_inicio, periodo_fim, kpis['headcount']['valor'], departamentos_ids)
     
     # KPI 3: Tempo Médio de Contratação
     kpis['tempo_contratacao'] = calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim)
@@ -176,8 +178,8 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     # KPI 4: Vagas Abertas
     kpis['vagas_abertas'] = calcular_kpi_vagas_abertas()
     
-    # KPI 5, 6, 7: Custos (Salários, Benefícios e Total)
-    custos = calcular_kpi_custo_total()
+    # KPI 5, 6, 7: Custos (Salários, Benefícios e Total) - COM FILTRO
+    custos = calcular_kpi_custo_total(departamentos_ids)
     kpis['custo_salarios'] = {
         'valor': custos['custo_salarios'],
         'variacao': 0,
@@ -213,23 +215,32 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     return kpis
 
 
-def calcular_kpi_headcount():
+def calcular_kpi_headcount(departamentos_ids=None):
     """
     KPI 1: Headcount - Total de Colaboradores Ativos
     
     Lógica:
     - COUNT(*) WHERE status = 'Ativo' AND data_desligamento IS NULL
+    - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
-        response = supabase.table('rh_colaboradores')\
+        query = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
             .eq('status', 'Ativo')\
-            .is_('data_desligamento', 'null')\
-            .execute()
+            .is_('data_desligamento', 'null')
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query = query.in_('departamento_id', departamentos_ids)
+        
+        response = query.execute()
         
         headcount = response.count if response.count is not None else 0
         
-        print(f"   ✅ Headcount: {headcount}")
+        if departamentos_ids:
+            print(f"   ✅ Headcount (filtrado): {headcount}")
+        else:
+            print(f"   ✅ Headcount: {headcount}")
         
         return {
             'valor': headcount,
@@ -249,7 +260,7 @@ def calcular_kpi_headcount():
         }
 
 
-def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
+def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departamentos_ids=None):
     """
     KPI 2: Turnover - Taxa de Rotatividade (%)
     
@@ -259,15 +270,21 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual):
     Lógica:
     - Usar data_desligamento da tabela rh_colaboradores
     - NÃO usar histórico (pode ter múltiplos registros)
+    - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
         # Contar desligamentos no período usando data_desligamento
-        response_demissoes = supabase.table('rh_colaboradores')\
+        query_demissoes = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
             .not_.is_('data_desligamento', 'null')\
             .gte('data_desligamento', periodo_inicio)\
-            .lte('data_desligamento', periodo_fim)\
-            .execute()
+            .lte('data_desligamento', periodo_fim)
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query_demissoes = query_demissoes.in_('departamento_id', departamentos_ids)
+        
+        response_demissoes = query_demissoes.execute()
         
         desligamentos = response_demissoes.count if response_demissoes.count is not None else 0
         
@@ -618,7 +635,7 @@ def calcular_kpi_idade_media():
         }
 
 
-def calcular_kpi_custo_total():
+def calcular_kpi_custo_total(departamentos_ids=None):
     """
     KPI 5, 6, 7: Custos de Pessoal (Salários, Benefícios e Total)
     
@@ -630,14 +647,20 @@ def calcular_kpi_custo_total():
     Lógica:
     - Usa a view vw_colaboradores_atual que já tem total_beneficios calculado
     - View já traz último salário e benefícios de cada colaborador ativo
+    - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
         print(f"   🔍 Buscando custos da view vw_colaboradores_atual...")
         
         # 🔥 OTIMIZAÇÃO: Usar view que já calcula tudo
-        response = supabase.table('vw_colaboradores_atual')\
-            .select('salario_mensal, total_beneficios')\
-            .execute()
+        query = supabase.table('vw_colaboradores_atual')\
+            .select('salario_mensal, total_beneficios')
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query = query.in_('departamento_id', departamentos_ids)
+        
+        response = query.execute()
         
         colaboradores = response.data if response.data else []
         
@@ -722,13 +745,18 @@ def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
     2. Admissões vs Desligamentos (Barras agrupadas)
     3. Turnover por Departamento (Barras - Top 5)
     4. Distribuição por Departamento (Pizza)
+    
+    Args:
+        departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
     """
     print("🚀 Calculando Gráficos do Dashboard Executivo...")
+    if departamentos_ids:
+        print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
     
     graficos = {}
     
-    # Gráfico 1 e 2: Evolução e Admissões/Desligamentos (usam mesmos dados)
-    dados_evolucao = calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim)
+    # Gráfico 1 e 2: Evolução e Admissões/Desligamentos (usam mesmos dados) - ✅ FILTRO IMPLEMENTADO
+    dados_evolucao = calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids)
     graficos['evolucao_headcount'] = dados_evolucao
     graficos['admissoes_desligamentos'] = {
         'labels': dados_evolucao['labels'],
@@ -739,16 +767,20 @@ def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
     }
     
     # Gráfico 3: Turnover por Departamento (Top 5)
+    # TODO: Implementar filtro de departamentos para turnover
     graficos['turnover_departamento'] = calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim)
     
-    # Gráfico 4: Distribuição por Departamento
-    graficos['distribuicao_departamento'] = calcular_grafico_distribuicao_departamento()
+    # Gráfico 4: Custo Total por Departamento (substituindo distribuição) - ✅ FILTRO IMPLEMENTADO
+    graficos['custo_departamento'] = calcular_grafico_custo_departamento(departamentos_ids)
+    
+    # Gráfico 5: Distribuição por Departamento - ✅ FILTRO IMPLEMENTADO
+    graficos['distribuicao_departamento'] = calcular_grafico_distribuicao_departamento(departamentos_ids)
     
     print("✅ Gráficos calculados com sucesso!\n")
     return graficos
 
 
-def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
+def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids=None):
     """
     Gráfico 1: Evolução do Headcount (Linha - 12 meses)
     
@@ -760,9 +792,12 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
     Otimização:
     - Buscar TODOS os eventos do período de uma vez
     - Agrupar em Python (O(n) ao invés de 24 queries)
+    - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
         print(f"   🔍 Calculando evolução de headcount para período {periodo_inicio} a {periodo_fim}")
+        if departamentos_ids:
+            print(f"   🔍 Filtrando evolução por departamentos: {departamentos_ids}")
         
         # Gerar lista de meses no período
         data_inicio = datetime.strptime(periodo_inicio, '%Y-%m-%d')
@@ -777,20 +812,30 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
         print(f"   📊 Total de meses a processar: {len(meses)}")
         
         # 🔥 OTIMIZAÇÃO: Buscar todas as admissões do período de uma vez
-        response_admissoes = supabase.table('rh_colaboradores')\
+        query_admissoes = supabase.table('rh_colaboradores')\
             .select('data_admissao')\
             .not_.is_('data_admissao', 'null')\
             .gte('data_admissao', periodo_inicio)\
-            .lte('data_admissao', periodo_fim)\
-            .execute()
+            .lte('data_admissao', periodo_fim)
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query_admissoes = query_admissoes.in_('departamento_id', departamentos_ids)
+        
+        response_admissoes = query_admissoes.execute()
         
         # 🔥 OTIMIZAÇÃO: Buscar todos os desligamentos do período de uma vez
-        response_desligamentos = supabase.table('rh_colaboradores')\
+        query_desligamentos = supabase.table('rh_colaboradores')\
             .select('data_desligamento')\
             .not_.is_('data_desligamento', 'null')\
             .gte('data_desligamento', periodo_inicio)\
-            .lte('data_desligamento', periodo_fim)\
-            .execute()
+            .lte('data_desligamento', periodo_fim)
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query_desligamentos = query_desligamentos.in_('departamento_id', departamentos_ids)
+        
+        response_desligamentos = query_desligamentos.execute()
         
         print(f"   📊 Admissões encontradas: {len(response_admissoes.data or [])}")
         print(f"   📊 Desligamentos encontrados: {len(response_desligamentos.data or [])}")
@@ -824,11 +869,16 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim):
         
         # Buscar headcount inicial (antes do período)
         # Contar colaboradores admitidos antes do período_inicio e que ainda estavam ativos
-        response_headcount_inicial = supabase.table('rh_colaboradores')\
+        query_headcount_inicial = supabase.table('rh_colaboradores')\
             .select('id', count='exact')\
             .lt('data_admissao', periodo_inicio)\
-            .or_(f'data_desligamento.is.null,data_desligamento.gte.{periodo_inicio}')\
-            .execute()
+            .or_(f'data_desligamento.is.null,data_desligamento.gte.{periodo_inicio}')
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query_headcount_inicial = query_headcount_inicial.in_('departamento_id', departamentos_ids)
+        
+        response_headcount_inicial = query_headcount_inicial.execute()
         
         headcount_inicial = response_headcount_inicial.count if response_headcount_inicial.count is not None else 0
         print(f"   📊 Headcount inicial (antes de {periodo_inicio}): {headcount_inicial}")
@@ -1003,21 +1053,30 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
         return {'labels': [], 'data': []}
 
 
-def calcular_grafico_distribuicao_departamento():
+def calcular_grafico_distribuicao_departamento(departamentos_ids=None):
     """
     Gráfico 4: Distribuição de Colaboradores por Departamento (Pizza)
     
     Lógica:
     - Contar colaboradores ativos por departamento
     - Retornar labels (nomes dos departamentos) e data (quantidades)
+    
+    Args:
+        departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
     """
     try:
         print(f"   🔍 Calculando distribuição por departamento")
+        if departamentos_ids:
+            print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
         
-        # Buscar departamentos
-        response_deps = supabase.table('rh_departamentos')\
-            .select('id, nome_departamento')\
-            .execute()
+        # Buscar departamentos (aplicar filtro se fornecido)
+        query_deps = supabase.table('rh_departamentos')\
+            .select('id, nome_departamento')
+        
+        if departamentos_ids:
+            query_deps = query_deps.in_('id', departamentos_ids)
+        
+        response_deps = query_deps.execute()
         
         departamentos = response_deps.data if response_deps.data else []
         print(f"   📊 Total de departamentos: {len(departamentos)}")
@@ -1041,12 +1100,16 @@ def calcular_grafico_distribuicao_departamento():
             return {'labels': [], 'data': []}
         
         # Buscar último departamento de cada colaborador
-        response_hist = supabase.table('rh_historico_colaborador')\
+        query_hist = supabase.table('rh_historico_colaborador')\
             .select('colaborador_id, departamento_id')\
             .in_('colaborador_id', colaboradores_ids)\
-            .not_.is_('departamento_id', 'null')\
-            .order('data_evento', desc=True)\
-            .execute()
+            .not_.is_('departamento_id', 'null')
+        
+        # Aplicar filtro de departamentos se fornecido
+        if departamentos_ids:
+            query_hist = query_hist.in_('departamento_id', departamentos_ids)
+        
+        response_hist = query_hist.order('data_evento', desc=True).execute()
         
         print(f"   📊 Registros no histórico: {len(response_hist.data or [])}")
         
@@ -1096,6 +1159,187 @@ def calcular_grafico_distribuicao_departamento():
         return {'labels': [], 'data': []}
 
 
+def calcular_grafico_custo_departamento(departamentos_ids=None):
+    """
+    Gráfico 5: Custo Total (Pessoal) por Departamento
+    
+    Lógica:
+    - Para cada departamento, somar: salário_mensal + benefícios (vale_alimentacao + ajuda_de_custo)
+    - Retornar labels (nomes dos departamentos) e data (custo total em R$)
+    - Ordenar por custo DESC (maior centro de custo primeiro)
+    
+    Args:
+        departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
+    """
+    try:
+        print(f"   🔍 Calculando custo total por departamento")
+        if departamentos_ids:
+            print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        
+        # Buscar departamentos (aplicar filtro se fornecido)
+        query_deps = supabase.table('rh_departamentos')\
+            .select('id, nome_departamento')
+        
+        if departamentos_ids:
+            query_deps = query_deps.in_('id', departamentos_ids)
+        
+        response_deps = query_deps.execute()
+        
+        departamentos = response_deps.data if response_deps.data else []
+        print(f"   📊 Total de departamentos: {len(departamentos)}")
+        
+        if not departamentos:
+            print(f"   ⚠️  Custo por Departamento: Nenhum departamento encontrado")
+            return {'labels': [], 'data': []}
+        
+        # Buscar colaboradores ativos
+        response_colabs = supabase.table('rh_colaboradores')\
+            .select('id')\
+            .eq('status', 'Ativo')\
+            .is_('data_desligamento', 'null')\
+            .execute()
+        
+        colaboradores_ids = [c['id'] for c in (response_colabs.data or [])]
+        print(f"   📊 Total de colaboradores ativos: {len(colaboradores_ids)}")
+        
+        if not colaboradores_ids:
+            print(f"   ⚠️  Custo por Departamento: Nenhum colaborador ativo")
+            return {'labels': [], 'data': []}
+        
+        # Buscar último histórico de cada colaborador (com salário, benefícios e departamento)
+        query_hist = supabase.table('rh_historico_colaborador')\
+            .select('colaborador_id, departamento_id, salario_mensal, beneficios_jsonb')\
+            .in_('colaborador_id', colaboradores_ids)
+        
+        # Aplicar filtro de departamentos se fornecido
+        if departamentos_ids:
+            query_hist = query_hist.in_('departamento_id', departamentos_ids)
+        
+        response_hist = query_hist.order('data_evento', desc=True).execute()
+        
+        print(f"   📊 Registros no histórico: {len(response_hist.data or [])}")
+        
+        # Mapear colaborador → último histórico (departamento, salário, benefícios)
+        colaborador_info_map = {}
+        for hist in (response_hist.data or []):
+            colab_id = hist['colaborador_id']
+            if colab_id not in colaborador_info_map:
+                colaborador_info_map[colab_id] = hist
+        
+        # Calcular custo total por departamento
+        custo_por_dept = defaultdict(float)
+        
+        for colab_id, info in colaborador_info_map.items():
+            dept_id = info.get('departamento_id')
+            if not dept_id:
+                continue
+            
+            # Salário mensal
+            salario = float(info.get('salario_mensal') or 0)
+            
+            # Benefícios (vale_alimentacao + ajuda_de_custo)
+            beneficios_jsonb = info.get('beneficios_jsonb') or {}
+            
+            vale_alimentacao = 0
+            ajuda_de_custo = 0
+            
+            if isinstance(beneficios_jsonb, dict):
+                # Estrutura: {"beneficios_padrao": {"vale_alimentacao": 635.00}, "remuneracao_adicional": {"ajuda_de_custo": 700.00}}
+                beneficios_padrao = beneficios_jsonb.get('beneficios_padrao') or {}
+                remuneracao_adicional = beneficios_jsonb.get('remuneracao_adicional') or {}
+                
+                vale_alimentacao = float(beneficios_padrao.get('vale_alimentacao') or 0)
+                ajuda_de_custo = float(remuneracao_adicional.get('ajuda_de_custo') or 0)
+            
+            custo_total_colaborador = salario + vale_alimentacao + ajuda_de_custo
+            custo_por_dept[dept_id] += custo_total_colaborador
+        
+        # Criar mapa de ID → Nome do departamento
+        dept_map = {d['id']: d['nome_departamento'] for d in departamentos}
+        
+        # Montar dados do gráfico
+        labels = []
+        data = []
+        
+        for dept_id, custo_total in custo_por_dept.items():
+            dept_nome = dept_map.get(dept_id, 'Sem Departamento')
+            labels.append(dept_nome)
+            data.append(round(custo_total, 2))
+        
+        # Ordenar por custo DESC (maior centro de custo primeiro)
+        if labels and data:
+            combined = sorted(zip(labels, data), key=lambda x: x[1], reverse=True)
+            labels, data = zip(*combined)
+            labels = list(labels)
+            data = list(data)
+        
+        print(f"   ✅ Custo por Departamento: {len(labels)} departamentos")
+        print(f"      Departamentos: {labels}")
+        print(f"      Custos (R$): {data}")
+        if labels and data:
+            print(f"      Maior custo: {labels[0]} - R$ {data[0]:,.2f}")
+            print(f"      Custo total geral: R$ {sum(data):,.2f}")
+        
+        # Recalcular separando salários e benefícios
+        salarios_por_dept = defaultdict(float)
+        beneficios_por_dept = defaultdict(float)
+        
+        for colab_id, info in colaborador_info_map.items():
+            dept_id = info.get('departamento_id')
+            if not dept_id:
+                continue
+            
+            # Salário mensal
+            salario = float(info.get('salario_mensal') or 0)
+            salarios_por_dept[dept_id] += salario
+            
+            # Benefícios (vale_alimentacao + ajuda_de_custo)
+            beneficios_jsonb = info.get('beneficios_jsonb') or {}
+            
+            vale_alimentacao = 0
+            ajuda_de_custo = 0
+            
+            if isinstance(beneficios_jsonb, dict):
+                beneficios_padrao = beneficios_jsonb.get('beneficios_padrao') or {}
+                remuneracao_adicional = beneficios_jsonb.get('remuneracao_adicional') or {}
+                
+                vale_alimentacao = float(beneficios_padrao.get('vale_alimentacao') or 0)
+                ajuda_de_custo = float(remuneracao_adicional.get('ajuda_de_custo') or 0)
+            
+            beneficios_total = vale_alimentacao + ajuda_de_custo
+            beneficios_por_dept[dept_id] += beneficios_total
+        
+        # Preparar dados separados para salários e benefícios
+        salarios_data = []
+        beneficios_data = []
+        
+        for dept_nome in labels:
+            # Encontrar o ID do departamento pelo nome
+            dept_id = [d['id'] for d in departamentos if d['nome_departamento'] == dept_nome]
+            if dept_id:
+                dept_id = dept_id[0]
+                salarios_data.append(round(salarios_por_dept[dept_id], 2))
+                beneficios_data.append(round(beneficios_por_dept[dept_id], 2))
+            else:
+                salarios_data.append(0)
+                beneficios_data.append(0)
+        
+        print(f"      Salários (R$): {salarios_data}")
+        print(f"      Benefícios (R$): {beneficios_data}")
+        
+        return {
+            'labels': labels,
+            'data': data,  # Total (mantém compatibilidade)
+            'salarios': salarios_data,  # NOVO: Apenas salários
+            'beneficios': beneficios_data  # NOVO: Apenas benefícios
+        }
+    except Exception as e:
+        print(f"   ❌ Erro ao calcular custo por departamento: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {'labels': [], 'data': []}
+
+
 # ========================================
 # FUNÇÕES DE CÁLCULO - TABELAS
 # ========================================
@@ -1120,7 +1364,7 @@ def calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids=None):
 
 def calcular_tabela_vagas_abertas_mais_tempo():
     """
-    Tabela 1: Vagas Abertas por Mais Tempo (Top 5)
+    Visão Geral das Vagas em Aberto
     
     Colunas:
     - Título da Vaga
@@ -1128,15 +1372,16 @@ def calcular_tabela_vagas_abertas_mais_tempo():
     - Departamento
     - Data Abertura
     - Dias em Aberto
+    - Custo Estimado (Salário Base)
     
-    Mostra TODAS as vagas abertas, priorizando as mais antigas
+    Mostra TODAS as vagas abertas (sem filtro de 15 dias)
     """
     try:
-        print(f"   🔍 Buscando vagas abertas por mais tempo")
+        print(f"   🔍 Buscando todas as vagas abertas")
         
-        # USAR A MESMA QUERY DO KPI - apenas status 'Aberta'
+        # Buscar TODAS as vagas com status 'Aberta'
         response_vagas = supabase.table('rh_vagas')\
-            .select('id, titulo, data_abertura, cargo_id, localizacao, departamento_id, status')\
+            .select('id, titulo, data_abertura, cargo_id, localizacao, departamento_id, status, salario_base')\
             .eq('status', 'Aberta')\
             .execute()
         
@@ -1183,10 +1428,9 @@ def calcular_tabela_vagas_abertas_mais_tempo():
             
             print(f"   📊 Departamentos mapeados: {len(departamentos_map)}")
         
-        # Calcular dias em aberto E FILTRAR por 15 dias mínimos
+        # Calcular dados de todas as vagas (SEM FILTRO DE 15 DIAS)
         hoje = datetime.now()
         tabela_vagas = []
-        DIAS_MINIMOS = 15  # Filtro: apenas vagas abertas há mais de 15 dias
         
         for vaga in todas_vagas:
             data_abertura_str = vaga.get('data_abertura', '')
@@ -1200,10 +1444,6 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                 data_abertura = datetime.strptime(data_abertura_str[:10], '%Y-%m-%d')
                 dias_aberta = (hoje - data_abertura).days
                 
-                # FILTRO: Apenas vagas com 15 dias ou mais
-                if dias_aberta < DIAS_MINIMOS:
-                    continue
-                
                 # Determinar status de urgência
                 if dias_aberta > 60:
                     status_urgencia = 'alta'
@@ -1211,6 +1451,11 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                     status_urgencia = 'media'
                 else:
                     status_urgencia = 'baixa'
+                
+                # Calcular custo estimado (salário base)
+                salario_base = vaga.get('salario_base')
+                custo_estimado = float(salario_base) if salario_base else 0.0
+                custo_estimado_formatado = f"R$ {custo_estimado:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.') if custo_estimado > 0 else "Não especificado"
                 
                 tabela_vagas.append({
                     'id': vaga.get('id'),
@@ -1221,25 +1466,24 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                     'data_abertura': data_abertura.strftime('%d/%m/%Y'),
                     'dias_aberto': dias_aberta,
                     'status_urgencia': status_urgencia,
-                    'num_candidatos': 0,  # TODO: buscar da tabela rh_candidatos
-                    'candidatos_score_alto': 0  # TODO: buscar candidatos com score > 80
+                    'custo_estimado': custo_estimado,
+                    'custo_estimado_formatado': custo_estimado_formatado
                 })
             except Exception as ex:
                     print(f"      ⚠️ Erro ao processar vaga {vaga.get('id')}: {str(ex)}")
                     continue
         
-        # Ordenar por dias_aberto DESC e pegar Top 5
-        tabela_vagas_sorted = sorted(tabela_vagas, key=lambda x: x['dias_aberto'], reverse=True)[:5]
+        # Ordenar por dias_aberto DESC (mostrar TODAS, não apenas top 5)
+        tabela_vagas_sorted = sorted(tabela_vagas, key=lambda x: x['dias_aberto'], reverse=True)
         
-        print(f"   � Vagas filtradas (>{DIAS_MINIMOS} dias): {len(tabela_vagas)}")
-        print(f"   ✅ Top 5 vagas mais antigas: {len(tabela_vagas_sorted)}")
+        print(f"   ✅ Total de vagas processadas: {len(tabela_vagas_sorted)}")
         for v in tabela_vagas_sorted:
-            print(f"      {v['titulo']}: {v['dias_aberto']} dias ({v['status_urgencia']})")
+            print(f"      {v['titulo']}: {v['dias_aberto']} dias ({v['status_urgencia']}) - {v['custo_estimado_formatado']}")
         
         return tabela_vagas_sorted
         
     except Exception as e:
-        print(f"   ❌ Erro ao calcular vagas abertas mais tempo: {str(e)}")
+        print(f"   ❌ Erro ao calcular vagas abertas: {str(e)}")
         import traceback
         traceback.print_exc()
         return []
