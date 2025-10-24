@@ -59,7 +59,9 @@ class NewsGallery {
             }
 
             const data = await response.json();
-            this.state.news = data.noticias.slice(0, this.config.maxNewsDisplay);
+            // Ordenar notícias por ID em ordem decrescente (mais recentes primeiro)
+            const sortedNews = data.noticias.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+            this.state.news = sortedNews.slice(0, this.config.maxNewsDisplay);
             this.state.isLoading = false;
             console.log(`✓ ${this.state.news.length} notícias carregadas com sucesso`);
         } catch (error) {
@@ -616,6 +618,178 @@ function initNewsGallery() {
         });
         console.log('✓ Galeria de Notícias COMEX inicializada');
     }
+
+    // Inicializar indicadores COMEX
+    const indicatorsContainer = document.getElementById('comex-indicators-container');
+    if (indicatorsContainer) {
+        loadComexIndicators(indicatorsContainer);
+    }
+}
+
+async function loadComexIndicators(container) {
+    try {
+        const apiBypass = container.closest('.news-gallery-container')?.dataset?.apiBypass || 
+                         document.getElementById('news-gallery-container')?.dataset?.apiBypass || '';
+        
+        const headers = {};
+        if (apiBypass) {
+            headers['X-API-Key'] = apiBypass;
+        }
+
+        const response = await fetch('/api/comex-indicators', { headers });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.indicators) {
+            renderComexIndicators(container, data.indicators);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar indicadores COMEX:', error);
+        container.innerHTML = '<p style="color: #6B7280; font-size: 0.875rem; padding: 0.5rem;">Indicadores indisponíveis</p>';
+    }
+}
+
+function renderComexIndicators(container, indicators) {
+    const chips = [];
+
+    // Dólar (apenas símbolo)
+    if (indicators.dolar_venda) {
+        chips.push(`
+            <div class="comex-chip currency">
+                <i class="mdi mdi-currency-usd"></i>
+                <span class="comex-chip-value">R$ ${indicators.dolar_venda}</span>
+            </div>
+        `);
+    }
+
+    // Euro (apenas símbolo)
+    if (indicators.euro_venda) {
+        chips.push(`
+            <div class="comex-chip currency">
+                <i class="mdi mdi-currency-eur"></i>
+                <span class="comex-chip-value">R$ ${indicators.euro_venda}</span>
+            </div>
+        `);
+    }
+
+    // Selic
+    if (indicators.selic_meta) {
+        chips.push(`
+            <div class="comex-chip rate">
+                <i class="mdi mdi-percent"></i>
+                <span class="comex-chip-value">Selic ${indicators.selic_meta}%</span>
+            </div>
+        `);
+    }
+
+    // IPCA 12 meses
+    if (indicators.ipca_12_meses) {
+        chips.push(`
+            <div class="comex-chip rate">
+                <i class="mdi mdi-chart-line"></i>
+                <span class="comex-chip-value">IPCA ${indicators.ipca_12_meses}%</span>
+            </div>
+        `);
+    }
+
+    // Exportações com tooltip
+    if (indicators.expo_bi) {
+        const expoValue = indicators.expo_bi.replace(' Exportações', '').trim();
+        chips.push(`
+            <div class="comex-chip trade">
+                <i class="mdi mdi-arrow-up-bold"></i>
+                <span class="comex-chip-value">Expo</span>
+                <div class="comex-chip-tooltip">
+                    <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Exportações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${expoValue} Bi</span>
+                    </div>
+                    ${indicators.impo_bi ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Importações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${indicators.impo_bi.replace(' Importações', '').trim()} Bi</span>
+                    </div>
+                    ` : ''}
+                    ${indicators.saldo_comex ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Saldo Comercial:</span>
+                        <span class="comex-chip-tooltip-value">${indicators.saldo_comex}</span>
+                    </div>
+                    ` : ''}
+                    <div class="comex-chip-tooltip-footer">Valores FOB em US$ bilhões</div>
+                </div>
+            </div>
+        `);
+    }
+
+    // Importações com tooltip
+    if (indicators.impo_bi) {
+        const impoValue = indicators.impo_bi.replace(' Importações', '').trim();
+        chips.push(`
+            <div class="comex-chip trade">
+                <i class="mdi mdi-arrow-down-bold"></i>
+                <span class="comex-chip-value">Impo</span>
+                <div class="comex-chip-tooltip">
+                    <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
+                    ${indicators.expo_bi ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Exportações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${indicators.expo_bi.replace(' Exportações', '').trim()} Bi</span>
+                    </div>
+                    ` : ''}
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Importações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${impoValue} Bi</span>
+                    </div>
+                    ${indicators.saldo_comex ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Saldo Comercial:</span>
+                        <span class="comex-chip-tooltip-value">${indicators.saldo_comex}</span>
+                    </div>
+                    ` : ''}
+                    <div class="comex-chip-tooltip-footer">Valores FOB em US$ bilhões</div>
+                </div>
+            </div>
+        `);
+    }
+
+    // Saldo Comercial com tooltip
+    if (indicators.saldo_comex) {
+        const isPositive = indicators.saldo_comex.includes('+');
+        chips.push(`
+            <div class="comex-chip trade ${isPositive ? 'positive' : 'negative'}">
+                <i class="mdi mdi-scale-balance"></i>
+                <span class="comex-chip-value">Saldo</span>
+                <div class="comex-chip-tooltip">
+                    <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
+                    ${indicators.expo_bi ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Exportações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${indicators.expo_bi.replace(' Exportações', '').trim()} Bi</span>
+                    </div>
+                    ` : ''}
+                    ${indicators.impo_bi ? `
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Importações:</span>
+                        <span class="comex-chip-tooltip-value">US$ ${indicators.impo_bi.replace(' Importações', '').trim()} Bi</span>
+                    </div>
+                    ` : ''}
+                    <div class="comex-chip-tooltip-row">
+                        <span class="comex-chip-tooltip-label">Saldo Comercial:</span>
+                        <span class="comex-chip-tooltip-value">${indicators.saldo_comex}</span>
+                    </div>
+                    <div class="comex-chip-tooltip-footer">Valores FOB em US$ bilhões</div>
+                </div>
+            </div>
+        `);
+    }
+
+    container.innerHTML = `<div class="comex-indicators">${chips.join('')}</div>`;
 }
 
 // Expor para uso global
