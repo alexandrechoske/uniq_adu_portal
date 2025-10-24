@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('menu.static', filename='css/menu.css') }}">
-<link rel="stylesheet" href="{{ url_for('menu.static', filename='css/noticias.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -22,43 +21,41 @@
         {% set accessible_modules = get_user_accessible_modules() %}
         {% set filtered_menu = get_filtered_menu_structure() %}
         
-        <div class="menu-with-news-layout">
-            <div class="menu-left-column">
-                <!-- Tabs de Navegação -->
-                <div class="menu-tabs-container">
-                    <div class="menu-tabs">
-                        {% if 'dashboard_executivo' in accessible_modules or 'dashboard_operacional' in accessible_modules or 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
-                        <button class="menu-tab active" data-tab="importacoes">
-                            <i class="mdi mdi-ship-wheel"></i>
-                            <span>{{ t('menu.importacoes') }}</span>
-                        </button>
-                        {% endif %}
-                        
-                        {% if 'financeiro' in accessible_modules %}
-                        <button class="menu-tab" data-tab="financeiro">
-                            <i class="mdi mdi-cash-multiple"></i>
-                            <span>{{ t('menu.financeiro') }}</span>
-                        </button>
-                        {% endif %}
-                        
-                        {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'ajuste_status' in accessible_modules %}
-                        <button class="menu-tab" data-tab="ferramentas">
-                            <i class="mdi mdi-tools"></i>
-                            <span>{{ t('menu.ferramentas') }}</span>
-                        </button>
-                        {% endif %}
-                        
-                        {% if 'rh' in accessible_modules %}
-                        <button class="menu-tab" data-tab="rh">
-                            <i class="mdi mdi-account-tie"></i>
-                            <span>{{ t('menu.rh') }}</span>
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
+        <!-- Tabs de Navegação -->
+        <div class="menu-tabs-container">
+            <div class="menu-tabs">
+                {% if 'dashboard_executivo' in accessible_modules or 'dashboard_operacional' in accessible_modules or 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
+                <button class="menu-tab active" data-tab="importacoes">
+                    <i class="mdi mdi-ship-wheel"></i>
+                    <span>{{ t('menu.importacoes') }}</span>
+                </button>
+                {% endif %}
+                
+                {% if 'financeiro' in accessible_modules %}
+                <button class="menu-tab" data-tab="financeiro">
+                    <i class="mdi mdi-cash-multiple"></i>
+                    <span>{{ t('menu.financeiro') }}</span>
+                </button>
+                {% endif %}
+                
+                {% if 'export_relatorios' in accessible_modules or 'relatorios' in accessible_modules or 'usuarios' in accessible_modules or 'config' in accessible_modules or 'analytics_portal' in accessible_modules or 'analytics_agente' in accessible_modules or 'ajuste_status' in accessible_modules %}
+                <button class="menu-tab" data-tab="ferramentas">
+                    <i class="mdi mdi-tools"></i>
+                    <span>{{ t('menu.ferramentas') }}</span>
+                </button>
+                {% endif %}
+                
+                {% if 'rh' in accessible_modules %}
+                <button class="menu-tab" data-tab="rh">
+                    <i class="mdi mdi-account-tie"></i>
+                    <span>{{ t('menu.rh') }}</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
 
-                <!-- Área de Cards de Navegação -->
-                <div class="menu-tabs-content">
+        <!-- Conteúdo das Tabs -->
+        <div class="menu-tabs-content">
             <!-- Tab: Importações -->
             {% if 'dashboard_executivo' in accessible_modules or 'dashboard_operacional' in accessible_modules or 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
             <div class="tab-content active" data-content="importacoes">
@@ -272,39 +269,8 @@
                 </div>
             </div>
             {% endif %}
-            </div>
-            </div>
-            
-            <!-- Galeria de Notícias COMEX -->
-            <div class="news-gallery-container" id="news-gallery-container" data-api-bypass="{{ api_bypass_key or '' }}">
-                <div class="news-gallery-header">
-                    <div class="news-gallery-title">
-                        <i class="mdi mdi-newspaper-variant-multiple"></i>
-                        <h3>Notícias COMEX</h3>
-                    </div>
-                    <button class="news-refresh-btn" id="news-refresh-btn" title="Atualizar notícias">
-                        <i class="mdi mdi-refresh"></i>
-                    </button>
-                </div>
-
-                <div class="news-carousel">
-                    <div class="news-carousel-track">
-                        <!-- Cards de notícias serão injetados aqui pelo JavaScript -->
-                    </div>
-                </div>
-
-                <div class="news-controls">
-                    <!-- Controles serão injetados aqui pelo JavaScript -->
-                </div>
-            </div>
         </div>
     </div>
 </div>
-{% if api_bypass_key %}
-<script>
-    window.API_BYPASS_KEY = {{ api_bypass_key | tojson }};
-</script>
-{% endif %}
-<script src="{{ url_for('menu.static', filename='js/noticias.js') }}"></script>
 <script src="{{ url_for('menu.static', filename='js/menu.js') }}"></script>
 {% endblock %}

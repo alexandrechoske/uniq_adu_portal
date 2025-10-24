@@ -258,6 +258,7 @@
     padding-right: var(--spacing-xl);
     padding-top: 1rem;
     padding-bottom: 1rem;
+    box-sizing: border-box;
 }
 
 .main-content {

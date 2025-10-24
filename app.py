@@ -141,6 +141,14 @@ try:
 except Exception as e:
     print(f"⚠️ Não foi possível registrar test API endpoints: {e}")
 
+# Register test noticias API blueprint
+try:
+    from test_noticias_api import register_test_noticias_blueprint
+    register_test_noticias_blueprint(app)
+    print("✅ Test Notícias COMEX API registrado")
+except Exception as e:
+    print(f"⚠️ Não foi possível registrar test notícias API: {e}")
+
 # Register importacoes blueprints (módulo de importações completo)
 register_importacoes_blueprints(app)
 
@@ -356,6 +364,18 @@ def test_empresa_search():
     
     try:
         with open('test_empresa_search.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Arquivo de teste não encontrado", 404
+
+@app.route('/test-menu-noticias')
+def test_menu_noticias():
+    """Rota temporária para testar galeria de notícias COMEX no menu"""
+    if not app.config['DEBUG']:
+        return "Disponível apenas em modo debug", 404
+    
+    try:
+        with open('test_menu_com_noticias.html', 'r', encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
         return "Arquivo de teste não encontrado", 404
