@@ -833,3 +833,77 @@ def api_add_observacao(candidato_id):
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@recrutamento_bp.route('/api/candidatos/<candidato_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'recrutamento')
+def api_update_candidato(candidato_id):
+    """API: Atualizar informações do candidato (modo edição)"""
+    try:
+        data = request.get_json()
+        
+        # Campos editáveis permitidos (exclui campos de IA e ID)
+        campos_permitidos = {
+            # Informações Pessoais
+            'nome_completo',
+            'data_nascimento',
+            'email',
+            'telefone',
+            'sexo',
+            'estado_civil',
+            'cidade_estado',
+            # Formação e Experiência
+            'formacao_academica',
+            'curso_especifico',
+            'area_objetivo',
+            'experiencia_na_area',
+            'trabalha_atualmente',
+            # Candidatura
+            'fonte_candidatura',
+            'data_candidatura',
+            'foi_indicacao',
+            'indicado_por',
+            'linkedin_url',
+            'portfolio_url',
+            # Processo Seletivo
+            'status_processo',
+            'realizou_entrevista',
+            'data_entrevista',
+            # Contratação
+            'foi_contratado',
+            'data_contratacao'
+        }
+        
+        # Filtrar apenas campos permitidos e que foram enviados
+        campos_atualizar = {k: v for k, v in data.items() if k in campos_permitidos and k in data}
+        
+        if not campos_atualizar:
+            return jsonify({
+                'success': False,
+                'message': 'Nenhum campo válido para atualizar'
+            }), 400
+        
+        # Atualizar no banco
+        response = supabase_admin.table('rh_candidatos')\
+            .update(campos_atualizar)\
+            .eq('id', candidato_id)\
+            .execute()
+        
+        if response.data and len(response.data) > 0:
+            candidato_atualizado = response.data[0]
+            return jsonify({
+                'success': True,
+                'message': 'Candidato atualizado com sucesso',
+                'data': candidato_atualizado
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Erro ao atualizar candidato'
+            }), 500
+    
+    except Exception as e:
+        print(f"❌ Erro ao atualizar candidato: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500

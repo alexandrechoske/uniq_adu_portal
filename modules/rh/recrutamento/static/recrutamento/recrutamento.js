@@ -911,27 +911,447 @@ function toggleModoEdicao() {
 }
 
 /**
- * Construir formulário de edição (preparação FASE 2)
+ * Construir formulário de edição dinamicamente
  */
 function construirFormularioEdicao() {
     const form = document.getElementById('formEditarCandidato');
+    const candidatoId = document.getElementById('candidatoIdAtual').value;
+    
+    // Obter dados atuais do modal (view_* elements)
+    const dadosAtuais = {
+        nome_completo: document.getElementById('view_nome_completo')?.textContent || '',
+        email: document.getElementById('view_email')?.textContent || '',
+        telefone: document.getElementById('view_telefone')?.textContent || '',
+        sexo: document.getElementById('view_sexo')?.textContent || '',
+        estado_civil: document.getElementById('view_estado_civil')?.textContent || '',
+        cidade_estado: document.getElementById('view_cidade_estado')?.textContent || '',
+        formacao_academica: document.getElementById('view_formacao_academica')?.textContent || '',
+        curso_especifico: document.getElementById('view_curso_especifico')?.textContent || '',
+        area_objetivo: document.getElementById('view_area_objetivo')?.textContent || '',
+        experiencia_na_area: document.getElementById('view_experiencia_na_area')?.textContent === 'Sim',
+        trabalha_atualmente: document.getElementById('view_trabalha_atualmente')?.textContent === 'Sim',
+        fonte_candidatura: document.getElementById('view_fonte_candidatura')?.textContent || '',
+        foi_indicacao: document.getElementById('view_foi_indicacao')?.textContent === 'Sim',
+        indicado_por: document.getElementById('view_indicado_por')?.textContent || '',
+        linkedin_url: document.getElementById('view_linkedin_url')?.querySelector('a')?.href || '',
+        portfolio_url: document.getElementById('view_portfolio_url')?.querySelector('a')?.href || '',
+        status_processo: document.getElementById('view_status_processo')?.textContent || '',
+        realizou_entrevista: document.getElementById('view_realizou_entrevista')?.textContent === 'Sim',
+        foi_contratado: document.getElementById('view_foi_contratado')?.textContent === 'Sim'
+    };
+    
     form.innerHTML = `
-        <div class="alert alert-info">
-            <i class="mdi mdi-information"></i>
-            <strong>Modo Edição</strong> - Em desenvolvimento (FASE 2)
+        <div class="alert alert-info mb-4">
+            <i class="mdi mdi-pencil-box"></i>
+            <strong>Modo de Edição</strong> - Altere os campos desejados e clique em "Salvar Alterações"
         </div>
-        <p class="text-muted">
-            Esta funcionalidade será implementada na próxima etapa com todos os campos editáveis.
-        </p>
+        
+        <!-- SEÇÃO 1: INFORMAÇÕES PESSOAIS -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-account-circle"></i> Informações Pessoais
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Nome Completo *</label>
+                    <input type="text" class="form-control" name="nome_completo" 
+                           value="${escaparHTML(dadosAtuais.nome_completo)}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Sexo</label>
+                    <select class="form-select" name="sexo">
+                        <option value="">Selecione...</option>
+                        <option value="Masculino" ${dadosAtuais.sexo === 'Masculino' ? 'selected' : ''}>Masculino</option>
+                        <option value="Feminino" ${dadosAtuais.sexo === 'Feminino' ? 'selected' : ''}>Feminino</option>
+                        <option value="Outro" ${dadosAtuais.sexo === 'Outro' ? 'selected' : ''}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-control" name="email" 
+                           value="${escaparHTML(dadosAtuais.email)}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" class="form-control" name="telefone" 
+                           value="${escaparHTML(dadosAtuais.telefone)}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Estado Civil</label>
+                    <select class="form-select" name="estado_civil">
+                        <option value="">Selecione...</option>
+                        <option value="Solteiro(a)" ${dadosAtuais.estado_civil === 'Solteiro(a)' ? 'selected' : ''}>Solteiro(a)</option>
+                        <option value="Casado(a)" ${dadosAtuais.estado_civil === 'Casado(a)' ? 'selected' : ''}>Casado(a)</option>
+                        <option value="Divorciado(a)" ${dadosAtuais.estado_civil === 'Divorciado(a)' ? 'selected' : ''}>Divorciado(a)</option>
+                        <option value="Viúvo(a)" ${dadosAtuais.estado_civil === 'Viúvo(a)' ? 'selected' : ''}>Viúvo(a)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Cidade/Estado</label>
+                    <input type="text" class="form-control" name="cidade_estado" 
+                           value="${escaparHTML(dadosAtuais.cidade_estado)}">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 2: FORMAÇÃO E EXPERIÊNCIA -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-school"></i> Formação e Experiência Profissional
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Formação Acadêmica</label>
+                    <select class="form-select" name="formacao_academica">
+                        <option value="">Selecione...</option>
+                        <option value="Ensino Fundamental" ${dadosAtuais.formacao_academica === 'Ensino Fundamental' ? 'selected' : ''}>Ensino Fundamental</option>
+                        <option value="Ensino Médio" ${dadosAtuais.formacao_academica === 'Ensino Médio' ? 'selected' : ''}>Ensino Médio</option>
+                        <option value="Técnico" ${dadosAtuais.formacao_academica === 'Técnico' ? 'selected' : ''}>Técnico</option>
+                        <option value="Superior Incompleto" ${dadosAtuais.formacao_academica === 'Superior Incompleto' ? 'selected' : ''}>Superior Incompleto</option>
+                        <option value="Superior Completo" ${dadosAtuais.formacao_academica === 'Superior Completo' ? 'selected' : ''}>Superior Completo</option>
+                        <option value="Pós-Graduação" ${dadosAtuais.formacao_academica === 'Pós-Graduação' ? 'selected' : ''}>Pós-Graduação</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Curso Específico</label>
+                    <input type="text" class="form-control" name="curso_especifico" 
+                           value="${escaparHTML(dadosAtuais.curso_especifico)}"
+                           placeholder="Ex: Administração, Direito, etc.">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Área/Objetivo</label>
+                    <input type="text" class="form-control" name="area_objetivo" 
+                           value="${escaparHTML(dadosAtuais.area_objetivo)}"
+                           placeholder="Ex: Financeiro, RH, Logística, etc.">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Experiência na Área</label>
+                    <select class="form-select" name="experiencia_na_area">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.experiencia_na_area ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.experiencia_na_area ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trabalha Atualmente</label>
+                    <select class="form-select" name="trabalha_atualmente">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.trabalha_atualmente ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.trabalha_atualmente ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 3: CANDIDATURA -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-file-document"></i> Informações da Candidatura
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Fonte de Candidatura</label>
+                    <select class="form-select" name="fonte_candidatura">
+                        <option value="">Selecione...</option>
+                        <option value="LinkedIn" ${dadosAtuais.fonte_candidatura === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
+                        <option value="Indicação" ${dadosAtuais.fonte_candidatura === 'Indicação' ? 'selected' : ''}>Indicação</option>
+                        <option value="Currículo Enviado" ${dadosAtuais.fonte_candidatura === 'Currículo Enviado' ? 'selected' : ''}>Currículo Enviado</option>
+                        <option value="Site da Empresa" ${dadosAtuais.fonte_candidatura === 'Site da Empresa' ? 'selected' : ''}>Site da Empresa</option>
+                        <option value="Outro" ${dadosAtuais.fonte_candidatura === 'Outro' ? 'selected' : ''}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Data de Candidatura</label>
+                    <input type="date" class="form-control" name="data_candidatura" value="">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Foi Indicação?</label>
+                    <select class="form-select" name="foi_indicacao">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.foi_indicacao ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.foi_indicacao ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-9">
+                    <label class="form-label">Indicado Por</label>
+                    <input type="text" class="form-control" name="indicado_por" 
+                           value="${escaparHTML(dadosAtuais.indicado_por)}"
+                           placeholder="Nome da pessoa que indicou">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">LinkedIn</label>
+                    <input type="url" class="form-control" name="linkedin_url" 
+                           value="${escaparHTML(dadosAtuais.linkedin_url)}"
+                           placeholder="https://linkedin.com/in/...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Portfólio</label>
+                    <input type="url" class="form-control" name="portfolio_url" 
+                           value="${escaparHTML(dadosAtuais.portfolio_url)}"
+                           placeholder="https://...">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 4: PROCESSO SELETIVO -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-clipboard-check"></i> Processo Seletivo
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Status Atual</label>
+                    <select class="form-select" name="status_processo">
+                        <option value="">Selecione...</option>
+                        <option value="Triagem" ${dadosAtuais.status_processo === 'Triagem' ? 'selected' : ''}>Triagem</option>
+                        <option value="Pré-Entrevista" ${dadosAtuais.status_processo === 'Pré-Entrevista' ? 'selected' : ''}>Pré-Entrevista</option>
+                        <option value="Entrevista" ${dadosAtuais.status_processo === 'Entrevista' ? 'selected' : ''}>Entrevista</option>
+                        <option value="Teste Técnico" ${dadosAtuais.status_processo === 'Teste Técnico' ? 'selected' : ''}>Teste Técnico</option>
+                        <option value="Entrevista Final" ${dadosAtuais.status_processo === 'Entrevista Final' ? 'selected' : ''}>Entrevista Final</option>
+                        <option value="Contra-Oferta" ${dadosAtuais.status_processo === 'Contra-Oferta' ? 'selected' : ''}>Contra-Oferta</option>
+                        <option value="Contratado" ${dadosAtuais.status_processo === 'Contratado' ? 'selected' : ''}>Contratado</option>
+                        <option value="Rejeitado" ${dadosAtuais.status_processo === 'Rejeitado' ? 'selected' : ''}>Rejeitado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Realizou Entrevista?</label>
+                    <select class="form-select" name="realizou_entrevista">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.realizou_entrevista ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.realizou_entrevista ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data da Entrevista</label>
+                    <input type="date" class="form-control" name="data_entrevista">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 5: CONTRATAÇÃO -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-account-check"></i> Contratação
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Foi Contratado?</label>
+                    <select class="form-select" name="foi_contratado">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.foi_contratado ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.foi_contratado ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Data de Contratação</label>
+                    <input type="date" class="form-control" name="data_contratacao">
+                </div>
+            </div>
+        </div>
     `;
+    
+    // Populizar datas (format YYYY-MM-DD para inputs)
+    const dataEnt = document.querySelector('input[name="data_entrevista"]');
+    const dataCont = document.querySelector('input[name="data_contratacao"]');
+    const dataCand = document.querySelector('input[name="data_candidatura"]');
+    
+    if (dataEnt) {
+        const dateEntText = document.getElementById('view_data_entrevista')?.textContent || '';
+        dataEnt.value = extrairDataISO(dateEntText);
+    }
+    
+    if (dataCont) {
+        const dateContText = document.getElementById('view_data_contratacao')?.textContent || '';
+        dataCont.value = extrairDataISO(dateContText);
+    }
+    
+    if (dataCand) {
+        const dataCandText = document.getElementById('view_data_candidatura')?.textContent || '';
+        dataCand.value = extrairDataISO(dataCandText);
+    }
 }
 
 /**
- * Salvar edição do candidato (preparação FASE 2)
+ * Escapar HTML para evitar XSS
+ */
+function escaparHTML(texto) {
+    if (!texto || texto === '-') return '';
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
+/**
+ * Extrair data em formato ISO (YYYY-MM-DD) de texto em formato brasileiro (DD/MM/YYYY)
+ */
+function extrairDataISO(dateStr) {
+    if (!dateStr || dateStr === '-') return '';
+    
+    // Se já está em formato ISO, retorna como está
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+    
+    // Converter de DD/MM/YYYY para YYYY-MM-DD
+    const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (match) {
+        const [, day, month, year] = match;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    
+    return '';
+}
+
+/**
+ * Salvar edição do candidato - Coleta dados do formulário e envia para API
  */
 async function salvarEdicaoCandidato() {
-    alert('⚠️ Funcionalidade de edição em desenvolvimento (FASE 2)');
-    // TODO: Coletar dados do formulário e enviar para API
+    const candidatoId = document.getElementById('candidatoIdAtual').value;
+    const form = document.getElementById('formEditarCandidato');
+    
+    if (!candidatoId) {
+        alert('❌ Erro: ID do candidato não encontrado');
+        return;
+    }
+    
+    try {
+        // Coletar dados do formulário
+        const formData = new FormData(form);
+        const dados = {};
+        
+        for (let [key, value] of formData.entries()) {
+            // Converter strings 'true'/'false' para boolean
+            if (value === 'true') {
+                dados[key] = true;
+            } else if (value === 'false') {
+                dados[key] = false;
+            } else if (value === '') {
+                // Manter vazio como null para o backend
+                dados[key] = null;
+            } else {
+                dados[key] = value;
+            }
+        }
+        
+        // Validações básicas
+        if (!dados.nome_completo || dados.nome_completo.trim() === '') {
+            alert('❌ Nome completo é obrigatório');
+            return;
+        }
+        
+        if (!dados.email || dados.email.trim() === '') {
+            alert('❌ Email é obrigatório');
+            return;
+        }
+        
+        // Validar email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(dados.email)) {
+            alert('❌ Email inválido');
+            return;
+        }
+        
+        // Mostrar loading
+        const btnSalvar = document.getElementById('btnSalvarEdicao');
+        const btnEditar = document.getElementById('btnEditarCandidato');
+        const textOriginal = btnSalvar.innerHTML;
+        btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+        btnSalvar.disabled = true;
+        btnEditar.disabled = true;
+        
+        // Enviar para API
+        const response = await fetch(`/rh/recrutamento/api/candidatos/${candidatoId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Sucesso - recarregar dados e voltar para visualização
+            console.log('✅ Candidato atualizado com sucesso');
+            
+            // Recarregar dados do candidato
+            await verDetalhesCandidato(candidatoId);
+            
+            // Mostrar notificação
+            mostrarToast('success', '✅ Candidato atualizado com sucesso!');
+            
+            // Voltar para modo visualização
+            document.getElementById('modoEdicao').value = 'false';
+            document.getElementById('modo-visualizacao').style.display = 'block';
+            document.getElementById('modo-edicao').style.display = 'none';
+            btnEditar.innerHTML = '<i class="mdi mdi-pencil"></i> Editar';
+            btnSalvar.style.display = 'none';
+            
+        } else {
+            alert('❌ Erro ao salvar: ' + (result.message || 'Tente novamente'));
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar candidato:', error);
+        alert('❌ Erro ao salvar candidato: ' + error.message);
+    } finally {
+        // Restaurar botões
+        const btnSalvar = document.getElementById('btnSalvarEdicao');
+        const btnEditar = document.getElementById('btnEditarCandidato');
+        btnSalvar.innerHTML = '<i class="mdi mdi-content-save"></i> Salvar Alterações';
+        btnSalvar.disabled = false;
+        btnEditar.disabled = false;
+    }
+}
+
+/**
+ * Mostrar notificação toast (se bootstrap-toast disponível)
+ */
+function mostrarToast(tipo, mensagem) {
+    // Criar toast dinamicamente
+    const toastHTML = `
+        <div class="toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0" 
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${mensagem}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.getElementById('toastContainer') || criarToastContainer();
+    const toastEl = document.createElement('div');
+    toastEl.innerHTML = toastHTML;
+    toastContainer.appendChild(toastEl.firstElementChild);
+    
+    // Auto-remover após 3 segundos
+    setTimeout(() => {
+        const toast = toastContainer.querySelector('.toast');
+        if (toast) {
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 1500);
+        }
+    }, 100);
+}
+
+/**
+ * Criar container de toasts
+ */
+function criarToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    `;
+    document.body.appendChild(container);
+    return container;
 }
 
 /**
