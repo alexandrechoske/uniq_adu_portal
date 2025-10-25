@@ -10,6 +10,9 @@
     margin-bottom: 1rem;
     border: none;
     box-shadow: none;
+    overflow: visible;
+    position: relative;
+    z-index: 100;
 }
 
 .comex-indicators {
@@ -17,6 +20,8 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+    overflow: visible;
+    position: relative;
 }
 
 .comex-chip {
@@ -33,13 +38,14 @@
     transition: all 0.2s ease;
     white-space: nowrap;
     position: relative;
+    z-index: 1;
 }
 
 .comex-chip:hover {
     transform: translateY(-1px);
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     border-color: var(--unique-primary-medium, #2d6b92);
-    z-index: 10;
+    z-index: 10000;
 }
 
 .comex-chip i {
@@ -91,9 +97,9 @@
 /* Tooltip para chips de comércio */
 .comex-chip-tooltip {
     position: absolute;
-    bottom: 100%;
+    top: calc(100% + 8px);
     left: 50%;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateX(-50%);
     background: rgba(17, 24, 39, 0.95);
     color: white;
     padding: 0.75rem;
@@ -102,24 +108,26 @@
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 1300;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     min-width: 200px;
 }
 
 .comex-chip-tooltip::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: rgba(17, 24, 39, 0.95);
+    border-bottom-color: rgba(17, 24, 39, 0.95);
 }
 
 .comex-chip.trade:hover .comex-chip-tooltip {
     opacity: 1;
+    visibility: visible;
 }
 
 .comex-chip-tooltip-title {
@@ -171,6 +179,7 @@
     position: relative;
     left: 0;
     right: 0;
+    overflow: visible;
 }
 
 .menu-left-column {
@@ -178,6 +187,7 @@
     flex-direction: column;
     gap: 2rem;
     min-width: 0;
+    overflow: visible;
 }
 
 .menu-with-news-layout .menu-tabs-content {
@@ -199,6 +209,7 @@
     top: 5rem;
     max-height: calc(100vh - 7rem);
     overflow: visible;
+    z-index: 1200;
 }
 
 /* Cabeçalho da Galeria */
