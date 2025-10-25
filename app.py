@@ -133,21 +133,13 @@ app.register_blueprint(documents_bp)  # Document management
 # Register modular menu blueprint
 app.register_blueprint(menu_bp)  # Menu modular
 
-# Register test API endpoints temporarily
+# Register noticias COMEX API blueprint
 try:
-    from test_api_endpoints import test_api_bp
-    app.register_blueprint(test_api_bp)
-    print("✅ Test API endpoints registrados")
+    from routes.noticias_comex import bp as noticias_comex_bp
+    app.register_blueprint(noticias_comex_bp)
+    print("✅ Notícias COMEX API registrado")
 except Exception as e:
-    print(f"⚠️ Não foi possível registrar test API endpoints: {e}")
-
-# Register test noticias API blueprint
-try:
-    from test_noticias_api import register_test_noticias_blueprint
-    register_test_noticias_blueprint(app)
-    print("✅ Test Notícias COMEX API registrado")
-except Exception as e:
-    print(f"⚠️ Não foi possível registrar test notícias API: {e}")
+    print(f"⚠️ Não foi possível registrar notícias COMEX API: {e}")
 
 # Register importacoes blueprints (módulo de importações completo)
 register_importacoes_blueprints(app)
@@ -381,17 +373,6 @@ def test_menu_noticias():
         return "Arquivo de teste não encontrado", 404
 
 if __name__ == '__main__':   
-    # Registrar endpoints de teste de segurança em modo debug
-    if app.config['DEBUG']:
-        try:
-            from test_security_endpoints import register_test_security_blueprint
-            register_test_security_blueprint(app)
-            print("🔧 Endpoints de teste de segurança registrados")
-        except ImportError:
-            print("⚠️ Módulo test_security_endpoints não encontrado - pulando registro de endpoints de teste")
-        except Exception as e:
-            print(f"⚠️ Erro ao registrar endpoints de teste de segurança: {e}")
-
     # Start server based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
     if flask_env == 'development':
