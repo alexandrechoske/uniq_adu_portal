@@ -17,6 +17,9 @@ let chartDispersaoTempoSalario = null;
 // INICIALIZAÇÃO
 // ========================================
 
+// Registrar plugin de datalabels
+Chart.register(ChartDataLabels);
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📊 Dashboard Executivo RH - Inicializado (v3.0)');
     
@@ -47,6 +50,8 @@ function inicializarFiltros() {
  */
 function configurarEventosFiltros() {
     const periodoFilter = document.getElementById('periodo-filter');
+    const empresaFilter = document.getElementById('empresa-filter');
+    const departamentoFilter = document.getElementById('departamento-filter');
     const customDateGroup = document.getElementById('custom-date-group');
     const customDateEndGroup = document.getElementById('custom-date-end-group');
     const resetFiltersBtn = document.getElementById('reset-filters');
@@ -58,16 +63,58 @@ function configurarEventosFiltros() {
             if (customDateGroup) customDateGroup.style.display = isCustom ? 'flex' : 'none';
             if (customDateEndGroup) customDateEndGroup.style.display = isCustom ? 'flex' : 'none';
             if (resetFiltersBtn) resetFiltersBtn.style.display = 'inline-flex';
+            
+            // Atualizar dashboard automaticamente (exceto quando personalizado - aguarda datas)
+            if (!isCustom) {
+                console.log('🔄 Período alterado, atualizando dashboard...');
+                atualizarDashboard();
+            }
         });
     }
     
-    // Mostrar botão "Limpar Filtros" quando filtros mudarem
-    const filters = document.querySelectorAll('.filter-group select, .filter-group input');
-    filters.forEach(filter => {
-        filter.addEventListener('change', function() {
+    // Atualizar dashboard automaticamente quando mudar empresa
+    if (empresaFilter) {
+        empresaFilter.addEventListener('change', function() {
+            console.log('🔄 Empresa alterada, atualizando dashboard...');
             if (resetFiltersBtn) resetFiltersBtn.style.display = 'inline-flex';
+            atualizarDashboard();
         });
-    });
+    }
+    
+    // Atualizar dashboard automaticamente quando mudar departamento
+    if (departamentoFilter) {
+        departamentoFilter.addEventListener('change', function() {
+            console.log('🔄 Departamento alterado, atualizando dashboard...');
+            if (resetFiltersBtn) resetFiltersBtn.style.display = 'inline-flex';
+            atualizarDashboard();
+        });
+    }
+    
+    // Atualizar dashboard quando mudar datas personalizadas
+    const dataInicioInput = document.getElementById('data-inicio');
+    const dataFimInput = document.getElementById('data-fim');
+    
+    if (dataInicioInput) {
+        dataInicioInput.addEventListener('change', function() {
+            // Só atualiza se ambas as datas estiverem preenchidas
+            if (dataFimInput && dataFimInput.value) {
+                console.log('🔄 Datas alteradas, atualizando dashboard...');
+                atualizarDashboard();
+            }
+        });
+    }
+    
+    if (dataFimInput) {
+        dataFimInput.addEventListener('change', function() {
+            // Só atualiza se ambas as datas estiverem preenchidas
+            if (dataInicioInput && dataInicioInput.value) {
+                console.log('🔄 Datas alteradas, atualizando dashboard...');
+                atualizarDashboard();
+            }
+        });
+    }
+    
+    console.log('✅ Event listeners de filtros configurados');
 }
 
 /**
@@ -514,9 +561,9 @@ function renderizarGraficos(dados) {
         renderizarGraficoTurnoverDepartamento(dados.turnover_departamento);
     }
     
-    // Gráfico 3: Distribuição por Departamento
-    if (dados.distribuicao_departamento) {
-        renderizarGraficoDistribuicao(dados.distribuicao_departamento);
+    // Gráfico 3: Custo Total por Departamento (NOVO - substitui distribuição)
+    if (dados.custo_departamento) {
+        renderizarGraficoCustoDepartamento(dados.custo_departamento);
     }
     
     // Gráfico 4: Dispersão Tempo vs Salário
@@ -544,6 +591,11 @@ function renderizarGraficoEvolucao(dados) {
         return `${meses[parseInt(mes) - 1]}/${ano.substring(2)}`;
     });
     
+    // Calcular saldo líquido (Admissões - Demissões)
+    const saldoLiquido = dados.datasets.admissoes.map((admissao, index) => {
+        return admissao - dados.datasets.desligamentos[index];
+    });
+    
     chartEvolucaoHeadcount = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -553,13 +605,29 @@ function renderizarGraficoEvolucao(dados) {
                     label: 'Admissões',
                     data: dados.datasets.admissoes,
                     backgroundColor: '#28a745',
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    order: 2
                 },
                 {
                     label: 'Demissões',
-                    data: dados.datasets.desligamentos,  // ✅ CORRIGIDO: desligamentos, não demissoes
+                    data: dados.datasets.desligamentos,
                     backgroundColor: '#dc3545',
-                    yAxisID: 'y'
+                    yAxisID: 'y',
+                    order: 3
+                },
+                {
+                    label: 'Saldo Líquido',
+                    data: saldoLiquido,
+                    type: 'line',
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    yAxisID: 'y',
+                    order: 1,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }
             ]
         },
@@ -577,7 +645,7 @@ function renderizarGraficoEvolucao(dados) {
                 },
                 title: {
                     display: true,
-                    text: 'Admissões e Demissões Mensais',
+                    text: 'Admissões e Demissões Mensais (com Saldo Líquido)',
                     font: { size: 16, weight: 'bold' }
                 },
                 tooltip: {
@@ -588,10 +656,41 @@ function renderizarGraficoEvolucao(dados) {
                                 label += ': ';
                             }
                             if (context.parsed.y !== null) {
-                                label += context.parsed.y + ' pessoas';
+                                const value = context.parsed.y;
+                                if (context.dataset.label === 'Saldo Líquido') {
+                                    label += value >= 0 ? `+${value}` : value;
+                                    label += ' pessoas';
+                                } else {
+                                    label += value + ' pessoas';
+                                }
                             }
                             return label;
                         }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    font: {
+                        weight: 'bold',
+                        size: 10
+                    },
+                    color: function(context) {
+                        if (context.dataset.label === 'Saldo Líquido') {
+                            const value = context.parsed && context.parsed.y ? context.parsed.y : 0;
+                            return value >= 0 ? '#28a745' : '#dc3545';
+                        }
+                        return context.dataset.borderColor || '#000';
+                    },
+                    formatter: function(value, context) {
+                        if (context.dataset.label === 'Saldo Líquido') {
+                            return value >= 0 ? `+${value}` : value;
+                        }
+                        return value;
+                    },
+                    display: function(context) {
+                        // Mostrar labels apenas para datasets visíveis
+                        return true;
                     }
                 }
             },
@@ -652,6 +751,18 @@ function renderizarGraficoTurnoverDepartamento(dados) {
                         label: function(context) {
                             return context.parsed.x.toFixed(1) + '%';
                         }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    color: '#333',
+                    formatter: function(value) {
+                        return value.toFixed(1) + '%';
                     }
                 }
             },
@@ -719,6 +830,141 @@ function renderizarGraficoDistribuicao(dados) {
                             return `${label}: ${value} (${percentage}%)`;
                         }
                     }
+                },
+                datalabels: {
+                    anchor: 'center',
+                    align: 'center',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    color: '#fff',
+                    formatter: function(value, context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return percentage + '%';
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Renderizar gráfico de custo total por departamento
+ */
+function renderizarGraficoCustoDepartamento(dados) {
+    const ctx = document.getElementById('chart-distribuicao-departamento');
+    if (!ctx) return;
+    
+    if (chartDistribuicaoDepartamento) {
+        chartDistribuicaoDepartamento.destroy();
+    }
+    
+    // Cores para salários (verde/azul) e benefícios (laranja/amarelo)
+    const corSalarios = '#0d6efd';  // Azul
+    const corBeneficios = '#fd7e14';  // Laranja
+    
+    chartDistribuicaoDepartamento = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dados.labels,
+            datasets: [
+                {
+                    label: 'Salário',
+                    data: dados.salarios || dados.data,  // Fallback para compatibilidade
+                    backgroundColor: corSalarios,
+                    borderColor: corSalarios + 'dd',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Benefícios',
+                    data: dados.beneficios || [],  // Dados de benefícios
+                    backgroundColor: corBeneficios,
+                    borderColor: corBeneficios + 'dd',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: { size: 12, weight: 'bold' },
+                        boxWidth: 15,
+                        padding: 15
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Custo por Departamento - Salários vs Benefícios',
+                    font: { size: 16, weight: 'bold' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.x;
+                            const label = context.dataset.label;
+                            return label + ': R$ ' + value.toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        },
+                        afterLabel: function(context) {
+                            // Calcular total (salários + benefícios)
+                            const index = context.dataIndex;
+                            const salarios = dados.salarios[index] || 0;
+                            const beneficios = dados.beneficios[index] || 0;
+                            const total = salarios + beneficios;
+                            return 'Total: R$ ' + total.toLocaleString('pt-BR', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    font: {
+                        weight: 'bold',
+                        size: 11
+                    },
+                    color: function(context) {
+                        return context.dataset.backgroundColor;
+                    },
+                    formatter: function(value) {
+                        return 'R$ ' + value.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        });
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: false,  // Barras lado a lado (não empilhadas)
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Custo (R$)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR', {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                            });
+                        }
+                    }
+                },
+                y: {
+                    stacked: false  // Eixo Y não empilhado
                 }
             }
         }
@@ -752,7 +998,7 @@ function renderizarTabelaVagasAbertas(vagas) {
     tbody.innerHTML = '';
     
     if (vagas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma vaga aberta no momento</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhuma vaga aberta no momento</td></tr>';
         return;
     }
     
@@ -772,8 +1018,7 @@ function renderizarTabelaVagasAbertas(vagas) {
                     ${vaga.dias_aberto} dias
                 </span>
             </td>
-            <td class="text-center">${vaga.num_candidatos}</td>
-            <td class="text-center">${vaga.candidatos_score_alto}</td>
+            <td><strong>${vaga.custo_estimado_formatado || 'Não especificado'}</strong></td>
             <td class="text-center">
                 <button class="btn btn-sm btn-outline-primary" onclick="verDetalhesVaga('${vaga.id}')">
                     <i class="mdi mdi-eye"></i> Ver
