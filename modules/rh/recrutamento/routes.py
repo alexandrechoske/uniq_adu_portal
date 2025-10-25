@@ -21,6 +21,7 @@ recrutamento_bp = Blueprint(
 
 TIPOS_CONTRATACAO_VALIDOS = {'CLT', 'PJ', 'Estágio'}
 REGIMES_TRABALHO_VALIDOS = {'Presencial', 'Híbrido', 'Remoto'}
+UNIQUE_EMPRESA_ID = 'dc984b7c-3156-43f7-a1bf-f7a0b77db535'
 
 
 def _texto_obrigatorio(valor):
@@ -390,7 +391,8 @@ def api_create_vaga():
             'nivel_senioridade': nivel_senioridade,
             'quantidade_vagas': quantidade_vagas,
             'regime_trabalho': regime_trabalho,
-            'carga_horaria': carga_horaria
+            'carga_horaria': carga_horaria,
+            'empresa_controladora_id': UNIQUE_EMPRESA_ID
         }
 
         if faixa_salarial_min is not None:
