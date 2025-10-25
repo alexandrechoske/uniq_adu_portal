@@ -570,6 +570,14 @@ async function verDetalhesCandidato(candidatoId) {
             // ============================================
             setText('view_fonte_candidatura', candidato.fonte_candidatura);
             setText('view_data_candidatura', formatarData(candidato.data_candidatura));
+            
+            // Pretensão Salarial (formatada como moeda)
+            let pretensaoTexto = '-';
+            if (candidato.pretensao_salarial && candidato.pretensao_salarial > 0) {
+                pretensaoTexto = `R$ ${parseFloat(candidato.pretensao_salarial).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            }
+            setText('view_pretensao_salarial', pretensaoTexto);
+            
             setText('view_foi_indicacao', formatarBoolean(candidato.foi_indicacao));
             setText('view_indicado_por', candidato.indicado_por);
             
@@ -579,13 +587,35 @@ async function verDetalhesCandidato(candidatoId) {
             // Portfólio (com link clicável)
             setLink('view_portfolio_url', candidato.portfolio_url);
             
-            // Currículo
-            if (candidato.url_curriculo || candidato.curriculo_path) {
-                const curriculoUrl = candidato.url_curriculo || candidato.curriculo_path;
-                document.getElementById('btnDownloadCurriculo').href = curriculoUrl;
-                document.getElementById('btnDownloadCurriculo').style.display = 'inline-block';
+            // Currículo - Download com função
+            console.log('🔍 DEBUG Currículo:', {
+                url_curriculo: candidato.url_curriculo,
+                curriculo_path: candidato.curriculo_path,
+                nome_completo: candidato.nome_completo
+            });
+            
+            // Construir URL se tiver apenas o caminho
+            let urlCurriculo = candidato.url_curriculo;
+            if (!urlCurriculo && candidato.curriculo_path) {
+                // URL base do Supabase storage
+                const SUPABASE_URL = 'https://ixytthtngeifjumvbuwe.supabase.co';
+                const BUCKET = 'curriculos';
+                urlCurriculo = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${candidato.curriculo_path}`;
+                console.log('🔧 URL construída a partir do caminho:', urlCurriculo);
+            }
+            
+            if (urlCurriculo && urlCurriculo.trim()) {
+                const btnDownload = document.getElementById('btnDownloadCurriculo');
+                btnDownload.href = urlCurriculo;
+                btnDownload.download = `curriculo_${candidato.nome_completo?.replace(/\s+/g, '_')}.pdf` || 'curriculo.pdf';
+                btnDownload.style.display = 'inline-block';
+                // Garantir que abre em nova aba
+                btnDownload.target = '_blank';
+                btnDownload.rel = 'noopener noreferrer';
+                console.log('✅ Botão de download configurado:', btnDownload.href);
             } else {
                 document.getElementById('btnDownloadCurriculo').style.display = 'none';
+                console.log('❌ url_curriculo e curriculo_path vazios');
             }
             
             // ============================================
@@ -931,6 +961,7 @@ function construirFormularioEdicao() {
         experiencia_na_area: document.getElementById('view_experiencia_na_area')?.textContent === 'Sim',
         trabalha_atualmente: document.getElementById('view_trabalha_atualmente')?.textContent === 'Sim',
         fonte_candidatura: document.getElementById('view_fonte_candidatura')?.textContent || '',
+        pretensao_salarial: extrairNumeroMoeda(document.getElementById('view_pretensao_salarial')?.textContent || ''),
         foi_indicacao: document.getElementById('view_foi_indicacao')?.textContent === 'Sim',
         indicado_por: document.getElementById('view_indicado_por')?.textContent || '',
         linkedin_url: document.getElementById('view_linkedin_url')?.querySelector('a')?.href || '',
@@ -1057,12 +1088,20 @@ function construirFormularioEdicao() {
                         <option value="Indicação" ${dadosAtuais.fonte_candidatura === 'Indicação' ? 'selected' : ''}>Indicação</option>
                         <option value="Currículo Enviado" ${dadosAtuais.fonte_candidatura === 'Currículo Enviado' ? 'selected' : ''}>Currículo Enviado</option>
                         <option value="Site da Empresa" ${dadosAtuais.fonte_candidatura === 'Site da Empresa' ? 'selected' : ''}>Site da Empresa</option>
+                        <option value="Portal de Vagas" ${dadosAtuais.fonte_candidatura === 'Portal de Vagas' ? 'selected' : ''}>Portal de Vagas</option>
                         <option value="Outro" ${dadosAtuais.fonte_candidatura === 'Outro' ? 'selected' : ''}>Outro</option>
                     </select>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Data de Candidatura</label>
                     <input type="date" class="form-control" name="data_candidatura" value="">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pretensão Salarial (R$)</label>
+                    <input type="number" class="form-control" name="pretensao_salarial" 
+                           value="${dadosAtuais.pretensao_salarial || ''}" 
+                           min="0" step="100" max="999999"
+                           placeholder="Exemplo: 3500">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Foi Indicação?</label>
@@ -1072,7 +1111,7 @@ function construirFormularioEdicao() {
                         <option value="false" ${!dadosAtuais.foi_indicacao ? 'selected' : ''}>Não</option>
                     </select>
                 </div>
-                <div class="col-md-9">
+                <div class="col-md-5">
                     <label class="form-label">Indicado Por</label>
                     <input type="text" class="form-control" name="indicado_por" 
                            value="${escaparHTML(dadosAtuais.indicado_por)}"
@@ -1200,6 +1239,23 @@ function extrairDataISO(dateStr) {
     }
     
     return '';
+}
+
+/**
+ * Extrair número de uma string de moeda (R$ 1.234,56 -> 1234.56)
+ */
+function extrairNumeroMoeda(moedaStr) {
+    if (!moedaStr || moedaStr === '-') return '';
+    
+    // Remove "R$" e espaços
+    let num = moedaStr.replace('R$', '').trim();
+    
+    // Replace ponto de milhar (.) e vírgula decimal (,) brasileiros
+    num = num.replace(/\./g, '').replace(/,/g, '.');
+    
+    // Parse como número
+    const parsed = parseFloat(num);
+    return isNaN(parsed) ? '' : parsed;
 }
 
 /**

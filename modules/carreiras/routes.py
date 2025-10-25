@@ -139,6 +139,15 @@ def aplicar_vaga(vaga_id):
         email = request.form.get('email', '').strip()
         telefone = request.form.get('telefone', '').strip()
         linkedin_url = request.form.get('linkedin_url', '').strip()
+        pretensao_salarial = request.form.get('pretensao_salarial', '').strip()
+        
+        # Converter pretensão salarial para número
+        pretensao_salarial_num = None
+        if pretensao_salarial:
+            try:
+                pretensao_salarial_num = float(pretensao_salarial)
+            except ValueError:
+                pretensao_salarial_num = None
         
         if not nome_completo or not email:
             return jsonify({
@@ -193,6 +202,7 @@ def aplicar_vaga(vaga_id):
             'email': email,
             'telefone': telefone,
             'linkedin_url': linkedin_url if linkedin_url else None,
+            'pretensao_salarial': pretensao_salarial_num,
             'curriculo_path': curriculo_path,
             'status_processo': 'Triagem',
             'fonte_candidatura': 'Portal de Vagas',
@@ -246,7 +256,8 @@ def aplicar_vaga(vaga_id):
                     'email': email,
                     'nome_completo': nome_completo,
                     'telefone': telefone if telefone else None,
-                    'linkedin_url': linkedin_url if linkedin_url else None
+                    'linkedin_url': linkedin_url if linkedin_url else None,
+                    'pretensao_salarial': pretensao_salarial_num
                 }
                 
                 webhook_response = requests.post(
