@@ -274,7 +274,7 @@
             <!-- Gráfico 2: Turnover por Departamento -->
             <div class="col-md-6 mb-4">
                 <div class="chart-card">
-                    <div class="chart-container" style="height: 300px;">
+                    <div class="chart-container" style="height: 450px;">
                         <canvas id="chart-turnover-departamento"></canvas>
                     </div>
                 </div>
@@ -283,7 +283,7 @@
             <!-- Gráfico 3: Distribuição por Departamento -->
             <div class="col-md-6 mb-4">
                 <div class="chart-card">
-                    <div class="chart-container" style="height: 300px;">
+                    <div class="chart-container" style="height: 450px;">
                         <canvas id="chart-distribuicao-departamento"></canvas>
                     </div>
                 </div>
@@ -305,7 +305,7 @@
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="mdi mdi-briefcase-search"></i>
-                            Vagas Abertas Há Mais de 15 Dias
+                            Visão Geral das Vagas em Aberto
                         </h5>
                     </div>
                     <div class="card-body p-0">
@@ -316,14 +316,13 @@
                                         <th>Título da Vaga</th>
                                         <th>Departamento</th>
                                         <th>Dias em Aberto</th>
-                                        <th class="text-center">Nº Candidatos</th>
-                                        <th class="text-center">Score Alto (&gt;80%)</th>
+                                        <th>Custo Estimado (Salário)</th>
                                         <th class="text-center">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabela-vagas-tbody">
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">
+                                        <td colspan="5" class="text-center text-muted">
                                             Carregando vagas...
                                         </td>
                                     </tr>
@@ -340,5 +339,6 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=3.5"></script>
 {% endblock %}

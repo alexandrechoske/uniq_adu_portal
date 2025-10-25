@@ -69,8 +69,8 @@
     background: white;
     border-radius: 8px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    width: 90%;
-    max-width: 600px;
+    width: 95%;
+    max-width: 1000px;
     max-height: 90vh;
     overflow-y: auto;
     display: flex;
@@ -232,7 +232,7 @@
 }
 
 .produtos-table th.descricao-header {
-    width: 36%;
+    width: 50%;
 }
 
 .produtos-table tbody tr {
@@ -268,19 +268,17 @@
 
 .produtos-table td.descricao-cell {
     font-size: 0.8125rem;
-    line-height: 1.35;
+    line-height: 1.5;
     color: #4b5563;
-    max-width: 26rem;
+    max-width: 50rem;
     white-space: normal;
     overflow-wrap: anywhere;
+    padding: 1rem 1.25rem;
 }
 
 .produtos-table td.descricao-cell .descricao-text {
-    line-clamp: 4;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
 }
 
 /* =====================================================

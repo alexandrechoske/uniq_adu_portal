@@ -1,6 +1,27 @@
 /* Novo layout do Menu Principal - separado do teste
    Mantém paleta e tokens definidos em menu.css */
 
+/* ===== CONTAINER CENTRALIZADO - NÃO SE MOVE ===== */
+.menu-full-width {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto !important;
+    padding: 0 var(--spacing-xl);
+    box-sizing: border-box;
+    position: relative;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
 .menu-layout {
     display: flex;
     gap: 2rem;
@@ -79,7 +100,7 @@
 
 .module-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
 }
 
@@ -90,11 +111,11 @@
     padding: 1rem 1rem 1.1rem;
     display: flex;
     flex-direction: column;
-    gap: .65rem;
+    gap: .5rem;
     position: relative;
     text-decoration: none;
     transition: all var(--transition-fast);
-    min-height: 150px;
+    min-height: 120px;
     overflow: hidden;
 }
 
@@ -119,16 +140,17 @@
 }
 
 .module-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: var(--color-primary);
     background: var(--color-primary-light);
     box-shadow: inset 0 0 0 1px rgba(59, 130, 246, .35);
+    flex-shrink: 0;
 }
 
 .module-card[data-module="logout"] .module-icon {
@@ -137,17 +159,25 @@
     box-shadow: inset 0 0 0 1px rgba(239, 68, 68, .35);
 }
 
+.module-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
 .module-title {
     margin: 0;
-    font-size: .95rem;
+    font-size: .85rem;
     font-weight: 600;
     color: var(--color-text-primary);
+    line-height: 1.2;
 }
 
 .module-desc {
     margin: 0;
-    font-size: .70rem;
-    line-height: 1.15rem;
+    font-size: .65rem;
+    line-height: 1.1;
     color: var(--color-text-muted);
 }
 
@@ -258,6 +288,7 @@
     padding-right: var(--spacing-xl);
     padding-top: 1rem;
     padding-bottom: 1rem;
+    box-sizing: border-box;
 }
 
 .main-content {
@@ -266,6 +297,11 @@
     margin: 0 auto;
     padding: 0 var(--spacing-xl);
     box-sizing: border-box;
+}
+
+/* Remover padding lateral quando contém menu com notícias */
+.main-content.menu-full-width {
+    padding: 0;
 }
 
 /* === MENU GRID === */

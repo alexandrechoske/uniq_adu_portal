@@ -1,3 +1,5 @@
+import os
+
 from flask import Blueprint, render_template, session, jsonify, current_app as app
 from modules.auth.routes import login_required
 from extensions import supabase_admin
@@ -33,10 +35,15 @@ def menu_home():
         
         print(f"[MENU] Menu filtrado para {user.get('email')}: {list(filtered_menu.keys())}")
         
-        return render_template('menu.html', 
-                             filtered_menu=filtered_menu,
-                             accessible_modules=accessible_modules,
-                             user_perfis=user.get('user_perfis', []))
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+
+        return render_template(
+            'menu.html',
+            filtered_menu=filtered_menu,
+            accessible_modules=accessible_modules,
+            user_perfis=user.get('user_perfis', []),
+            api_bypass_key=api_bypass_key
+        )
     except Exception as e:
         app.logger.exception('[MENU] Erro ao renderizar menu_home: %s', e)
         return render_template('errors/500.html'), 500
