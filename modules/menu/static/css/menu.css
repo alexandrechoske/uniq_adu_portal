@@ -1,6 +1,27 @@
 /* Novo layout do Menu Principal - separado do teste
    Mantém paleta e tokens definidos em menu.css */
 
+/* ===== CONTAINER CENTRALIZADO - NÃO SE MOVE ===== */
+.menu-full-width {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto !important;
+    padding: 0 var(--spacing-xl);
+    box-sizing: border-box;
+    position: relative;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
 .menu-layout {
     display: flex;
     gap: 2rem;

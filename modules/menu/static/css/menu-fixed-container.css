@@ -1,0 +1,66 @@
+/* ================================================
+   MENU PAGE - LAYOUT CENTRALIZADO E ESTÁTICO
+   O container principal fica centralizado e não se move
+   ================================================ */
+
+/* Garante que nada do menu ultrapasse a viewport */
+.menu-full-width {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto !important;
+    padding: 0 1.5rem;
+    box-sizing: border-box;
+    position: relative;
+    overflow-x: hidden !important;
+    overflow-y: visible;
+}
+
+/* Container dashboard em página do menu */
+.dashboard-container {
+    width: 100%;
+    overflow-x: hidden !important;
+    padding: 0;
+    margin: 0 auto;
+}
+
+/* Main content fica centralizado */
+.main-content {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto !important;
+    padding: 0;
+    box-sizing: border-box;
+    position: relative;
+    overflow-x: hidden !important;
+}
+
+/* Menu layout centralizado e estático */
+.menu-with-news-layout {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+    position: relative;
+    left: auto;
+    right: auto;
+}
+
+/* ===== MOBILE RESPONSIVO ===== */
+
+@media (max-width: 768px) {
+    .menu-full-width {
+        padding: 0 0.75rem;
+        width: 100vw;
+    }
+    
+    .main-content {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    .menu-with-news-layout {
+        width: 100%;
+        max-width: 100%;
+    }
+}

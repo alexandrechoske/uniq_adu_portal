@@ -168,6 +168,9 @@
     margin: 0 auto;
     padding: 0 var(--spacing-xl);
     box-sizing: border-box;
+    position: relative;
+    left: 0;
+    right: 0;
 }
 
 .menu-left-column {
