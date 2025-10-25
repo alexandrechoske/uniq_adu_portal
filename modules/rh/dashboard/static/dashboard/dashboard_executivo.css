@@ -395,9 +395,11 @@
 .chart-container {
     background: white;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 2rem 2.5rem;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: visible;
+    position: relative;
 }
 
 .chart-header {
@@ -609,14 +611,17 @@
 .chart-card {
     background: white;
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 2rem 2.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: visible;
 }
 
 .chart-container {
     position: relative;
     width: 100%;
+    overflow: visible;
+    padding: 0.5rem;
 }
 
 /* ========================================
