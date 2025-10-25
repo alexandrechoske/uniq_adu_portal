@@ -562,7 +562,7 @@ async function verDetalhesCandidato(candidatoId) {
             setText('view_formacao_academica', candidato.formacao_academica);
             setText('view_curso_especifico', candidato.curso_especifico);
             setText('view_area_objetivo', candidato.area_objetivo);
-            setText('view_experiencia_na_area', candidato.experiencia_na_area);
+            setText('view_experiencia_na_area', formatarBoolean(candidato.experiencia_na_area));
             setText('view_trabalha_atualmente', formatarBoolean(candidato.trabalha_atualmente));
             
             // ============================================
@@ -592,35 +592,35 @@ async function verDetalhesCandidato(candidatoId) {
             // SEÇÃO 4: ANÁLISE DA IA
             // ============================================
             const secaoIA = document.getElementById('secaoIA');
+            const dadosIA = extrairDadosIA(candidato);
+
             if (candidato.ai_status && candidato.ai_status !== 'pending') {
                 secaoIA.style.display = 'block';
-                
+
                 setHTML('view_ai_status', formatarAIStatus(candidato.ai_status));
                 setHTML('view_ai_pre_filter_status', formatarPreFilterStatus(candidato.ai_pre_filter_status));
                 setHTML('view_ai_match_score', formatarScore(candidato.ai_match_score));
-                
-                // Análise completa - extrair do JSONB
-                if (candidato.ai_extracted_data_jsonb) {
-                    try {
-                        // Parsear JSONB se for string, ou usar diretamente se já for objeto
-                        const aiData = typeof candidato.ai_extracted_data_jsonb === 'string' 
-                            ? JSON.parse(candidato.ai_extracted_data_jsonb)
-                            : candidato.ai_extracted_data_jsonb;
-                        
-                        if (aiData && aiData.analise) {
-                            setText('view_ai_analise', aiData.analise);
-                        } else {
-                            setText('view_ai_analise', 'Análise não disponível.');
-                        }
-                    } catch (e) {
-                        console.error('Erro ao parsear análise da IA:', e);
-                        setText('view_ai_analise', 'Erro ao carregar análise.');
-                    }
+
+                if (dadosIA.analise) {
+                    setText('view_ai_analise', dadosIA.analise);
+                } else if (dadosIA.dados && typeof dadosIA.dados === 'object' && typeof dadosIA.dados.analise === 'string') {
+                    setText('view_ai_analise', dadosIA.dados.analise);
+                } else if (candidato.ai_status === 'Concluído' || candidato.ai_status === 'completed') {
+                    setText('view_ai_analise', 'Análise não disponível.');
                 } else {
                     setText('view_ai_analise', 'Análise em processamento...');
                 }
+            } else if (dadosIA.analise) {
+                secaoIA.style.display = 'block';
+                setHTML('view_ai_status', formatarAIStatus(candidato.ai_status || 'completed'));
+                setHTML('view_ai_pre_filter_status', '-');
+                setHTML('view_ai_match_score', '-');
+                setText('view_ai_analise', dadosIA.analise);
             } else {
                 secaoIA.style.display = 'none';
+                setText('view_ai_analise', 'Análise em processamento...');
+                setHTML('view_ai_pre_filter_status', '-');
+                setHTML('view_ai_match_score', '-');
             }
             
             // ============================================
@@ -725,6 +725,42 @@ function setLink(elementId, url) {
 }
 
 /**
+ * Extrai e normaliza os dados retornados pela IA (string simples ou JSON).
+ */
+function extrairDadosIA(candidato) {
+    const raw = candidato.ai_extracted_data_jsonb ?? candidato.ai_extracted_data ?? candidato.ai_extracted_data_json ?? null;
+
+    if (!raw) {
+        return { dados: null, analise: null };
+    }
+
+    if (typeof raw === 'object') {
+        const analise = typeof raw.analise === 'string' ? raw.analise : null;
+        return { dados: raw, analise };
+    }
+
+    if (typeof raw === 'string') {
+        const texto = raw.trim();
+        if (!texto) {
+            return { dados: null, analise: null };
+        }
+
+        try {
+            const parsed = JSON.parse(texto);
+            if (parsed && typeof parsed === 'object') {
+                const analise = typeof parsed.analise === 'string' ? parsed.analise : null;
+                return { dados: parsed, analise };
+            }
+        } catch (error) {
+            // Conteúdo textual simples - tratar como análise da IA
+            return { dados: null, analise: texto };
+        }
+    }
+
+    return { dados: null, analise: null };
+}
+
+/**
  * Formatar data DD/MM/YYYY
  */
 function formatarData(dataStr) {
@@ -767,7 +803,9 @@ function formatarAIStatus(status) {
         'pending': '<span class="badge bg-warning">Pendente</span>',
         'processing': '<span class="badge bg-info">Processando</span>',
         'completed': '<span class="badge bg-success">Concluído</span>',
-        'error': '<span class="badge bg-danger">Erro</span>'
+        'Concluído': '<span class="badge bg-success">Concluído</span>',
+        'error': '<span class="badge bg-danger">Erro</span>',
+        'erro': '<span class="badge bg-danger">Erro</span>'
     };
     return statusMap[status] || status || '-';
 }
@@ -1124,128 +1162,158 @@ function exibirAnaliseIA(candidato) {
         prefilterDisplay.style.display = 'none';
     }
     
-    // Dados extraídos
+    // Dados extraídos estruturados da IA
     const extractedDisplay = document.getElementById('aiExtractedDataDisplay');
     const extractedGrid = document.getElementById('aiExtractedGrid');
-    
-    if (candidato.ai_extracted_data_jsonb && Object.keys(candidato.ai_extracted_data_jsonb).length > 0) {
-        extractedDisplay.style.display = 'block';
-        extractedGrid.innerHTML = '';
-        
-        const data = candidato.ai_extracted_data_jsonb;
-        
-        // Formação
-        if (data.formacao) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-school"></i> Formação
+
+    if (extractedDisplay && extractedGrid) {
+        const dadosEstruturados = dadosIA.dados && typeof dadosIA.dados === 'object' ? dadosIA.dados : null;
+        let gridHTML = '';
+
+        if (dadosEstruturados) {
+            const data = dadosEstruturados;
+
+            if (data.erro) {
+                gridHTML = `
+                    <div class="ai-extracted-item" style="grid-column: 1 / -1; border-left-color: #dc3545;">
+                        <div class="ai-extracted-item-label" style="color: #dc3545;">
+                            <i class="mdi mdi-alert-circle"></i> Erro
+                        </div>
+                        <div class="ai-extracted-item-value" style="color: #dc3545;">
+                            ${data.erro}
+                        </div>
                     </div>
-                    <div class="ai-extracted-item-value">${data.formacao}</div>
-                </div>
-            `;
-        }
-        
-        // Anos de experiência
-        if (data.anos_experiencia) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-briefcase-clock"></i> Experiência
-                    </div>
-                    <div class="ai-extracted-item-value">${data.anos_experiencia} anos</div>
-                </div>
-            `;
-        }
-        
-        // Habilidades
-        if (data.habilidades && Array.isArray(data.habilidades)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-star-circle"></i> Habilidades
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.habilidades.map(h => `<li>${h}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Idiomas
-        if (data.idiomas && Array.isArray(data.idiomas)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-translate"></i> Idiomas
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.idiomas.map(i => `<li>${i}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Certificações
-        if (data.certificacoes && Array.isArray(data.certificacoes)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-certificate"></i> Certificações
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.certificacoes.map(c => `<li>${c}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Experiências relevantes
-        if (data.experiencias_relevantes && Array.isArray(data.experiencias_relevantes)) {
-            let experienciasHTML = '<div class="ai-extracted-item" style="grid-column: 1 / -1;">';
-            experienciasHTML += '<div class="ai-extracted-item-label"><i class="mdi mdi-briefcase-outline"></i> Experiências Relevantes</div>';
-            experienciasHTML += '<div class="ai-extracted-item-value">';
-            
-            data.experiencias_relevantes.forEach(exp => {
-                if (typeof exp === 'string') {
-                    experienciasHTML += `<div class="ai-experiencia-item">${exp}</div>`;
-                } else if (typeof exp === 'object') {
-                    experienciasHTML += `
-                        <div class="ai-experiencia-item">
-                            <div class="ai-experiencia-cargo">${exp.cargo || 'Cargo não especificado'}</div>
-                            ${exp.empresa ? `<div class="ai-experiencia-empresa">${exp.empresa}</div>` : ''}
-                            ${exp.periodo ? `<div class="ai-experiencia-periodo">${exp.periodo}</div>` : ''}
-                            ${exp.descricao ? `<div class="mt-2">${exp.descricao}</div>` : ''}
+                `;
+            } else {
+                if (data.formacao) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-school"></i> Formação
+                            </div>
+                            <div class="ai-extracted-item-value">${data.formacao}</div>
                         </div>
                     `;
                 }
-            });
-            
-            experienciasHTML += '</div></div>';
-            extractedGrid.innerHTML += experienciasHTML;
+
+                if (data.anos_experiencia) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-briefcase-clock"></i> Experiência
+                            </div>
+                            <div class="ai-extracted-item-value">${data.anos_experiencia} anos</div>
+                        </div>
+                    `;
+                }
+
+                if (data.senioridade) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-account-tie"></i> Senioridade
+                            </div>
+                            <div class="ai-extracted-item-value">${data.senioridade}</div>
+                        </div>
+                    `;
+                }
+
+                const habilidades = Array.isArray(data.habilidades)
+                    ? data.habilidades
+                    : typeof data.habilidades === 'string'
+                        ? [data.habilidades]
+                        : [];
+                if (habilidades.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-star-circle"></i> Habilidades
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${habilidades.map(h => `<li>${h}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const idiomas = Array.isArray(data.idiomas)
+                    ? data.idiomas
+                    : typeof data.idiomas === 'string'
+                        ? [data.idiomas]
+                        : [];
+                if (idiomas.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-translate"></i> Idiomas
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${idiomas.map(i => `<li>${i}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const certificacoes = Array.isArray(data.certificacoes)
+                    ? data.certificacoes
+                    : typeof data.certificacoes === 'string'
+                        ? [data.certificacoes]
+                        : [];
+                if (certificacoes.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-certificate"></i> Certificações
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${certificacoes.map(c => `<li>${c}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const experiencias = Array.isArray(data.experiencias_relevantes)
+                    ? data.experiencias_relevantes
+                    : [];
+                if (experiencias.length > 0) {
+                    let experienciasHTML = '<div class="ai-extracted-item" style="grid-column: 1 / -1;">';
+                    experienciasHTML += '<div class="ai-extracted-item-label"><i class="mdi mdi-briefcase-outline"></i> Experiências Relevantes</div>';
+                    experienciasHTML += '<div class="ai-extracted-item-value">';
+
+                    experiencias.forEach(exp => {
+                        if (typeof exp === 'string') {
+                            experienciasHTML += `<div class="ai-experiencia-item">${exp}</div>`;
+                        } else if (exp && typeof exp === 'object') {
+                            experienciasHTML += `
+                                <div class="ai-experiencia-item">
+                                    <div class="ai-experiencia-cargo">${exp.cargo || 'Cargo não especificado'}</div>
+                                    ${exp.empresa ? `<div class="ai-experiencia-empresa">${exp.empresa}</div>` : ''}
+                                    ${exp.periodo ? `<div class="ai-experiencia-periodo">${exp.periodo}</div>` : ''}
+                                    ${exp.descricao ? `<div class="mt-2">${exp.descricao}</div>` : ''}
+                                </div>
+                            `;
+                        }
+                    });
+
+                    experienciasHTML += '</div></div>';
+                    gridHTML += experienciasHTML;
+                }
+            }
         }
-        
-        // Erro (se houver)
-        if (data.erro) {
-            extractedGrid.innerHTML = `
-                <div class="ai-extracted-item" style="grid-column: 1 / -1; border-left-color: #dc3545;">
-                    <div class="ai-extracted-item-label" style="color: #dc3545;">
-                        <i class="mdi mdi-alert-circle"></i> Erro
-                    </div>
-                    <div class="ai-extracted-item-value" style="color: #dc3545;">
-                        ${data.erro}
-                    </div>
-                </div>
-            `;
+
+        if (gridHTML) {
+            extractedDisplay.style.display = 'block';
+            extractedGrid.innerHTML = gridHTML;
+        } else {
+            extractedDisplay.style.display = 'none';
+            extractedGrid.innerHTML = '';
         }
-    } else {
-        extractedDisplay.style.display = 'none';
     }
 }
 
