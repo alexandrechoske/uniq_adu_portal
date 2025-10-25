@@ -286,6 +286,23 @@ class NewsGallery {
             });
         });
 
+        // ANALYTICS: Tracking de cliques nos links "Ler mais"
+        const readMoreLinks = this.container.querySelectorAll('.news-read-more');
+        readMoreLinks.forEach((link, index) => {
+            link.addEventListener('click', (e) => {
+                // Permitir que o link abra normalmente, mas registrar analytics
+                const noticia = this.state.news[index];
+                if (noticia && window.newsAnalytics) {
+                    window.newsAnalytics.trackNewsClick(
+                        noticia.id,
+                        noticia.titulo,
+                        noticia.fonte || 'Portal COMEX'
+                    );
+                    console.log(`📊 Analytics: Clique registrado na notícia #${noticia.id}`);
+                }
+            });
+        });
+
         // Pausar autoplay ao passar mouse
         this.container.addEventListener('mouseenter', () => {
             if (this.config.autoplayEnabled && !this.state.isAutoplayPaused) {
@@ -791,6 +808,86 @@ function renderComexIndicators(container, indicators) {
 
     container.innerHTML = `<div class="comex-indicators">${chips.join('')}</div>`;
 }
+
+/**
+ * ANALYTICS - Tracking de cliques em notícias
+ */
+class NewsAnalytics {
+    constructor() {
+        this.endpoint = '/api/noticias-comex';
+        this.apiKey = this.getApiBypassKey();
+    }
+
+    getApiBypassKey() {
+        if (typeof window !== 'undefined' && window.API_BYPASS_KEY) {
+            return window.API_BYPASS_KEY;
+        }
+        return '';
+    }
+
+    getUserData() {
+        // Tenta obter dados do usuário do sessionStorage ou variáveis globais
+        const userData = {
+            user_id: null,
+            user_email: null,
+            user_name: null,
+            user_role: null,
+            session_id: null
+        };
+
+        // Tentar pegar do sessionStorage
+        try {
+            const storedUser = sessionStorage.getItem('user_data');
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                Object.assign(userData, parsed);
+            }
+        } catch (e) {
+            console.warn('Não foi possível recuperar dados do usuário do sessionStorage');
+        }
+
+        // Fallback para variáveis globais
+        if (typeof window !== 'undefined') {
+            if (window.currentUser) {
+                Object.assign(userData, window.currentUser);
+            }
+        }
+
+        return userData;
+    }
+
+    async trackNewsClick(newsId, newsTitle, newsSource) {
+        try {
+            const userData = this.getUserData();
+            
+            const payload = {
+                ...userData,
+                news_title: newsTitle,
+                news_source: newsSource
+            };
+
+            const response = await fetch(`${this.endpoint}/${newsId}/analytics`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': this.apiKey
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                console.warn('Erro ao registrar analytics:', response.statusText);
+            } else {
+                console.log(`✓ Analytics registrado: Notícia #${newsId}`);
+            }
+        } catch (error) {
+            console.error('Erro ao enviar analytics:', error);
+        }
+    }
+}
+
+// Instância global do analytics
+window.newsAnalytics = new NewsAnalytics();
 
 // Expor para uso global
 window.NewsGallery = NewsGallery;

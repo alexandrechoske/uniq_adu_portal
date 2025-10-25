@@ -355,6 +355,26 @@
         </div>
     </div>
 </div>
+
+<!-- Dados do usuário para analytics -->
+<script>
+    // Dados do usuário para tracking de analytics
+    window.currentUser = {
+        user_id: {{ (session.get('user') or {}).get('id') | tojson | safe }},
+        user_email: {{ (session.get('user') or {}).get('email') | tojson | safe }},
+        user_name: {{ (session.get('user') or {}).get('name') | tojson | safe }},
+        user_role: {{ (session.get('user') or {}).get('role') | tojson | safe }},
+        session_id: {{ request.cookies.get('session') | tojson | safe }}
+    };
+
+    // Salvar também no sessionStorage para persistência
+    try {
+        sessionStorage.setItem('user_data', JSON.stringify(window.currentUser));
+    } catch (e) {
+        console.warn('Não foi possível salvar dados no sessionStorage');
+    }
+</script>
+
 <script src="{{ url_for('menu.static', filename='js/noticias.js') }}"></script>
 <script src="{{ url_for('menu.static', filename='js/menu.js') }}"></script>
 {% endblock %}
