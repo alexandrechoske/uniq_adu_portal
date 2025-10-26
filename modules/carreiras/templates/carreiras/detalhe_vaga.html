@@ -140,6 +140,7 @@
             line-height: 1.8;
             font-size: 1rem;
             margin-bottom: 0;
+            white-space: pre-line;
         }
         
         .vaga-section ul {
@@ -151,6 +152,88 @@
         
         .vaga-section ul li {
             margin-bottom: 10px;
+        }
+
+        .vaga-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 16px;
+        }
+
+        .vaga-info-item {
+            background: #f7f4ff;
+            border-radius: 12px;
+            padding: 16px 18px;
+            border: 1px solid rgba(111, 66, 193, 0.18);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .vaga-beneficios-resumo {
+            margin-top: 12px;
+        }
+
+        .vaga-chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .vaga-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(111, 66, 193, 0.12);
+            color: var(--unique-primary);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .vaga-chip i {
+            font-size: 1.1rem;
+        }
+
+        .vaga-info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--unique-primary);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vaga-info-value {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .vaga-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .vaga-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: #444;
+        }
+
+        .vaga-list li i {
+            color: var(--unique-primary);
+            font-size: 1.2rem;
+            margin-top: 2px;
         }
         
         /* Formulário Sticky */
@@ -342,9 +425,82 @@
                             <i class="mdi mdi-clock-outline"></i>
                             <span>Publicada em {{ vaga.data_abertura[:10] if vaga.data_abertura else 'N/A' }}</span>
                         </div>
+                        {% if vaga.regime_trabalho %}
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-office-building-marker"></i>
+                            <span>{{ vaga.regime_trabalho }}</span>
+                        </div>
+                        {% endif %}
+                        {% if vaga.carga_horaria %}
+                        <div class="vaga-meta-item">
+                            <i class="mdi mdi-calendar-clock"></i>
+                            <span>{{ vaga.carga_horaria }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 
+                {% if vaga.localizacao or vaga.tipo_contratacao or vaga.regime_trabalho or vaga.carga_horaria or vaga.quantidade_vagas_display or vaga.nivel_senioridade %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-information-outline"></i>
+                        Detalhes da Vaga
+                    </h3>
+                    <div class="vaga-info-grid">
+                        {% if vaga.localizacao %}
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-map-marker"></i>Local</span>
+                            <span class="vaga-info-value">{{ vaga.localizacao }}</span>
+                        </div>
+                        {% endif %}
+                        {% if vaga.tipo_contratacao %}
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-briefcase-check"></i>Tipo de contratação</span>
+                            <span class="vaga-info-value">{{ vaga.tipo_contratacao }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-account-tie"></i>Nível</span>
+                            <span class="vaga-info-value">{{ vaga.nivel_senioridade or 'Não informado' }}</span>
+                        </div>
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-domain"></i>Regime de trabalho</span>
+                            <span class="vaga-info-value">{{ vaga.regime_trabalho or 'Presencial' }}</span>
+                        </div>
+                        {% if vaga.carga_horaria %}
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-timer-outline"></i>Jornada</span>
+                            <span class="vaga-info-value">{{ vaga.carga_horaria }}</span>
+                        </div>
+                        {% endif %}
+                        {% if vaga.quantidade_vagas_display %}
+                        <div class="vaga-info-item">
+                            <span class="vaga-info-label"><i class="mdi mdi-account-multiple"></i>Vagas disponíveis</span>
+                            <span class="vaga-info-value">{{ vaga.quantidade_vagas_display }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if vaga.beneficios_list %}
+                    <div class="vaga-beneficios-resumo">
+                        <span class="vaga-info-label"><i class="mdi mdi-gift-outline"></i>Benefícios</span>
+                        <div class="vaga-chip-container">
+                            {% for item in vaga.beneficios_list %}
+                            <span class="vaga-chip">
+                                <i class="mdi mdi-check-decagram"></i>
+                                {{ item }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% elif vaga.beneficios %}
+                    <div class="vaga-beneficios-resumo">
+                        <span class="vaga-info-label"><i class="mdi mdi-gift-outline"></i>Benefícios</span>
+                        <p>{{ vaga.beneficios }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
                 <!-- Descrição da Vaga -->
                 {% if vaga.descricao %}
                 <div class="vaga-section">
@@ -357,15 +513,81 @@
                 {% endif %}
                 
                 <!-- Requisitos -->
-                {% if vaga.requisitos %}
+                {% if vaga.requisitos_obrigatorios_list %}
                 <div class="vaga-section">
                     <h3>
                         <i class="mdi mdi-clipboard-list-outline"></i>
-                        Requisitos
+                        Requisitos obrigatórios
                     </h3>
-                    <p style="white-space: pre-line;">{{ vaga.requisitos }}</p>
+                    <ul class="vaga-list">
+                        {% for item in vaga.requisitos_obrigatorios_list %}
+                        <li>
+                            <i class="mdi mdi-check-circle-outline"></i>
+                            <span>{{ item }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% elif vaga.requisitos_obrigatorios %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-clipboard-list-outline"></i>
+                        Requisitos obrigatórios
+                    </h3>
+                    <p>{{ vaga.requisitos_obrigatorios }}</p>
                 </div>
                 {% endif %}
+
+                {% if vaga.requisitos_desejaveis_list %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-star-outline"></i>
+                        Requisitos desejáveis
+                    </h3>
+                    <ul class="vaga-list">
+                        {% for item in vaga.requisitos_desejaveis_list %}
+                        <li>
+                            <i class="mdi mdi-star-circle-outline"></i>
+                            <span>{{ item }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% elif vaga.requisitos_desejaveis %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-star-outline"></i>
+                        Requisitos desejáveis
+                    </h3>
+                    <p>{{ vaga.requisitos_desejaveis }}</p>
+                </div>
+                {% endif %}
+
+                {% if vaga.diferenciais_list %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-diamond-stone"></i>
+                        Diferenciais
+                    </h3>
+                    <ul class="vaga-list">
+                        {% for item in vaga.diferenciais_list %}
+                        <li>
+                            <i class="mdi mdi-diamond-outline"></i>
+                            <span>{{ item }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% elif vaga.diferenciais %}
+                <div class="vaga-section">
+                    <h3>
+                        <i class="mdi mdi-diamond-stone"></i>
+                        Diferenciais
+                    </h3>
+                    <p>{{ vaga.diferenciais }}</p>
+                </div>
+                {% endif %}
+
             </div>
             
             <!-- Coluna Direita: Formulário de Candidatura (Sticky) -->
@@ -406,6 +628,16 @@
                             LinkedIn
                         </label>
                         <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" placeholder="linkedin.com/in/seu-perfil">
+                    </div>
+                    
+                    <!-- Pretensão Salarial -->
+                    <div class="mb-4">
+                        <label for="pretensao_salarial" class="form-label">
+                            Pretensão Salarial (R$) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="pretensao_salarial" name="pretensao_salarial" 
+                               placeholder="Exemplo: 3500" min="0" step="0.01" max="999999.99" required>
+                        <small class="form-text text-muted">Seu salário esperado para a posição</small>
                     </div>
                     
                     <!-- Upload de Currículo -->

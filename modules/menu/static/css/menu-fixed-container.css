@@ -34,6 +34,17 @@
     overflow-x: hidden !important;
 }
 
+/* Garante que tooltips e overlays não sejam cortados pelo container principal */
+#main-content {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+}
+
+#main-content > .dashboard-container,
+#main-content .main-content.menu-full-width {
+    overflow: visible !important;
+}
+
 /* Menu layout centralizado e estático */
 .menu-with-news-layout {
     width: 100%;

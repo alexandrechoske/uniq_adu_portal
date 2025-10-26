@@ -719,7 +719,7 @@ function renderComexIndicators(container, indicators) {
         chips.push(`
             <div class="comex-chip trade">
                 <i class="mdi mdi-arrow-up-bold"></i>
-                <span class="comex-chip-value">Expo</span>
+                <span class="comex-chip-value">US$ ${expoValue} Bi</span>
                 <div class="comex-chip-tooltip">
                     <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
                     <div class="comex-chip-tooltip-row">
@@ -750,7 +750,7 @@ function renderComexIndicators(container, indicators) {
         chips.push(`
             <div class="comex-chip trade">
                 <i class="mdi mdi-arrow-down-bold"></i>
-                <span class="comex-chip-value">Impo</span>
+                <span class="comex-chip-value">US$ ${impoValue} Bi</span>
                 <div class="comex-chip-tooltip">
                     <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
                     ${indicators.expo_bi ? `
@@ -778,10 +778,11 @@ function renderComexIndicators(container, indicators) {
     // Saldo Comercial com tooltip
     if (indicators.saldo_comex) {
         const isPositive = indicators.saldo_comex.includes('+');
+        const saldoValue = indicators.saldo_comex.replace('Saldo Comercial', '').trim();
         chips.push(`
             <div class="comex-chip trade ${isPositive ? 'positive' : 'negative'}">
                 <i class="mdi mdi-scale-balance"></i>
-                <span class="comex-chip-value">Saldo</span>
+                <span class="comex-chip-value">${saldoValue}</span>
                 <div class="comex-chip-tooltip">
                     <div class="comex-chip-tooltip-title">Comércio Exterior - Set/2025</div>
                     ${indicators.expo_bi ? `

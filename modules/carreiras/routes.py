@@ -5,6 +5,7 @@ Rotas para candidaturas externas (sem autenticação)
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from extensions import supabase_admin
 from werkzeug.utils import secure_filename
+import json
 import os
 import uuid
 from datetime import datetime
@@ -23,6 +24,7 @@ carreiras_bp = Blueprint(
 ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx'}
 WEBHOOK_N8N_URL = os.getenv('WEBHOOK_N8N_URL')  # URL do webhook n8n
 API_SECRET_KEY = os.getenv('API_SECRET_KEY_IA')  # Chave para proteger endpoint de IA
+UNIQUE_EMPRESA_ID = 'dc984b7c-3156-43f7-a1bf-f7a0b77db535'  # Unique Aduaneira
 
 
 def allowed_file(filename):
@@ -72,6 +74,50 @@ def detalhe_vaga(vaga_id):
             return render_template('carreiras/vaga_nao_encontrada.html'), 404
         
         vaga = response.data[0]
+
+        def _split_text(value):
+            if not value:
+                return []
+            if isinstance(value, list):
+                return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+            linhas = []
+            for linha in str(value).splitlines():
+                texto = linha.strip().lstrip('•-*–—')
+                if texto:
+                    linhas.append(texto)
+            return linhas
+
+        beneficios_raw = vaga.get('beneficios')
+        beneficios_list = []
+        if isinstance(beneficios_raw, str):
+            try:
+                parsed = json.loads(beneficios_raw)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, list):
+                beneficios_list = [item.strip() for item in parsed if isinstance(item, str) and item.strip()]
+            else:
+                beneficios_list = _split_text(beneficios_raw)
+        elif isinstance(beneficios_raw, list):
+            beneficios_list = [item.strip() for item in beneficios_raw if isinstance(item, str) and item.strip()]
+
+        vaga['beneficios_list'] = beneficios_list
+        vaga['requisitos_obrigatorios_list'] = _split_text(vaga.get('requisitos_obrigatorios'))
+        vaga['requisitos_desejaveis_list'] = _split_text(vaga.get('requisitos_desejaveis'))
+        vaga['diferenciais_list'] = _split_text(vaga.get('diferenciais'))
+
+        quantidade = vaga.get('quantidade_vagas')
+        quantidade_formatada = None
+        try:
+            if quantidade is not None:
+                quantidade_int = int(quantidade)
+                if quantidade_int > 0:
+                    sufixo = 's' if quantidade_int > 1 else ''
+                    quantidade_formatada = f"{quantidade_int} vaga{sufixo}"
+        except (TypeError, ValueError):
+            quantidade_formatada = None
+
+        vaga['quantidade_vagas_display'] = quantidade_formatada
         
         # Se a vaga não está aberta, mostrar mensagem
         if vaga.get('status') != 'Aberta':
@@ -93,6 +139,15 @@ def aplicar_vaga(vaga_id):
         email = request.form.get('email', '').strip()
         telefone = request.form.get('telefone', '').strip()
         linkedin_url = request.form.get('linkedin_url', '').strip()
+        pretensao_salarial = request.form.get('pretensao_salarial', '').strip()
+        
+        # Converter pretensão salarial para número
+        pretensao_salarial_num = None
+        if pretensao_salarial:
+            try:
+                pretensao_salarial_num = float(pretensao_salarial)
+            except ValueError:
+                pretensao_salarial_num = None
         
         if not nome_completo or not email:
             return jsonify({
@@ -147,11 +202,13 @@ def aplicar_vaga(vaga_id):
             'email': email,
             'telefone': telefone,
             'linkedin_url': linkedin_url if linkedin_url else None,
+            'pretensao_salarial': pretensao_salarial_num,
             'curriculo_path': curriculo_path,
             'status_processo': 'Triagem',
             'fonte_candidatura': 'Portal de Vagas',
             'ai_status': 'Pendente',
-            'data_candidatura': datetime.now().isoformat()
+            'data_candidatura': datetime.now().isoformat(),
+            'empresa_controladora_id': UNIQUE_EMPRESA_ID
         }
         
         insert_response = supabase_admin.table('rh_candidatos')\
@@ -199,7 +256,8 @@ def aplicar_vaga(vaga_id):
                     'email': email,
                     'nome_completo': nome_completo,
                     'telefone': telefone if telefone else None,
-                    'linkedin_url': linkedin_url if linkedin_url else None
+                    'linkedin_url': linkedin_url if linkedin_url else None,
+                    'pretensao_salarial': pretensao_salarial_num
                 }
                 
                 webhook_response = requests.post(

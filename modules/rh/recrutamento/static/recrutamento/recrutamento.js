@@ -562,7 +562,7 @@ async function verDetalhesCandidato(candidatoId) {
             setText('view_formacao_academica', candidato.formacao_academica);
             setText('view_curso_especifico', candidato.curso_especifico);
             setText('view_area_objetivo', candidato.area_objetivo);
-            setText('view_experiencia_na_area', candidato.experiencia_na_area);
+            setText('view_experiencia_na_area', formatarBoolean(candidato.experiencia_na_area));
             setText('view_trabalha_atualmente', formatarBoolean(candidato.trabalha_atualmente));
             
             // ============================================
@@ -570,6 +570,14 @@ async function verDetalhesCandidato(candidatoId) {
             // ============================================
             setText('view_fonte_candidatura', candidato.fonte_candidatura);
             setText('view_data_candidatura', formatarData(candidato.data_candidatura));
+            
+            // Pretensão Salarial (formatada como moeda)
+            let pretensaoTexto = '-';
+            if (candidato.pretensao_salarial && candidato.pretensao_salarial > 0) {
+                pretensaoTexto = `R$ ${parseFloat(candidato.pretensao_salarial).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            }
+            setText('view_pretensao_salarial', pretensaoTexto);
+            
             setText('view_foi_indicacao', formatarBoolean(candidato.foi_indicacao));
             setText('view_indicado_por', candidato.indicado_por);
             
@@ -579,48 +587,70 @@ async function verDetalhesCandidato(candidatoId) {
             // Portfólio (com link clicável)
             setLink('view_portfolio_url', candidato.portfolio_url);
             
-            // Currículo
-            if (candidato.url_curriculo || candidato.curriculo_path) {
-                const curriculoUrl = candidato.url_curriculo || candidato.curriculo_path;
-                document.getElementById('btnDownloadCurriculo').href = curriculoUrl;
-                document.getElementById('btnDownloadCurriculo').style.display = 'inline-block';
+            // Currículo - Download com função
+            console.log('🔍 DEBUG Currículo:', {
+                url_curriculo: candidato.url_curriculo,
+                curriculo_path: candidato.curriculo_path,
+                nome_completo: candidato.nome_completo
+            });
+            
+            // Construir URL se tiver apenas o caminho
+            let urlCurriculo = candidato.url_curriculo;
+            if (!urlCurriculo && candidato.curriculo_path) {
+                // URL base do Supabase storage
+                const SUPABASE_URL = 'https://ixytthtngeifjumvbuwe.supabase.co';
+                const BUCKET = 'curriculos';
+                urlCurriculo = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${candidato.curriculo_path}`;
+                console.log('🔧 URL construída a partir do caminho:', urlCurriculo);
+            }
+            
+            if (urlCurriculo && urlCurriculo.trim()) {
+                const btnDownload = document.getElementById('btnDownloadCurriculo');
+                btnDownload.href = urlCurriculo;
+                btnDownload.download = `curriculo_${candidato.nome_completo?.replace(/\s+/g, '_')}.pdf` || 'curriculo.pdf';
+                btnDownload.style.display = 'inline-block';
+                // Garantir que abre em nova aba
+                btnDownload.target = '_blank';
+                btnDownload.rel = 'noopener noreferrer';
+                console.log('✅ Botão de download configurado:', btnDownload.href);
             } else {
                 document.getElementById('btnDownloadCurriculo').style.display = 'none';
+                console.log('❌ url_curriculo e curriculo_path vazios');
             }
             
             // ============================================
             // SEÇÃO 4: ANÁLISE DA IA
             // ============================================
             const secaoIA = document.getElementById('secaoIA');
+            const dadosIA = extrairDadosIA(candidato);
+
             if (candidato.ai_status && candidato.ai_status !== 'pending') {
                 secaoIA.style.display = 'block';
-                
+
                 setHTML('view_ai_status', formatarAIStatus(candidato.ai_status));
                 setHTML('view_ai_pre_filter_status', formatarPreFilterStatus(candidato.ai_pre_filter_status));
                 setHTML('view_ai_match_score', formatarScore(candidato.ai_match_score));
-                
-                // Análise completa - extrair do JSONB
-                if (candidato.ai_extracted_data_jsonb) {
-                    try {
-                        // Parsear JSONB se for string, ou usar diretamente se já for objeto
-                        const aiData = typeof candidato.ai_extracted_data_jsonb === 'string' 
-                            ? JSON.parse(candidato.ai_extracted_data_jsonb)
-                            : candidato.ai_extracted_data_jsonb;
-                        
-                        if (aiData && aiData.analise) {
-                            setText('view_ai_analise', aiData.analise);
-                        } else {
-                            setText('view_ai_analise', 'Análise não disponível.');
-                        }
-                    } catch (e) {
-                        console.error('Erro ao parsear análise da IA:', e);
-                        setText('view_ai_analise', 'Erro ao carregar análise.');
-                    }
+
+                if (dadosIA.analise) {
+                    setText('view_ai_analise', dadosIA.analise);
+                } else if (dadosIA.dados && typeof dadosIA.dados === 'object' && typeof dadosIA.dados.analise === 'string') {
+                    setText('view_ai_analise', dadosIA.dados.analise);
+                } else if (candidato.ai_status === 'Concluído' || candidato.ai_status === 'completed') {
+                    setText('view_ai_analise', 'Análise não disponível.');
                 } else {
                     setText('view_ai_analise', 'Análise em processamento...');
                 }
+            } else if (dadosIA.analise) {
+                secaoIA.style.display = 'block';
+                setHTML('view_ai_status', formatarAIStatus(candidato.ai_status || 'completed'));
+                setHTML('view_ai_pre_filter_status', '-');
+                setHTML('view_ai_match_score', '-');
+                setText('view_ai_analise', dadosIA.analise);
             } else {
                 secaoIA.style.display = 'none';
+                setText('view_ai_analise', 'Análise em processamento...');
+                setHTML('view_ai_pre_filter_status', '-');
+                setHTML('view_ai_match_score', '-');
             }
             
             // ============================================
@@ -725,6 +755,42 @@ function setLink(elementId, url) {
 }
 
 /**
+ * Extrai e normaliza os dados retornados pela IA (string simples ou JSON).
+ */
+function extrairDadosIA(candidato) {
+    const raw = candidato.ai_extracted_data_jsonb ?? candidato.ai_extracted_data ?? candidato.ai_extracted_data_json ?? null;
+
+    if (!raw) {
+        return { dados: null, analise: null };
+    }
+
+    if (typeof raw === 'object') {
+        const analise = typeof raw.analise === 'string' ? raw.analise : null;
+        return { dados: raw, analise };
+    }
+
+    if (typeof raw === 'string') {
+        const texto = raw.trim();
+        if (!texto) {
+            return { dados: null, analise: null };
+        }
+
+        try {
+            const parsed = JSON.parse(texto);
+            if (parsed && typeof parsed === 'object') {
+                const analise = typeof parsed.analise === 'string' ? parsed.analise : null;
+                return { dados: parsed, analise };
+            }
+        } catch (error) {
+            // Conteúdo textual simples - tratar como análise da IA
+            return { dados: null, analise: texto };
+        }
+    }
+
+    return { dados: null, analise: null };
+}
+
+/**
  * Formatar data DD/MM/YYYY
  */
 function formatarData(dataStr) {
@@ -767,7 +833,9 @@ function formatarAIStatus(status) {
         'pending': '<span class="badge bg-warning">Pendente</span>',
         'processing': '<span class="badge bg-info">Processando</span>',
         'completed': '<span class="badge bg-success">Concluído</span>',
-        'error': '<span class="badge bg-danger">Erro</span>'
+        'Concluído': '<span class="badge bg-success">Concluído</span>',
+        'error': '<span class="badge bg-danger">Erro</span>',
+        'erro': '<span class="badge bg-danger">Erro</span>'
     };
     return statusMap[status] || status || '-';
 }
@@ -873,27 +941,473 @@ function toggleModoEdicao() {
 }
 
 /**
- * Construir formulário de edição (preparação FASE 2)
+ * Construir formulário de edição dinamicamente
  */
 function construirFormularioEdicao() {
     const form = document.getElementById('formEditarCandidato');
+    const candidatoId = document.getElementById('candidatoIdAtual').value;
+    
+    // Obter dados atuais do modal (view_* elements)
+    const dadosAtuais = {
+        nome_completo: document.getElementById('view_nome_completo')?.textContent || '',
+        email: document.getElementById('view_email')?.textContent || '',
+        telefone: document.getElementById('view_telefone')?.textContent || '',
+        sexo: document.getElementById('view_sexo')?.textContent || '',
+        estado_civil: document.getElementById('view_estado_civil')?.textContent || '',
+        cidade_estado: document.getElementById('view_cidade_estado')?.textContent || '',
+        formacao_academica: document.getElementById('view_formacao_academica')?.textContent || '',
+        curso_especifico: document.getElementById('view_curso_especifico')?.textContent || '',
+        area_objetivo: document.getElementById('view_area_objetivo')?.textContent || '',
+        experiencia_na_area: document.getElementById('view_experiencia_na_area')?.textContent === 'Sim',
+        trabalha_atualmente: document.getElementById('view_trabalha_atualmente')?.textContent === 'Sim',
+        fonte_candidatura: document.getElementById('view_fonte_candidatura')?.textContent || '',
+        pretensao_salarial: extrairNumeroMoeda(document.getElementById('view_pretensao_salarial')?.textContent || ''),
+        foi_indicacao: document.getElementById('view_foi_indicacao')?.textContent === 'Sim',
+        indicado_por: document.getElementById('view_indicado_por')?.textContent || '',
+        linkedin_url: document.getElementById('view_linkedin_url')?.querySelector('a')?.href || '',
+        portfolio_url: document.getElementById('view_portfolio_url')?.querySelector('a')?.href || '',
+        status_processo: document.getElementById('view_status_processo')?.textContent || '',
+        realizou_entrevista: document.getElementById('view_realizou_entrevista')?.textContent === 'Sim',
+        foi_contratado: document.getElementById('view_foi_contratado')?.textContent === 'Sim'
+    };
+    
     form.innerHTML = `
-        <div class="alert alert-info">
-            <i class="mdi mdi-information"></i>
-            <strong>Modo Edição</strong> - Em desenvolvimento (FASE 2)
+        <div class="alert alert-info mb-4">
+            <i class="mdi mdi-pencil-box"></i>
+            <strong>Modo de Edição</strong> - Altere os campos desejados e clique em "Salvar Alterações"
         </div>
-        <p class="text-muted">
-            Esta funcionalidade será implementada na próxima etapa com todos os campos editáveis.
-        </p>
+        
+        <!-- SEÇÃO 1: INFORMAÇÕES PESSOAIS -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-account-circle"></i> Informações Pessoais
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Nome Completo *</label>
+                    <input type="text" class="form-control" name="nome_completo" 
+                           value="${escaparHTML(dadosAtuais.nome_completo)}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Sexo</label>
+                    <select class="form-select" name="sexo">
+                        <option value="">Selecione...</option>
+                        <option value="Masculino" ${dadosAtuais.sexo === 'Masculino' ? 'selected' : ''}>Masculino</option>
+                        <option value="Feminino" ${dadosAtuais.sexo === 'Feminino' ? 'selected' : ''}>Feminino</option>
+                        <option value="Outro" ${dadosAtuais.sexo === 'Outro' ? 'selected' : ''}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-control" name="email" 
+                           value="${escaparHTML(dadosAtuais.email)}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" class="form-control" name="telefone" 
+                           value="${escaparHTML(dadosAtuais.telefone)}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Estado Civil</label>
+                    <select class="form-select" name="estado_civil">
+                        <option value="">Selecione...</option>
+                        <option value="Solteiro(a)" ${dadosAtuais.estado_civil === 'Solteiro(a)' ? 'selected' : ''}>Solteiro(a)</option>
+                        <option value="Casado(a)" ${dadosAtuais.estado_civil === 'Casado(a)' ? 'selected' : ''}>Casado(a)</option>
+                        <option value="Divorciado(a)" ${dadosAtuais.estado_civil === 'Divorciado(a)' ? 'selected' : ''}>Divorciado(a)</option>
+                        <option value="Viúvo(a)" ${dadosAtuais.estado_civil === 'Viúvo(a)' ? 'selected' : ''}>Viúvo(a)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Cidade/Estado</label>
+                    <input type="text" class="form-control" name="cidade_estado" 
+                           value="${escaparHTML(dadosAtuais.cidade_estado)}">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 2: FORMAÇÃO E EXPERIÊNCIA -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-school"></i> Formação e Experiência Profissional
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Formação Acadêmica</label>
+                    <select class="form-select" name="formacao_academica">
+                        <option value="">Selecione...</option>
+                        <option value="Ensino Fundamental" ${dadosAtuais.formacao_academica === 'Ensino Fundamental' ? 'selected' : ''}>Ensino Fundamental</option>
+                        <option value="Ensino Médio" ${dadosAtuais.formacao_academica === 'Ensino Médio' ? 'selected' : ''}>Ensino Médio</option>
+                        <option value="Técnico" ${dadosAtuais.formacao_academica === 'Técnico' ? 'selected' : ''}>Técnico</option>
+                        <option value="Superior Incompleto" ${dadosAtuais.formacao_academica === 'Superior Incompleto' ? 'selected' : ''}>Superior Incompleto</option>
+                        <option value="Superior Completo" ${dadosAtuais.formacao_academica === 'Superior Completo' ? 'selected' : ''}>Superior Completo</option>
+                        <option value="Pós-Graduação" ${dadosAtuais.formacao_academica === 'Pós-Graduação' ? 'selected' : ''}>Pós-Graduação</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Curso Específico</label>
+                    <input type="text" class="form-control" name="curso_especifico" 
+                           value="${escaparHTML(dadosAtuais.curso_especifico)}"
+                           placeholder="Ex: Administração, Direito, etc.">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Área/Objetivo</label>
+                    <input type="text" class="form-control" name="area_objetivo" 
+                           value="${escaparHTML(dadosAtuais.area_objetivo)}"
+                           placeholder="Ex: Financeiro, RH, Logística, etc.">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Experiência na Área</label>
+                    <select class="form-select" name="experiencia_na_area">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.experiencia_na_area ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.experiencia_na_area ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trabalha Atualmente</label>
+                    <select class="form-select" name="trabalha_atualmente">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.trabalha_atualmente ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.trabalha_atualmente ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 3: CANDIDATURA -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-file-document"></i> Informações da Candidatura
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Fonte de Candidatura</label>
+                    <select class="form-select" name="fonte_candidatura">
+                        <option value="">Selecione...</option>
+                        <option value="LinkedIn" ${dadosAtuais.fonte_candidatura === 'LinkedIn' ? 'selected' : ''}>LinkedIn</option>
+                        <option value="Indicação" ${dadosAtuais.fonte_candidatura === 'Indicação' ? 'selected' : ''}>Indicação</option>
+                        <option value="Currículo Enviado" ${dadosAtuais.fonte_candidatura === 'Currículo Enviado' ? 'selected' : ''}>Currículo Enviado</option>
+                        <option value="Site da Empresa" ${dadosAtuais.fonte_candidatura === 'Site da Empresa' ? 'selected' : ''}>Site da Empresa</option>
+                        <option value="Portal de Vagas" ${dadosAtuais.fonte_candidatura === 'Portal de Vagas' ? 'selected' : ''}>Portal de Vagas</option>
+                        <option value="Outro" ${dadosAtuais.fonte_candidatura === 'Outro' ? 'selected' : ''}>Outro</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Data de Candidatura</label>
+                    <input type="date" class="form-control" name="data_candidatura" value="">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Pretensão Salarial (R$)</label>
+                    <input type="number" class="form-control" name="pretensao_salarial" 
+                           value="${dadosAtuais.pretensao_salarial || ''}" 
+                           min="0" step="100" max="999999"
+                           placeholder="Exemplo: 3500">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Foi Indicação?</label>
+                    <select class="form-select" name="foi_indicacao">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.foi_indicacao ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.foi_indicacao ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Indicado Por</label>
+                    <input type="text" class="form-control" name="indicado_por" 
+                           value="${escaparHTML(dadosAtuais.indicado_por)}"
+                           placeholder="Nome da pessoa que indicou">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">LinkedIn</label>
+                    <input type="url" class="form-control" name="linkedin_url" 
+                           value="${escaparHTML(dadosAtuais.linkedin_url)}"
+                           placeholder="https://linkedin.com/in/...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Portfólio</label>
+                    <input type="url" class="form-control" name="portfolio_url" 
+                           value="${escaparHTML(dadosAtuais.portfolio_url)}"
+                           placeholder="https://...">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 4: PROCESSO SELETIVO -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-clipboard-check"></i> Processo Seletivo
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Status Atual</label>
+                    <select class="form-select" name="status_processo">
+                        <option value="">Selecione...</option>
+                        <option value="Triagem" ${dadosAtuais.status_processo === 'Triagem' ? 'selected' : ''}>Triagem</option>
+                        <option value="Pré-Entrevista" ${dadosAtuais.status_processo === 'Pré-Entrevista' ? 'selected' : ''}>Pré-Entrevista</option>
+                        <option value="Entrevista" ${dadosAtuais.status_processo === 'Entrevista' ? 'selected' : ''}>Entrevista</option>
+                        <option value="Teste Técnico" ${dadosAtuais.status_processo === 'Teste Técnico' ? 'selected' : ''}>Teste Técnico</option>
+                        <option value="Entrevista Final" ${dadosAtuais.status_processo === 'Entrevista Final' ? 'selected' : ''}>Entrevista Final</option>
+                        <option value="Contra-Oferta" ${dadosAtuais.status_processo === 'Contra-Oferta' ? 'selected' : ''}>Contra-Oferta</option>
+                        <option value="Contratado" ${dadosAtuais.status_processo === 'Contratado' ? 'selected' : ''}>Contratado</option>
+                        <option value="Rejeitado" ${dadosAtuais.status_processo === 'Rejeitado' ? 'selected' : ''}>Rejeitado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Realizou Entrevista?</label>
+                    <select class="form-select" name="realizou_entrevista">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.realizou_entrevista ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.realizou_entrevista ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data da Entrevista</label>
+                    <input type="date" class="form-control" name="data_entrevista">
+                </div>
+            </div>
+        </div>
+        
+        <!-- SEÇÃO 5: CONTRATAÇÃO -->
+        <div class="form-section mb-4">
+            <h6 class="text-primary mb-3">
+                <i class="mdi mdi-account-check"></i> Contratação
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Foi Contratado?</label>
+                    <select class="form-select" name="foi_contratado">
+                        <option value="">Selecione...</option>
+                        <option value="true" ${dadosAtuais.foi_contratado ? 'selected' : ''}>Sim</option>
+                        <option value="false" ${!dadosAtuais.foi_contratado ? 'selected' : ''}>Não</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Data de Contratação</label>
+                    <input type="date" class="form-control" name="data_contratacao">
+                </div>
+            </div>
+        </div>
     `;
+    
+    // Populizar datas (format YYYY-MM-DD para inputs)
+    const dataEnt = document.querySelector('input[name="data_entrevista"]');
+    const dataCont = document.querySelector('input[name="data_contratacao"]');
+    const dataCand = document.querySelector('input[name="data_candidatura"]');
+    
+    if (dataEnt) {
+        const dateEntText = document.getElementById('view_data_entrevista')?.textContent || '';
+        dataEnt.value = extrairDataISO(dateEntText);
+    }
+    
+    if (dataCont) {
+        const dateContText = document.getElementById('view_data_contratacao')?.textContent || '';
+        dataCont.value = extrairDataISO(dateContText);
+    }
+    
+    if (dataCand) {
+        const dataCandText = document.getElementById('view_data_candidatura')?.textContent || '';
+        dataCand.value = extrairDataISO(dataCandText);
+    }
 }
 
 /**
- * Salvar edição do candidato (preparação FASE 2)
+ * Escapar HTML para evitar XSS
+ */
+function escaparHTML(texto) {
+    if (!texto || texto === '-') return '';
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML;
+}
+
+/**
+ * Extrair data em formato ISO (YYYY-MM-DD) de texto em formato brasileiro (DD/MM/YYYY)
+ */
+function extrairDataISO(dateStr) {
+    if (!dateStr || dateStr === '-') return '';
+    
+    // Se já está em formato ISO, retorna como está
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+    
+    // Converter de DD/MM/YYYY para YYYY-MM-DD
+    const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (match) {
+        const [, day, month, year] = match;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    
+    return '';
+}
+
+/**
+ * Extrair número de uma string de moeda (R$ 1.234,56 -> 1234.56)
+ */
+function extrairNumeroMoeda(moedaStr) {
+    if (!moedaStr || moedaStr === '-') return '';
+    
+    // Remove "R$" e espaços
+    let num = moedaStr.replace('R$', '').trim();
+    
+    // Replace ponto de milhar (.) e vírgula decimal (,) brasileiros
+    num = num.replace(/\./g, '').replace(/,/g, '.');
+    
+    // Parse como número
+    const parsed = parseFloat(num);
+    return isNaN(parsed) ? '' : parsed;
+}
+
+/**
+ * Salvar edição do candidato - Coleta dados do formulário e envia para API
  */
 async function salvarEdicaoCandidato() {
-    alert('⚠️ Funcionalidade de edição em desenvolvimento (FASE 2)');
-    // TODO: Coletar dados do formulário e enviar para API
+    const candidatoId = document.getElementById('candidatoIdAtual').value;
+    const form = document.getElementById('formEditarCandidato');
+    
+    if (!candidatoId) {
+        alert('❌ Erro: ID do candidato não encontrado');
+        return;
+    }
+    
+    try {
+        // Coletar dados do formulário
+        const formData = new FormData(form);
+        const dados = {};
+        
+        for (let [key, value] of formData.entries()) {
+            // Converter strings 'true'/'false' para boolean
+            if (value === 'true') {
+                dados[key] = true;
+            } else if (value === 'false') {
+                dados[key] = false;
+            } else if (value === '') {
+                // Manter vazio como null para o backend
+                dados[key] = null;
+            } else {
+                dados[key] = value;
+            }
+        }
+        
+        // Validações básicas
+        if (!dados.nome_completo || dados.nome_completo.trim() === '') {
+            alert('❌ Nome completo é obrigatório');
+            return;
+        }
+        
+        if (!dados.email || dados.email.trim() === '') {
+            alert('❌ Email é obrigatório');
+            return;
+        }
+        
+        // Validar email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(dados.email)) {
+            alert('❌ Email inválido');
+            return;
+        }
+        
+        // Mostrar loading
+        const btnSalvar = document.getElementById('btnSalvarEdicao');
+        const btnEditar = document.getElementById('btnEditarCandidato');
+        const textOriginal = btnSalvar.innerHTML;
+        btnSalvar.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Salvando...';
+        btnSalvar.disabled = true;
+        btnEditar.disabled = true;
+        
+        // Enviar para API
+        const response = await fetch(`/rh/recrutamento/api/candidatos/${candidatoId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Sucesso - recarregar dados e voltar para visualização
+            console.log('✅ Candidato atualizado com sucesso');
+            
+            // Recarregar dados do candidato
+            await verDetalhesCandidato(candidatoId);
+            
+            // Mostrar notificação
+            mostrarToast('success', '✅ Candidato atualizado com sucesso!');
+            
+            // Voltar para modo visualização
+            document.getElementById('modoEdicao').value = 'false';
+            document.getElementById('modo-visualizacao').style.display = 'block';
+            document.getElementById('modo-edicao').style.display = 'none';
+            btnEditar.innerHTML = '<i class="mdi mdi-pencil"></i> Editar';
+            btnSalvar.style.display = 'none';
+            
+        } else {
+            alert('❌ Erro ao salvar: ' + (result.message || 'Tente novamente'));
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar candidato:', error);
+        alert('❌ Erro ao salvar candidato: ' + error.message);
+    } finally {
+        // Restaurar botões
+        const btnSalvar = document.getElementById('btnSalvarEdicao');
+        const btnEditar = document.getElementById('btnEditarCandidato');
+        btnSalvar.innerHTML = '<i class="mdi mdi-content-save"></i> Salvar Alterações';
+        btnSalvar.disabled = false;
+        btnEditar.disabled = false;
+    }
+}
+
+/**
+ * Mostrar notificação toast (se bootstrap-toast disponível)
+ */
+function mostrarToast(tipo, mensagem) {
+    // Criar toast dinamicamente
+    const toastHTML = `
+        <div class="toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0" 
+             role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${mensagem}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.getElementById('toastContainer') || criarToastContainer();
+    const toastEl = document.createElement('div');
+    toastEl.innerHTML = toastHTML;
+    toastContainer.appendChild(toastEl.firstElementChild);
+    
+    // Auto-remover após 3 segundos
+    setTimeout(() => {
+        const toast = toastContainer.querySelector('.toast');
+        if (toast) {
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout(() => toast.remove(), 1500);
+        }
+    }, 100);
+}
+
+/**
+ * Criar container de toasts
+ */
+function criarToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    `;
+    document.body.appendChild(container);
+    return container;
 }
 
 /**
@@ -1124,128 +1638,158 @@ function exibirAnaliseIA(candidato) {
         prefilterDisplay.style.display = 'none';
     }
     
-    // Dados extraídos
+    // Dados extraídos estruturados da IA
     const extractedDisplay = document.getElementById('aiExtractedDataDisplay');
     const extractedGrid = document.getElementById('aiExtractedGrid');
-    
-    if (candidato.ai_extracted_data_jsonb && Object.keys(candidato.ai_extracted_data_jsonb).length > 0) {
-        extractedDisplay.style.display = 'block';
-        extractedGrid.innerHTML = '';
-        
-        const data = candidato.ai_extracted_data_jsonb;
-        
-        // Formação
-        if (data.formacao) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-school"></i> Formação
+
+    if (extractedDisplay && extractedGrid) {
+        const dadosEstruturados = dadosIA.dados && typeof dadosIA.dados === 'object' ? dadosIA.dados : null;
+        let gridHTML = '';
+
+        if (dadosEstruturados) {
+            const data = dadosEstruturados;
+
+            if (data.erro) {
+                gridHTML = `
+                    <div class="ai-extracted-item" style="grid-column: 1 / -1; border-left-color: #dc3545;">
+                        <div class="ai-extracted-item-label" style="color: #dc3545;">
+                            <i class="mdi mdi-alert-circle"></i> Erro
+                        </div>
+                        <div class="ai-extracted-item-value" style="color: #dc3545;">
+                            ${data.erro}
+                        </div>
                     </div>
-                    <div class="ai-extracted-item-value">${data.formacao}</div>
-                </div>
-            `;
-        }
-        
-        // Anos de experiência
-        if (data.anos_experiencia) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-briefcase-clock"></i> Experiência
-                    </div>
-                    <div class="ai-extracted-item-value">${data.anos_experiencia} anos</div>
-                </div>
-            `;
-        }
-        
-        // Habilidades
-        if (data.habilidades && Array.isArray(data.habilidades)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-star-circle"></i> Habilidades
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.habilidades.map(h => `<li>${h}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Idiomas
-        if (data.idiomas && Array.isArray(data.idiomas)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-translate"></i> Idiomas
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.idiomas.map(i => `<li>${i}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Certificações
-        if (data.certificacoes && Array.isArray(data.certificacoes)) {
-            extractedGrid.innerHTML += `
-                <div class="ai-extracted-item">
-                    <div class="ai-extracted-item-label">
-                        <i class="mdi mdi-certificate"></i> Certificações
-                    </div>
-                    <div class="ai-extracted-item-value">
-                        <ul>
-                            ${data.certificacoes.map(c => `<li>${c}</li>`).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Experiências relevantes
-        if (data.experiencias_relevantes && Array.isArray(data.experiencias_relevantes)) {
-            let experienciasHTML = '<div class="ai-extracted-item" style="grid-column: 1 / -1;">';
-            experienciasHTML += '<div class="ai-extracted-item-label"><i class="mdi mdi-briefcase-outline"></i> Experiências Relevantes</div>';
-            experienciasHTML += '<div class="ai-extracted-item-value">';
-            
-            data.experiencias_relevantes.forEach(exp => {
-                if (typeof exp === 'string') {
-                    experienciasHTML += `<div class="ai-experiencia-item">${exp}</div>`;
-                } else if (typeof exp === 'object') {
-                    experienciasHTML += `
-                        <div class="ai-experiencia-item">
-                            <div class="ai-experiencia-cargo">${exp.cargo || 'Cargo não especificado'}</div>
-                            ${exp.empresa ? `<div class="ai-experiencia-empresa">${exp.empresa}</div>` : ''}
-                            ${exp.periodo ? `<div class="ai-experiencia-periodo">${exp.periodo}</div>` : ''}
-                            ${exp.descricao ? `<div class="mt-2">${exp.descricao}</div>` : ''}
+                `;
+            } else {
+                if (data.formacao) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-school"></i> Formação
+                            </div>
+                            <div class="ai-extracted-item-value">${data.formacao}</div>
                         </div>
                     `;
                 }
-            });
-            
-            experienciasHTML += '</div></div>';
-            extractedGrid.innerHTML += experienciasHTML;
+
+                if (data.anos_experiencia) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-briefcase-clock"></i> Experiência
+                            </div>
+                            <div class="ai-extracted-item-value">${data.anos_experiencia} anos</div>
+                        </div>
+                    `;
+                }
+
+                if (data.senioridade) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-account-tie"></i> Senioridade
+                            </div>
+                            <div class="ai-extracted-item-value">${data.senioridade}</div>
+                        </div>
+                    `;
+                }
+
+                const habilidades = Array.isArray(data.habilidades)
+                    ? data.habilidades
+                    : typeof data.habilidades === 'string'
+                        ? [data.habilidades]
+                        : [];
+                if (habilidades.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-star-circle"></i> Habilidades
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${habilidades.map(h => `<li>${h}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const idiomas = Array.isArray(data.idiomas)
+                    ? data.idiomas
+                    : typeof data.idiomas === 'string'
+                        ? [data.idiomas]
+                        : [];
+                if (idiomas.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-translate"></i> Idiomas
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${idiomas.map(i => `<li>${i}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const certificacoes = Array.isArray(data.certificacoes)
+                    ? data.certificacoes
+                    : typeof data.certificacoes === 'string'
+                        ? [data.certificacoes]
+                        : [];
+                if (certificacoes.length > 0) {
+                    gridHTML += `
+                        <div class="ai-extracted-item">
+                            <div class="ai-extracted-item-label">
+                                <i class="mdi mdi-certificate"></i> Certificações
+                            </div>
+                            <div class="ai-extracted-item-value">
+                                <ul>
+                                    ${certificacoes.map(c => `<li>${c}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const experiencias = Array.isArray(data.experiencias_relevantes)
+                    ? data.experiencias_relevantes
+                    : [];
+                if (experiencias.length > 0) {
+                    let experienciasHTML = '<div class="ai-extracted-item" style="grid-column: 1 / -1;">';
+                    experienciasHTML += '<div class="ai-extracted-item-label"><i class="mdi mdi-briefcase-outline"></i> Experiências Relevantes</div>';
+                    experienciasHTML += '<div class="ai-extracted-item-value">';
+
+                    experiencias.forEach(exp => {
+                        if (typeof exp === 'string') {
+                            experienciasHTML += `<div class="ai-experiencia-item">${exp}</div>`;
+                        } else if (exp && typeof exp === 'object') {
+                            experienciasHTML += `
+                                <div class="ai-experiencia-item">
+                                    <div class="ai-experiencia-cargo">${exp.cargo || 'Cargo não especificado'}</div>
+                                    ${exp.empresa ? `<div class="ai-experiencia-empresa">${exp.empresa}</div>` : ''}
+                                    ${exp.periodo ? `<div class="ai-experiencia-periodo">${exp.periodo}</div>` : ''}
+                                    ${exp.descricao ? `<div class="mt-2">${exp.descricao}</div>` : ''}
+                                </div>
+                            `;
+                        }
+                    });
+
+                    experienciasHTML += '</div></div>';
+                    gridHTML += experienciasHTML;
+                }
+            }
         }
-        
-        // Erro (se houver)
-        if (data.erro) {
-            extractedGrid.innerHTML = `
-                <div class="ai-extracted-item" style="grid-column: 1 / -1; border-left-color: #dc3545;">
-                    <div class="ai-extracted-item-label" style="color: #dc3545;">
-                        <i class="mdi mdi-alert-circle"></i> Erro
-                    </div>
-                    <div class="ai-extracted-item-value" style="color: #dc3545;">
-                        ${data.erro}
-                    </div>
-                </div>
-            `;
+
+        if (gridHTML) {
+            extractedDisplay.style.display = 'block';
+            extractedGrid.innerHTML = gridHTML;
+        } else {
+            extractedDisplay.style.display = 'none';
+            extractedGrid.innerHTML = '';
         }
-    } else {
-        extractedDisplay.style.display = 'none';
     }
 }
 

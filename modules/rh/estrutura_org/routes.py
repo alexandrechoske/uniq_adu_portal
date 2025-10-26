@@ -27,6 +27,7 @@ estrutura_org_bp = Blueprint(
 
 # Configuração
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY')
+UNIQUE_EMPRESA_ID = 'dc984b7c-3156-43f7-a1bf-f7a0b77db535'
 
 def check_api_bypass():
     """Verifica se a requisição tem a chave de bypass da API"""
@@ -233,7 +234,8 @@ def api_create_cargo():
         cargo_data = {
             'nome_cargo': nome_cargo,
             'grupo_cargo': data.get('grupo', '').strip() or None,
-            'descricao': data.get('descricao', '').strip() or None
+            'descricao': data.get('descricao', '').strip() or None,
+            'empresa_controladora_id': UNIQUE_EMPRESA_ID
         }
         
         response = supabase_admin.table('rh_cargos').insert(cargo_data).execute()
