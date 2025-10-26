@@ -21,6 +21,7 @@ recrutamento_bp = Blueprint(
 
 TIPOS_CONTRATACAO_VALIDOS = {'CLT', 'PJ', 'Estágio'}
 REGIMES_TRABALHO_VALIDOS = {'Presencial', 'Híbrido', 'Remoto'}
+UNIQUE_EMPRESA_ID = 'dc984b7c-3156-43f7-a1bf-f7a0b77db535'
 
 
 def _texto_obrigatorio(valor):
@@ -390,7 +391,8 @@ def api_create_vaga():
             'nivel_senioridade': nivel_senioridade,
             'quantidade_vagas': quantidade_vagas,
             'regime_trabalho': regime_trabalho,
-            'carga_horaria': carga_horaria
+            'carga_horaria': carga_horaria,
+            'empresa_controladora_id': UNIQUE_EMPRESA_ID
         }
 
         if faixa_salarial_min is not None:
@@ -828,6 +830,80 @@ def api_add_observacao(candidato_id):
     
     except Exception as e:
         print(f"❌ Erro ao adicionar observação: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@recrutamento_bp.route('/api/candidatos/<candidato_id>', methods=['PUT'])
+@perfil_or_bypass_required('rh', 'recrutamento')
+def api_update_candidato(candidato_id):
+    """API: Atualizar informações do candidato (modo edição)"""
+    try:
+        data = request.get_json()
+        
+        # Campos editáveis permitidos (exclui campos de IA e ID)
+        campos_permitidos = {
+            # Informações Pessoais
+            'nome_completo',
+            'data_nascimento',
+            'email',
+            'telefone',
+            'sexo',
+            'estado_civil',
+            'cidade_estado',
+            # Formação e Experiência
+            'formacao_academica',
+            'curso_especifico',
+            'area_objetivo',
+            'experiencia_na_area',
+            'trabalha_atualmente',
+            # Candidatura
+            'fonte_candidatura',
+            'data_candidatura',
+            'foi_indicacao',
+            'indicado_por',
+            'linkedin_url',
+            'portfolio_url',
+            # Processo Seletivo
+            'status_processo',
+            'realizou_entrevista',
+            'data_entrevista',
+            # Contratação
+            'foi_contratado',
+            'data_contratacao'
+        }
+        
+        # Filtrar apenas campos permitidos e que foram enviados
+        campos_atualizar = {k: v for k, v in data.items() if k in campos_permitidos and k in data}
+        
+        if not campos_atualizar:
+            return jsonify({
+                'success': False,
+                'message': 'Nenhum campo válido para atualizar'
+            }), 400
+        
+        # Atualizar no banco
+        response = supabase_admin.table('rh_candidatos')\
+            .update(campos_atualizar)\
+            .eq('id', candidato_id)\
+            .execute()
+        
+        if response.data and len(response.data) > 0:
+            candidato_atualizado = response.data[0]
+            return jsonify({
+                'success': True,
+                'message': 'Candidato atualizado com sucesso',
+                'data': candidato_atualizado
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Erro ao atualizar candidato'
+            }), 500
+    
+    except Exception as e:
+        print(f"❌ Erro ao atualizar candidato: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
