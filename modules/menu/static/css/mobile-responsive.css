@@ -1,0 +1,285 @@
+/* ===================================
+   RESPONSIVIDADE MOBILE - MENU PAGE
+   Correções para dispositivos móveis
+   =================================== */
+
+/* Force mobile responsiveness with !important */
+@media (max-width: 768px) {
+    /* Container principal */
+    .menu-full-width {
+        padding: 0 0.5rem !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+    
+    .menu-with-news-layout {
+        grid-template-columns: 1fr !important;
+        padding: 0 !important;
+        gap: 1rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .menu-left-column {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Tabs - CORRIGIDO para não ficar largo */
+    .menu-tabs-container {
+        padding: 0.25rem !important;
+        margin-bottom: 1rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .menu-tabs {
+        flex-direction: column !important;
+        gap: 0.25rem !important;
+        width: 100% !important;
+    }
+    
+    .menu-tab {
+        width: 100% !important;
+        min-width: unset !important;
+        max-width: 100% !important;
+        flex: none !important;
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.8125rem !important;
+        box-sizing: border-box !important;
+        justify-content: flex-start !important;
+    }
+    
+    .menu-tab span {
+        white-space: normal !important;
+        text-align: left !important;
+    }
+    
+    /* Cards */
+    .cards-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+    
+    /* COMEX Chips */
+    .comex-indicators-container {
+        width: 100% !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+    
+    .comex-indicators {
+        gap: 0.25rem !important;
+        flex-wrap: wrap !important;
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+    
+    .comex-chip {
+        font-size: 0.625rem !important;
+        padding: 0.25rem 0.5rem !important;
+        gap: 0.25rem !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+    
+    .comex-chip i {
+        font-size: 0.7rem !important;
+    }
+    
+    /* News Container - CORRIGIDO */
+    .news-gallery-container {
+        padding: 0.75rem !important;
+        position: relative !important;
+        top: 0 !important;
+        max-height: none !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* News Header */
+    .news-gallery-header {
+        margin-bottom: 0.75rem !important;
+        padding-bottom: 0.625rem !important;
+    }
+    
+    .news-gallery-title h3 {
+        font-size: 0.9375rem !important;
+    }
+    
+    .news-gallery-title i {
+        font-size: 1.125rem !important;
+    }
+    
+    /* News Controls - CORRIGIDO alinhamento */
+    .news-controls {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 0.5rem !important;
+        margin-top: 0.75rem !important;
+    }
+    
+    .news-nav-buttons {
+        display: flex !important;
+        gap: 0.375rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .news-indicators {
+        display: flex !important;
+        gap: 0.375rem !important;
+        flex: 1 !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    .news-counter {
+        flex-shrink: 0 !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .news-nav-btn {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    /* News Carousel */
+    .news-carousel {
+        min-height: 320px !important;
+    }
+    
+    .news-image {
+        height: 140px !important;
+    }
+    
+    .news-content {
+        padding: 0.75rem !important;
+    }
+    
+    .news-title {
+        font-size: 0.875rem !important;
+    }
+    
+    .news-summary {
+        font-size: 0.75rem !important;
+    }
+    
+    /* Breadcrumb */
+    .actions-bar.module-header-menu {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Força width 100% em TODOS os elementos do menu */
+    .menu-full-width,
+    .menu-with-news-layout,
+    .menu-left-column,
+    .menu-tabs-container,
+    .menu-tabs,
+    .cards-grid,
+    .news-gallery-container,
+    .comex-indicators-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Remove margens laterais que causam overflow */
+    .menu-tabs-container,
+    .news-gallery-container {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    /* Garante que tabs não ultrapassem a tela */
+    .menu-tab {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .menu-full-width {
+        padding: 0 0.375rem !important;
+    }
+    
+    .menu-with-news-layout {
+        padding: 0 !important;
+    }
+    
+    .menu-tabs-container {
+        padding: 0.25rem !important;
+        border-radius: 8px !important;
+    }
+    
+    .menu-tab {
+        padding: 0.5rem 0.625rem !important;
+        font-size: 0.75rem !important;
+        gap: 0.375rem !important;
+    }
+    
+    .menu-tab i {
+        font-size: 0.9375rem !important;
+    }
+    
+    .comex-chip {
+        font-size: 0.5625rem !important;
+        padding: 0.1875rem 0.4375rem !important;
+    }
+    
+    .comex-chip i {
+        font-size: 0.625rem !important;
+    }
+    
+    .news-gallery-container {
+        padding: 0.625rem !important;
+        border-radius: 10px !important;
+    }
+    
+    .news-carousel {
+        min-height: 280px !important;
+    }
+    
+    .news-image {
+        height: 120px !important;
+    }
+    
+    .news-content {
+        padding: 0.625rem !important;
+    }
+    
+    .news-title {
+        font-size: 0.8125rem !important;
+    }
+    
+    .news-summary {
+        font-size: 0.6875rem !important;
+    }
+    
+    .news-nav-btn {
+        width: 28px !important;
+        height: 28px !important;
+    }
+    
+    .news-nav-btn i {
+        font-size: 0.875rem !important;
+    }
+    
+    .news-controls {
+        margin-top: 0.625rem !important;
+    }
+    
+    .actions-bar.module-header-menu {
+        padding-left: 0.375rem !important;
+        padding-right: 0.375rem !important;
+    }
+}

@@ -58,10 +58,17 @@
 
 /* ===== MOBILE RESPONSIVO ===== */
 
+@media (max-width: 1200px) {
+    .menu-full-width {
+        padding: 0 1rem;
+    }
+}
+
 @media (max-width: 768px) {
     .menu-full-width {
         padding: 0 0.75rem;
-        width: 100vw;
+        width: 100%;
+        max-width: 100%;
     }
     
     .main-content {
@@ -73,5 +80,12 @@
     .menu-with-news-layout {
         width: 100%;
         max-width: 100%;
+        padding: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .menu-full-width {
+        padding: 0 0.5rem;
     }
 }
