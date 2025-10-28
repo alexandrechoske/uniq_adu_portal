@@ -449,6 +449,7 @@ class EnhancedDataTable {
             'modal': 'modal',
             'status': 'status_sistema',     // CORRIGIDO
             'custo total': 'custo_total',
+            'previsão chegada': 'data_chegada',
             'data chegada': 'data_chegada',
             'material': 'mercadoria',        // CORRIGIDO
             'urf': 'urf_despacho_normalizado', // CORRIGIDO
