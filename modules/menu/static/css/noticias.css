@@ -6,8 +6,8 @@
 /* Indicadores COMEX */
 .comex-indicators-container {
     background: transparent;
-    padding: 0;
-    margin-bottom: 1rem;
+    padding: 0 0 7rem 0;
+    margin-bottom: -6rem;
     border: none;
     box-shadow: none;
     overflow: hidden;
@@ -21,7 +21,7 @@
     gap: 0.5rem;
     align-items: center;
     overflow: visible;
-    position: relative;
+    position: static;
     flex-wrap: nowrap;
     animation: scrollIndicators 30s linear infinite;
 }
@@ -89,6 +89,8 @@
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     border-color: var(--unique-primary-medium, #2d6b92);
     z-index: 10000;
+    /* Parar a animação do carousel ao fazer hover em qualquer chip */
+    animation-play-state: paused;
 }
 
 .comex-chip i {
@@ -153,7 +155,7 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
-    z-index: 1300;
+    z-index: 10001;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     min-width: 200px;
 }
