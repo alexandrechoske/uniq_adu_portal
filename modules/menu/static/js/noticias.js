@@ -99,6 +99,12 @@ class NewsGallery {
             return;
         }
 
+        // Esconder skeleton de notícias quando os dados carregarem
+        const newsSkeleton = this.container.querySelector('.news-skeleton');
+        if (newsSkeleton) {
+            newsSkeleton.style.display = 'none';
+        }
+
         if (this.state.news.length === 0) {
             this.renderEmpty();
             this.cacheElements();
@@ -662,11 +668,35 @@ async function loadComexIndicators(container) {
         const data = await response.json();
         
         if (data.success && data.indicators) {
+            // Esconder skeleton de indicadores quando os dados carregarem
+            const skeleton = document.querySelector('.comex-indicators-skeleton');
+            if (skeleton) {
+                skeleton.style.display = 'none';
+            }
+            
             renderComexIndicators(container, data.indicators);
         }
     } catch (error) {
         console.error('Erro ao carregar indicadores COMEX:', error);
-        container.innerHTML = '<p style="color: #6B7280; font-size: 0.875rem; padding: 0.5rem;">Indicadores indisponíveis</p>';
+        
+        // Esconder skeleton mesmo em caso de erro
+        const skeleton = document.querySelector('.comex-indicators-skeleton');
+        if (skeleton) {
+            skeleton.style.display = 'none';
+        }
+        
+        // Renderizar mensagem de erro com botão de retry
+        container.innerHTML = `
+            <div class="comex-indicators-error" style="display: flex; flex-direction: column; gap: 0.75rem; align-items: center; padding: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; color: #DC2626;">
+                    <i class="mdi mdi-alert-circle-outline" style="font-size: 1.25rem;"></i>
+                    <span style="font-size: 0.875rem;">Não foi possível carregar os indicadores</span>
+                </div>
+                <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: var(--unique-primary-medium, #2d6b92); color: white; border: none; border-radius: 6px; font-size: 0.8125rem; cursor: pointer; transition: all 0.2s;">
+                    <i class="mdi mdi-refresh"></i> Tentar novamente
+                </button>
+            </div>
+        `;
     }
 }
 
@@ -807,7 +837,7 @@ function renderComexIndicators(container, indicators) {
         `);
     }
 
-    container.innerHTML = `<div class="comex-indicators">${chips.join('')}</div>`;
+    container.innerHTML = `<div class="comex-indicators">${chips.join('')}${chips.join('')}</div>`;
 }
 
 /**
