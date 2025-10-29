@@ -138,7 +138,7 @@
         return `<div class="mini-kpi-table-wrapper"><table class="mini-kpi-table"><thead><tr>
             <th data-sort="ref_importador">Pedido</th>
             <th data-sort="data_abertura">Abertura</th>
-            <th data-sort="data_chegada">Data Chegada</th>
+            <th data-sort="data_chegada">Previsão Chegada</th>
             <th data-sort="urf_despacho_normalizado">URF</th></tr></thead><tbody>${rows}</tbody></table></div>
             ${buildPagination(filtered.length, pageTotal)}`;
     }

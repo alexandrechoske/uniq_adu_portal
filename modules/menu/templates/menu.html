@@ -328,9 +328,15 @@
             
             <!-- Galeria de Notícias COMEX -->
             <div class="news-gallery-container" id="news-gallery-container" data-api-bypass="{{ api_bypass_key or '' }}">
-                <!-- Indicadores COMEX -->
+                <!-- Indicadores COMEX com Skeleton Loading -->
                 <div class="comex-indicators-container" id="comex-indicators-container">
-                    <!-- Chips serão injetados aqui pelo JavaScript -->
+                    <!-- Skeleton loading -->
+                    <div class="comex-indicators-skeleton">
+                        <div class="comex-chip-skeleton"></div>
+                        <div class="comex-chip-skeleton"></div>
+                        <div class="comex-chip-skeleton"></div>
+                        <div class="comex-chip-skeleton"></div>
+                    </div>
                 </div>
 
                 <div class="news-gallery-header">
@@ -344,8 +350,16 @@
                 </div>
 
                 <div class="news-carousel">
-                    <div class="news-carousel-track">
-                        <!-- Cards de notícias serão injetados aqui pelo JavaScript -->
+                    <!-- Skeleton loading para notícias -->
+                    <div class="news-skeleton">
+                        <div class="news-skeleton-image"></div>
+                        <div class="news-skeleton-content">
+                            <div class="news-skeleton-date"></div>
+                            <div class="news-skeleton-title"></div>
+                            <div class="news-skeleton-text"></div>
+                            <div class="news-skeleton-text"></div>
+                            <div class="news-skeleton-footer"></div>
+                        </div>
                     </div>
                 </div>
 

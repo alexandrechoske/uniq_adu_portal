@@ -597,14 +597,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         <input type="date" name="data_embarque_end" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
       
-      <!-- Data Chegada -->
+      <!-- Previsão Chegada -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Data Chegada (De)</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Previsão Chegada (De)</label>
         <input type="date" name="data_chegada_start" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Data Chegada (Até)</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Previsão Chegada (Até)</label>
         <input type="date" name="data_chegada_end" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
       </div>
       

@@ -44,7 +44,7 @@ const AVAILABLE_COLUMNS = [
     { id: 'despesas', label: 'Despesas Detalhadas', visible: false, fixed: false, sortable: false, sortField: 'despesas', category: 'Informações Financeiras', order: 21 },
 
     // Grupo: Datas e Prazos
-    { id: 'data_chegada', label: 'Data Chegada', visible: true, fixed: false, sortField: 'data_chegada', category: 'Datas e Prazos', order: 8 },
+    { id: 'data_chegada', label: 'Previsão Chegada', visible: true, fixed: false, sortField: 'data_chegada', category: 'Datas e Prazos', order: 8 },
     { id: 'data_embarque', label: 'Data Embarque', visible: false, fixed: false, sortField: 'data_embarque', category: 'Datas e Prazos', order: 9 },
     { id: 'transit_time', label: 'Transit Time', visible: false, fixed: false, sortField: 'transit_time', category: 'Datas e Prazos', order: 10 },
     { id: 'data_registro', label: 'Data Registro', visible: false, fixed: false, sortField: 'data_registro', category: 'Datas e Prazos', order: 11 },

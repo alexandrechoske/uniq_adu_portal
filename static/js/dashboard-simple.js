@@ -247,7 +247,7 @@ function renderTablePage() {
                     <th>Mercadoria</th>
                     <th>Despesas (R$)</th>
                     <th>Recinto</th>
-                    <th>Data Chegada</th>
+                    <th>Previsão Chegada</th>
                 </tr>
             </thead>
             <tbody>
