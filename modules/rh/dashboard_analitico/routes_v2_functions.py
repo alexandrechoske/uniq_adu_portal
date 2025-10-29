@@ -800,9 +800,19 @@ def calcular_turnover_por_departamento_v2(periodo_inicio, periodo_fim):
         
         print(f"   ✅ [DEBUG] Turnover calculado para {len(turnover_por_dept_sorted)} departamentos (otimizado)")
         
+        # 6. Preparar detalhes para o modal (frontend)
+        detalhes = {}
+        for item in turnover_por_dept_sorted:
+            detalhes[item['departamento']] = {
+                'headcount': item['headcount'],
+                'desligamentos': item['desligamentos'],
+                'turnover': item['turnover']
+            }
+        
         resultado = {
             'labels': [d['departamento'] for d in turnover_por_dept_sorted],
-            'values': [d['turnover'] for d in turnover_por_dept_sorted]
+            'values': [d['turnover'] for d in turnover_por_dept_sorted],
+            'detalhes': detalhes  # Novo campo com informações detalhadas
         }
         
         print(f"   📊 [DEBUG] Resultado final: {resultado}")

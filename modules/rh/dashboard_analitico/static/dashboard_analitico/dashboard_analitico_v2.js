@@ -452,6 +452,11 @@ const DashboardAnalitico = {
         let inicio, fim;
         
         switch (periodo) {
+            case 'todos_dados':
+                // Base completa desde o início dos dados (2016)
+                inicio = '2016-01-01';
+                fim = hoje.toISOString().split('T')[0];
+                break;
             case 'este_ano':
                 inicio = `${hoje.getFullYear()}-01-01`;
                 fim = hoje.toISOString().split('T')[0];
@@ -478,7 +483,8 @@ const DashboardAnalitico = {
                 fim = `${anoAnterior}-12-31`;
                 break;
             default:
-                inicio = `${hoje.getFullYear()}-01-01`;
+                // Padrão: todos os dados
+                inicio = '2016-01-01';
                 fim = hoje.toISOString().split('T')[0];
         }
         
@@ -750,8 +756,44 @@ const DashboardAnalitico = {
     // ========================================
     renderSecaoTurnover(data) {
         // KPIs
-        document.getElementById('kpi-turnover-geral').textContent = 
-            `${data.kpis.turnover_geral || 0}%`;
+        const turnoverGeral = data.kpis.turnover_geral || 0;
+        document.getElementById('kpi-turnover-geral').textContent = `${turnoverGeral}%`;
+        
+        // Calcular label dinâmico do período
+        const filters = this.getFilters();
+        const periodoInicio = new Date(filters.periodo_inicio);
+        const periodoFim = new Date(filters.periodo_fim);
+        const diffTime = Math.abs(periodoFim - periodoInicio);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffMonths = Math.floor(diffDays / 30);
+        const diffYears = (diffDays / 365).toFixed(1);
+        
+        // Atualizar label do período
+        const labelPeriodo = document.getElementById('kpi-turnover-periodo');
+        if (diffDays <= 31) {
+            labelPeriodo.textContent = 'no mês';
+        } else if (diffDays <= 100) {
+            labelPeriodo.textContent = 'no trimestre';
+        } else if (diffDays <= 370) {
+            labelPeriodo.textContent = 'nos últimos 12 meses';
+        } else {
+            labelPeriodo.textContent = `no período (${diffYears} anos)`;
+        }
+        
+        // Mostrar/ocultar KPI de Turnover Anual e calcular média
+        const cardAnual = document.getElementById('kpi-turnover-anual-card');
+        if (diffMonths > 12) {
+            // Período maior que 12 meses - mostrar turnover anual médio
+            const turnoverAnual = (turnoverGeral / parseFloat(diffYears)).toFixed(1);
+            document.getElementById('kpi-turnover-anual').textContent = `${turnoverAnual}%`;
+            document.getElementById('kpi-turnover-anual-anos').textContent = 
+                `média anual (${diffYears} anos)`;
+            cardAnual.style.display = 'block';
+        } else {
+            // Período menor ou igual a 12 meses - ocultar
+            cardAnual.style.display = 'none';
+        }
+        
         document.getElementById('kpi-desligamentos').textContent = 
             data.kpis.desligamentos || 0;
         document.getElementById('kpi-admissoes').textContent = 
@@ -782,6 +824,9 @@ const DashboardAnalitico = {
             this.charts.turnoverDept.destroy();
         }
         
+        // Armazenar dados detalhados para o modal
+        this.departamentosDetalhes = dados.detalhes || {};
+        
         this.charts.turnoverDept = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -791,14 +836,30 @@ const DashboardAnalitico = {
                     data: dados.values || [],
                     backgroundColor: 'rgba(220, 53, 69, 0.7)',
                     borderColor: 'rgba(220, 53, 69, 1)',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    hoverBackgroundColor: 'rgba(220, 53, 69, 0.9)',
+                    cursor: 'pointer'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: (event, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const index = activeElements[0].index;
+                        const departamento = dados.labels[index];
+                        this.abrirModalDepartamento(departamento, dados, index);
+                    }
+                },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function() {
+                                return 'Clique para ver detalhes';
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: {
@@ -808,6 +869,9 @@ const DashboardAnalitico = {
                 }
             }
         });
+        
+        // Mudar cursor para pointer
+        ctx.style.cursor = 'pointer';
     },
     
     renderChartTurnoverCargo(dados) {
@@ -1788,12 +1852,120 @@ const DashboardAnalitico = {
     verPendencia(referencia) {
         console.log('Ver pendência contábil:', referencia);
         // TODO: Implementar visualização detalhada de pendências
+    },
+    
+    // ========================================
+    // MODAL DE DETALHES DO DEPARTAMENTO
+    // ========================================
+    abrirModalDepartamento(departamento, dados, index) {
+        const turnover = dados.values[index];
+        const detalhes = dados.detalhes?.[departamento] || {};
+        
+        // Preencher dados do modal
+        document.getElementById('modal-dept-nome').textContent = departamento;
+        document.getElementById('modal-dept-headcount').textContent = detalhes.headcount || '?';
+        document.getElementById('modal-dept-desligamentos').textContent = detalhes.desligamentos || '?';
+        document.getElementById('modal-dept-turnover').textContent = `${turnover}%`;
+        
+        // Fórmula
+        const headcount = detalhes.headcount || 0;
+        const desligamentos = detalhes.desligamentos || 0;
+        document.getElementById('modal-dept-formula').textContent = 
+            `${desligamentos} / ${headcount} × 100 = ${turnover}%`;
+        
+        // Contexto
+        const contextoEl = document.getElementById('modal-dept-contexto');
+        contextoEl.innerHTML = this.gerarContextoDepartamento(departamento, turnover, headcount, desligamentos);
+        
+        // Mostrar modal
+        document.getElementById('modal-departamento-detalhes').style.display = 'flex';
+        
+        // Fechar com ESC
+        document.addEventListener('keydown', this.fecharModalComEsc);
+    },
+    
+    fecharModalDepartamento() {
+        document.getElementById('modal-departamento-detalhes').style.display = 'none';
+        document.removeEventListener('keydown', this.fecharModalComEsc);
+    },
+    
+    fecharModalComEsc(e) {
+        if (e.key === 'Escape') {
+            dashboardAnalitico.fecharModalDepartamento();
+        }
+    },
+    
+    gerarContextoDepartamento(departamento, turnover, headcount, desligamentos) {
+        let html = '';
+        
+        // Análise do tamanho da equipe
+        if (headcount === 0) {
+            html += '<p><strong>⚠️ Atenção:</strong> Este departamento não possui colaboradores ativos no momento.</p>';
+        } else if (headcount <= 2) {
+            html += `<p><strong>⚠️ Equipe Pequena:</strong> Este departamento possui apenas <strong>${headcount} colaborador(es)</strong> ativo(s). `;
+            html += 'Em equipes muito pequenas, um único desligamento pode resultar em percentuais altos de turnover.</p>';
+        } else if (headcount <= 5) {
+            html += `<p><strong>ℹ️ Equipe Reduzida:</strong> Departamento com <strong>${headcount} colaboradores</strong>. `;
+            html += 'Desligamentos têm impacto significativo no percentual de turnover.</p>';
+        } else {
+            html += `<p><strong>ℹ️ Tamanho da Equipe:</strong> Departamento com <strong>${headcount} colaboradores</strong> ativos.</p>`;
+        }
+        
+        // Análise do turnover
+        html += '<p><strong>📊 Interpretação do Turnover:</strong></p><ul>';
+        
+        if (turnover === 0) {
+            html += '<li><strong>Excelente!</strong> Nenhum desligamento registrado no período selecionado.</li>';
+            html += '<li>Indica <strong>estabilidade total</strong> da equipe neste período.</li>';
+        } else if (turnover < 10) {
+            html += '<li><strong>Baixo:</strong> Turnover saudável e dentro do esperado.</li>';
+            html += '<li>Indica <strong>boa retenção</strong> de talentos no departamento.</li>';
+        } else if (turnover < 20) {
+            html += '<li><strong>Moderado:</strong> Turnover aceitável, mas merece atenção.</li>';
+            html += '<li>Acompanhar tendências e possíveis causas.</li>';
+        } else if (turnover < 50) {
+            html += '<li><strong>Alto:</strong> Turnover significativo neste departamento.</li>';
+            html += '<li>Recomenda-se <strong>investigar causas</strong> e implementar ações de retenção.</li>';
+        } else if (turnover < 100) {
+            html += '<li><strong>Muito Alto:</strong> Turnover crítico que requer atenção imediata.</li>';
+            html += '<li>Possíveis problemas: clima organizacional, liderança, ou adequação de perfil.</li>';
+        } else {
+            html += '<li><strong>Crítico (≥100%):</strong> A quantidade de desligamentos excede o headcount atual.</li>';
+            html += '<li>Indica <strong>renovação completa ou múltipla</strong> da equipe no período.</li>';
+            if (headcount <= 3) {
+                html += '<li>Em equipes pequenas, este cenário pode ser normal em períodos de reestruturação.</li>';
+            }
+        }
+        
+        html += '</ul>';
+        
+        // Recomendações
+        if (turnover > 0) {
+            html += '<p><strong>💡 Próximos Passos:</strong></p><ul>';
+            if (turnover >= 50) {
+                html += '<li>Realizar entrevistas de desligamento para identificar padrões.</li>';
+                html += '<li>Revisar processos de seleção e onboarding.</li>';
+                html += '<li>Avaliar clima organizacional e liderança do departamento.</li>';
+            } else if (turnover >= 20) {
+                html += '<li>Monitorar evolução do turnover nos próximos meses.</li>';
+                html += '<li>Identificar se há concentração em cargos ou períodos específicos.</li>';
+            } else {
+                html += '<li>Manter acompanhamento regular das métricas.</li>';
+                html += '<li>Continuar práticas de retenção em vigor.</li>';
+            }
+            html += '</ul>';
+        }
+        
+        return html;
     }
 };
 
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
+// Expor dashboard globalmente para acesso no HTML (modal)
+window.dashboardAnalitico = DashboardAnalitico;
+
 document.addEventListener('DOMContentLoaded', () => {
     DashboardAnalitico.init();
 });
