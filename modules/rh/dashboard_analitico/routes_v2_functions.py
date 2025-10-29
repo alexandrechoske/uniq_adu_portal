@@ -555,32 +555,44 @@ def calcular_tabela_vagas_abertas_v2():
 # ========================================
 
 def calcular_turnover_geral_v2(periodo_inicio, periodo_fim):
-    """KPI: Turnover Geral (%) nos últimos 12 meses"""
+    """
+    KPI: Turnover Geral (%) no período filtrado
+    
+    Fórmula: (Desligamentos no Período / Headcount Médio) × 100
+    
+    IMPORTANTE: Agora usa o período filtrado pelo usuário ao invés de período fixo de 12 meses
+    """
     try:
-        # Calcular 12 meses atrás
-        hoje = datetime.now()
-        um_ano_atras = hoje - relativedelta(months=12)
+        print(f"   🔍 Calculando Turnover Geral para período: {periodo_inicio} a {periodo_fim}")
         
-        # Desligamentos nos últimos 12 meses
+        # Desligamentos no período filtrado
         response = supabase.table('rh_historico_colaborador')\
             .select('id', count='exact')\
             .eq('tipo_evento', 'Demissão')\
-            .gte('data_evento', um_ano_atras.strftime('%Y-%m-%d'))\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)\
             .execute()
         
         desligamentos = response.count if response.count else 0
+        print(f"   📊 Desligamentos no período: {desligamentos}")
         
         # Headcount médio (aproximação: headcount atual)
         headcount = calcular_headcount_atual_v2()
+        print(f"   📊 Headcount atual (usado como médio): {headcount}")
         
         if headcount == 0:
+            print(f"   ⚠️  Headcount zero, turnover = 0")
             return 0
         
         turnover = (desligamentos / headcount) * 100
+        print(f"   ✅ Turnover calculado: {turnover:.1f}% ({desligamentos}/{headcount} × 100)")
+        
         return round(turnover, 1)
         
     except Exception as e:
         print(f"❌ Erro ao calcular turnover geral: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return 0
 
 
@@ -678,23 +690,129 @@ def calcular_headcount_atual_v2():
 
 
 def calcular_turnover_por_departamento_v2(periodo_inicio, periodo_fim):
-    """Gráfico: Turnover por Departamento (Todos)"""
+    """
+    Gráfico: Turnover por Departamento (Todos)
+    Calcula o turnover real de cada departamento e ordena do maior para o menor
+    OTIMIZADO: Usa queries agregadas ao invés de N+1 queries
+    """
     try:
-        # Buscar departamentos
+        print(f"   🔍 [DEBUG] Calculando Turnover por Departamento para período: {periodo_inicio} a {periodo_fim}")
+        
+        # 1. Buscar headcount atual por departamento (último evento de cada colaborador ativo)
+        print(f"   🔍 [DEBUG] Passo 1: Buscando histórico de colaboradores ativos...")
+        # Especificar o relacionamento correto (colaborador_id, não gestor_id)
+        response_hist = supabase.table('rh_historico_colaborador')\
+            .select('colaborador_id, departamento_id, data_evento, rh_colaboradores!rh_historico_colaborador_colaborador_id_fkey!inner(status)')\
+            .eq('rh_colaboradores.status', 'Ativo')\
+            .order('data_evento', desc=False)\
+            .execute()
+        
+        historico = response_hist.data if response_hist.data else []
+        print(f"   📊 [DEBUG] Total de eventos no histórico: {len(historico)}")
+        
+        # Agrupar por colaborador e pegar último evento
+        ultimo_evento_por_colab = {}
+        for evento in historico:
+            colab_id = evento['colaborador_id']
+            data_evento = evento['data_evento']
+            
+            if colab_id not in ultimo_evento_por_colab:
+                ultimo_evento_por_colab[colab_id] = evento
+            else:
+                # Comparar datas e manter o mais recente
+                if data_evento > ultimo_evento_por_colab[colab_id]['data_evento']:
+                    ultimo_evento_por_colab[colab_id] = evento
+        
+        print(f"   📊 [DEBUG] Total de colaboradores ativos: {len(ultimo_evento_por_colab)}")
+        
+        # Contar headcount por departamento
+        headcount_por_dept = {}
+        for evento in ultimo_evento_por_colab.values():
+            dept_id = evento['departamento_id']
+            headcount_por_dept[dept_id] = headcount_por_dept.get(dept_id, 0) + 1
+        
+        print(f"   📊 [DEBUG] Headcount por departamento: {headcount_por_dept}")
+        
+        # 2. Buscar todos departamentos
+        print(f"   🔍 [DEBUG] Passo 2: Buscando todos departamentos...")
         response_deps = supabase.table('rh_departamentos')\
             .select('id, nome_departamento')\
             .execute()
         departamentos = response_deps.data if response_deps.data else []
         
-        # TODO: Implementar cálculo real por departamento
-        # Por enquanto, retornar dados mock
-        return {
-            'labels': [d['nome_departamento'] for d in departamentos[:5]],
-            'values': [18.5, 12.3, 22.1, 8.7, 15.9]
+        print(f"   📊 [DEBUG] Total de departamentos encontrados: {len(departamentos)}")
+        
+        if not departamentos:
+            print(f"   ⚠️  [DEBUG] ERRO: Nenhum departamento encontrado!")
+            return {'labels': [], 'values': []}
+        
+        # 3. Buscar desligamentos por departamento (uma query só!)
+        print(f"   🔍 [DEBUG] Passo 3: Buscando desligamentos do período...")
+        response_deslig = supabase.table('rh_historico_colaborador')\
+            .select('departamento_id')\
+            .eq('tipo_evento', 'Demissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)\
+            .execute()
+        
+        desligamentos_list = response_deslig.data if response_deslig.data else []
+        print(f"   📊 [DEBUG] Total de desligamentos no período: {len(desligamentos_list)}")
+        
+        # Contar desligamentos por departamento
+        desligamentos_por_dept = {}
+        for deslig in desligamentos_list:
+            dept_id = deslig['departamento_id']
+            desligamentos_por_dept[dept_id] = desligamentos_por_dept.get(dept_id, 0) + 1
+        
+        print(f"   📊 [DEBUG] Desligamentos por departamento: {desligamentos_por_dept}")
+        
+        # 4. Calcular turnover para cada departamento
+        print(f"   🔍 [DEBUG] Passo 4: Calculando turnover...")
+        turnover_por_dept = []
+        
+        for dept in departamentos:
+            dept_id = dept['id']
+            dept_nome = dept['nome_departamento']
+            
+            headcount = headcount_por_dept.get(dept_id, 0)
+            desligamentos = desligamentos_por_dept.get(dept_id, 0)
+            
+            # Calcular turnover
+            if headcount > 0:
+                turnover_pct = (desligamentos / headcount) * 100
+            else:
+                turnover_pct = 0
+            
+            if headcount > 0:  # Só incluir departamentos com colaboradores
+                print(f"   • {dept_nome}: {turnover_pct:.1f}% ({desligamentos} deslig. / {headcount} ativos)")
+                
+                turnover_por_dept.append({
+                    'departamento': dept_nome,
+                    'turnover': round(turnover_pct, 1),
+                    'desligamentos': desligamentos,
+                    'headcount': headcount
+                })
+            else:
+                print(f"   ⚠️  {dept_nome}: SEM COLABORADORES ATIVOS (ignorado)")
+        
+        # 5. Ordenar por turnover DECRESCENTE (maior para menor)
+        turnover_por_dept_sorted = sorted(turnover_por_dept, key=lambda x: x['turnover'], reverse=True)
+        
+        print(f"   ✅ [DEBUG] Turnover calculado para {len(turnover_por_dept_sorted)} departamentos (otimizado)")
+        
+        resultado = {
+            'labels': [d['departamento'] for d in turnover_por_dept_sorted],
+            'values': [d['turnover'] for d in turnover_por_dept_sorted]
         }
         
+        print(f"   📊 [DEBUG] Resultado final: {resultado}")
+        
+        return resultado
+        
     except Exception as e:
-        print(f"❌ Erro ao calcular turnover por departamento: {str(e)}")
+        print(f"❌ [DEBUG] ERRO ao calcular turnover por departamento: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {'labels': [], 'values': []}
 
 
