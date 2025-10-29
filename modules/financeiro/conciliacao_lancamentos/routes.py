@@ -43,6 +43,64 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Bypass API key para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
 
+# Variável global para rastrear progresso da conciliação
+progresso_conciliacao = {
+    'em_andamento': False,
+    'total': 0,
+    'processados': 0,
+    'percentual': 0,
+    'conciliados': 0,
+    'mensagem': ''
+}
+
+def obter_perfis_usuario() -> List[str]:
+    """
+    Obtém os perfis do usuário logado a partir da sessão
+    
+    Returns:
+        Lista de códigos de perfis do usuário
+    """
+    try:
+        user_data = session.get('user', {})
+        user_email = user_data.get('email', 'DESCONHECIDO')
+        
+        # Tentar buscar perfis em diferentes formatos possíveis
+        perfis = user_data.get('user_perfis', []) or user_data.get('perfis', [])
+        
+        logger.info(f"[CONCILIACAO] Verificando perfis para {user_email}")
+        logger.info(f"[CONCILIACAO] Perfis na sessão: {perfis}")
+        
+        # Perfis podem vir como lista de dicts ou lista de strings
+        if perfis and len(perfis) > 0 and isinstance(perfis[0], dict):
+            perfis_codigos = [p.get('profile_code', '') for p in perfis]
+            logger.info(f"[CONCILIACAO] Perfis extraídos (dict): {perfis_codigos}")
+            return perfis_codigos
+        
+        logger.info(f"[CONCILIACAO] Perfis extraídos (list): {perfis}")
+        return perfis if isinstance(perfis, list) else []
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro ao obter perfis do usuário: {e}")
+        return []
+
+def usuario_restrito_itau_bb() -> bool:
+    """
+    Verifica se o usuário possui perfil restrito a Itaú e Banco do Brasil
+    
+    Perfil: financeiroconciliacaoitaubb
+    Usuários: edicleia, juliano, rafael
+    
+    Returns:
+        True se o usuário deve ver apenas Itaú e BB, False caso contrário
+    """
+    try:
+        perfis = obter_perfis_usuario()
+        restrito = 'financeiroconciliacaoitaubb' in perfis
+        logger.info(f"[CONCILIACAO] Perfil restrito detectado: {restrito}")
+        return restrito
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro ao verificar perfil restrito: {e}")
+        return False
+
 def normalizar_nome_banco(nome_banco: str) -> str:
     """
     Normaliza os nomes dos bancos do sistema para ficar igual aos identificadores dos arquivos OFX
@@ -832,12 +890,16 @@ class ProcessadorBancos:
 def index():
     """Página principal da conciliação de lançamentos."""
     try:
+        # Verificar se usuário tem perfil restrito (só Itaú e BB)
+        perfil_restrito = usuario_restrito_itau_bb()
+        
         # Verificar bypass da API primeiro
         if verificar_api_bypass():
             logger.info(f"[CONCILIACAO] Acesso via bypass da API")
             return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                                  module_name='Conciliação de Lançamentos',
-                                 page_title='Conciliação de Lançamentos')
+                                 page_title='Conciliação de Lançamentos',
+                                 perfil_restrito_itau_bb=perfil_restrito)
         
         # Log de acesso
         access_logger.log_page_access('Conciliação de Lançamentos', 'financeiro')
@@ -848,7 +910,8 @@ def index():
         
         return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                              module_name='Conciliação de Lançamentos',
-                             page_title='Conciliação de Lançamentos')
+                             page_title='Conciliação de Lançamentos',
+                             perfil_restrito_itau_bb=perfil_restrito)
         
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao carregar página: {str(e)}")
@@ -1438,9 +1501,21 @@ def movimentos_sistema():
         # Aplicar filtro de data
         query = query.gte('data_lancamento', data_inicio).lte('data_lancamento', data_fim)
         
-        # Aplicar filtro de banco se especificado
-        if banco_filtro and banco_filtro != 'todos':
-            query = query.ilike('nome_banco', f'%{banco_filtro}%')
+        # URGENTE: Verificar se usuário tem perfil restrito (financeiroconciliacaoitaubb)
+        # Usuários edicleia, juliano, rafael devem ver apenas Itaú e Banco do Brasil
+        if usuario_restrito_itau_bb():
+            logger.info("[CONCILIACAO] Usuário com perfil restrito - aplicando filtro Itaú + BB")
+            # Lista completa de variações conforme nomes REAIS no banco de dados:
+            # - 'ITAU' (3567 registros)
+            # - 'Banco do Brasil' (1132 registros) 
+            # - 'BANCO DO BRASIL' (287 registros)
+            bancos_permitidos = ['ITAU', 'Banco do Brasil', 'BANCO DO BRASIL']
+            query = query.in_('nome_banco', bancos_permitidos)
+        else:
+            # Aplicar filtro de banco manual se especificado e usuário não restrito
+            if banco_filtro and banco_filtro != 'todos':
+                query = query.ilike('nome_banco', f'%{banco_filtro}%')
+        
         if empresa_filtro and empresa_filtro.lower() != 'todas':
             query = query.ilike('empresa', f'%{empresa_filtro}%')
         
@@ -1628,6 +1703,12 @@ def limpar_sessao():
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao limpar sessão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+@conciliacao_lancamentos_bp.route('/api/progresso-conciliacao', methods=['GET'])
+def progresso_conciliacao_endpoint():
+    """Endpoint para consultar progresso da conciliação em tempo real"""
+    global progresso_conciliacao
+    return jsonify(progresso_conciliacao)
 
 @conciliacao_lancamentos_bp.route('/api/processar-conciliacao', methods=['POST'])
 def processar_conciliacao():
@@ -2028,7 +2109,19 @@ def identificar_banco(filename, df):
 
 def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw):
     """Executa conciliação automática utilizando ConciliacaoService."""
+    global progresso_conciliacao
+    
     try:
+        # Resetar progresso
+        progresso_conciliacao.update({
+            'em_andamento': True,
+            'total': len(movimentos_sistema_raw),
+            'processados': 0,
+            'percentual': 0,
+            'conciliados': 0,
+            'mensagem': 'Iniciando conciliação...'
+        })
+        
         logger.info(
             "[CONCILIACAO] Iniciando conciliação - Sistema: %s registros | Banco: %s registros",
             len(movimentos_sistema_raw),
@@ -2036,8 +2129,10 @@ def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw
         )
 
         if not movimentos_sistema_raw:
+            progresso_conciliacao['em_andamento'] = False
             return {'erro': 'Nenhum movimento do sistema carregado'}
         if not movimentos_banco_raw:
+            progresso_conciliacao['em_andamento'] = False
             return {'erro': 'Nenhum movimento bancário carregado'}
 
         service = ConciliacaoService()
@@ -2154,8 +2249,24 @@ def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw
             banco_index_map[id(movimento_obj)] = len(banco_payload)
             banco_payload.append(payload)
 
-        # Executar conciliação
-        resultados = service.conciliar_movimentos(movimentos_sistema_objs, movimentos_banco_objs)
+        # Callback para atualizar progresso
+        def atualizar_progresso(processados, total, conciliados):
+            global progresso_conciliacao
+            percentual = (processados / total) * 100 if total > 0 else 0
+            progresso_conciliacao.update({
+                'processados': processados,
+                'total': total,
+                'percentual': round(percentual, 1),
+                'conciliados': conciliados,
+                'mensagem': f'Processando {processados}/{total} registros... ({conciliados} conciliados)'
+            })
+        
+        # Executar conciliação com callback de progresso
+        resultados = service.conciliar_movimentos(
+            movimentos_sistema_objs, 
+            movimentos_banco_objs,
+            callback_progresso=atualizar_progresso
+        )
         relatorio = service.gerar_relatorio_conciliacao(resultados)
 
         status_map = {
@@ -2203,6 +2314,13 @@ def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw
             'valor_conciliado': relatorio.get('valores', {}).get('valor_conciliado', 0),
             'taxa_conciliacao': round((conciliados / total_sistema * 100), 2) if total_sistema else 0.0
         }
+        
+        # Marcar conciliação como concluída
+        progresso_conciliacao.update({
+            'em_andamento': False,
+            'percentual': 100,
+            'mensagem': f'Conciliação concluída! {conciliados} registros conciliados'
+        })
 
         return {
             'dados_aberta': sistema_payload,
@@ -2213,6 +2331,8 @@ def executar_conciliacao_automatica(movimentos_sistema_raw, movimentos_banco_raw
 
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro na conciliação automática: {e}", exc_info=True)
+        progresso_conciliacao['em_andamento'] = False
+        progresso_conciliacao['mensagem'] = f'Erro: {str(e)}'
         return {'erro': str(e)}
 
 

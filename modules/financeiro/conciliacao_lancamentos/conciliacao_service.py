@@ -241,9 +241,13 @@ class ConciliacaoService:
             return 0.0
     
     def conciliar_movimentos(self, movimentos_sistema: List[MovimentoSistema], 
-                           movimentos_banco: List[MovimentoBanco]) -> List[ResultadoConciliacao]:
+                           movimentos_banco: List[MovimentoBanco],
+                           callback_progresso=None) -> List[ResultadoConciliacao]:
         """
         Executa conciliação completa entre movimentos do sistema e banco
+        
+        Args:
+            callback_progresso: Função opcional callback(processados, total, conciliados)
         
         Returns:
             Lista com resultados da conciliação
@@ -253,7 +257,19 @@ class ConciliacaoService:
         resultados = []
         movimentos_banco_usados = set()  # Usa índices ao invés dos objetos
         
-        for mov_sistema in movimentos_sistema:
+        total_sistema = len(movimentos_sistema)
+        progresso_intervalo = max(1, total_sistema // 10)  # Log a cada 10%
+        
+        for idx, mov_sistema in enumerate(movimentos_sistema, 1):
+            # Log de progresso a cada 10%
+            if idx % progresso_intervalo == 0 or idx == total_sistema:
+                percentual = (idx / total_sistema) * 100
+                logger.info(f"[CONCILIACAO] Progresso: {idx}/{total_sistema} ({percentual:.1f}%) - {len(resultados)} conciliados")
+                
+                # Chamar callback se fornecido
+                if callback_progresso:
+                    callback_progresso(idx, total_sistema, len(resultados))
+            
             logger.debug(f"Processando movimento sistema ID {mov_sistema.id}")
             
             # Filtra movimentos não utilizados do mesmo banco
