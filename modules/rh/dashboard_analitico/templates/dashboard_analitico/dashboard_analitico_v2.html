@@ -44,7 +44,8 @@
                     Período
                 </label>
                 <select id="periodo-filter" class="form-select">
-                    <option value="este_ano" selected>Este Ano (2025)</option>
+                    <option value="todos_dados" selected>Todos os Dados</option>
+                    <option value="este_ano">Este Ano (2025)</option>
                     <option value="ultimos_12_meses">Últimos 12 Meses</option>
                     <option value="este_mes">Este Mês</option>
                     <option value="trimestre_atual">Trimestre Atual</option>
@@ -316,7 +317,19 @@
                 <div class="kpi-metrics-container">
                     <p class="kpi-label">Turnover Geral</p>
                     <p class="kpi-value" id="kpi-turnover-geral">--</p>
-                    <p class="kpi-trend">últimos 12 meses</p>
+                    <p class="kpi-trend" id="kpi-turnover-periodo">no período</p>
+                </div>
+            </div>
+            
+            <!-- KPI Turnover Anual (visível apenas para períodos > 12 meses) -->
+            <div class="kpi-card kpi-info" id="kpi-turnover-anual-card" style="display: none;">
+                <div class="kpi-icon-container" style="background: rgba(13, 110, 253, 0.15);">
+                    <i class="mdi mdi-calendar-clock" style="color: #0d6efd;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <p class="kpi-label">Turnover Anual Médio</p>
+                    <p class="kpi-value" id="kpi-turnover-anual">--</p>
+                    <p class="kpi-trend" id="kpi-turnover-anual-anos">média anual</p>
                 </div>
             </div>
             
@@ -483,6 +496,73 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Detalhes do Departamento -->
+    <div id="modal-departamento-detalhes" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="mdi mdi-office-building"></i>
+                    Detalhes de Turnover - <span id="modal-dept-nome">Departamento</span>
+                </h3>
+                <button class="modal-close" onclick="dashboardAnalitico.fecharModalDepartamento()">
+                    <i class="mdi mdi-close"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-kpis">
+                    <div class="modal-kpi-item">
+                        <div class="modal-kpi-label">
+                            <i class="mdi mdi-account-group"></i>
+                            Headcount Atual
+                        </div>
+                        <div class="modal-kpi-value" id="modal-dept-headcount">--</div>
+                    </div>
+                    <div class="modal-kpi-item">
+                        <div class="modal-kpi-label">
+                            <i class="mdi mdi-account-arrow-right"></i>
+                            Desligamentos no Período
+                        </div>
+                        <div class="modal-kpi-value" id="modal-dept-desligamentos">--</div>
+                    </div>
+                    <div class="modal-kpi-item">
+                        <div class="modal-kpi-label">
+                            <i class="mdi mdi-percent"></i>
+                            Turnover
+                        </div>
+                        <div class="modal-kpi-value modal-kpi-danger" id="modal-dept-turnover">--</div>
+                    </div>
+                </div>
+                
+                <div class="modal-calculation">
+                    <h4 class="modal-subtitle">
+                        <i class="mdi mdi-calculator"></i>
+                        Cálculo do Turnover
+                    </h4>
+                    <div class="calculation-formula">
+                        <div class="formula-line">
+                            <span class="formula-label">Fórmula:</span>
+                            <code>Turnover = (Desligamentos / Headcount Atual) × 100</code>
+                        </div>
+                        <div class="formula-line">
+                            <span class="formula-label">Aplicando:</span>
+                            <code id="modal-dept-formula">-- / -- × 100 = --%</code>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-context">
+                    <h4 class="modal-subtitle">
+                        <i class="mdi mdi-information"></i>
+                        Contexto e Interpretação
+                    </h4>
+                    <div class="context-text" id="modal-dept-contexto">
+                        <p>Carregando informações...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -803,6 +883,220 @@
     </div>
 
 </div>
+
+<style>
+/* Modal de Detalhes do Departamento */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 2px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.modal-kpi-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+}
+
+.modal-kpi-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.modal-kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2d6b92;
+}
+
+.modal-kpi-danger {
+    color: #dc3545;
+}
+
+.modal-subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-calculation {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #e7f3ff;
+    border-radius: 8px;
+    border-left: 4px solid #0d6efd;
+}
+
+.calculation-formula {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.formula-line {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.formula-label {
+    font-weight: 600;
+    color: #495057;
+    min-width: 85px;
+}
+
+.formula-line code {
+    background: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    color: #2d6b92;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    flex: 1;
+    border: 1px solid #d0e7ff;
+}
+
+.modal-context {
+    padding: 1rem;
+    background: #fff8e1;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.context-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.context-text p {
+    margin: 0 0 0.75rem 0;
+}
+
+.context-text p:last-child {
+    margin-bottom: 0;
+}
+
+.context-text strong {
+    color: #2d6b92;
+}
+
+.context-text ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.context-text li {
+    margin-bottom: 0.25rem;
+}
+
+@media (max-width: 768px) {
+    .modal-kpis {
+        grid-template-columns: 1fr;
+    }
+    
+    .formula-line {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .formula-label {
+        min-width: auto;
+    }
+}
+</style>
+
 {% endblock %}
 
 {% block extra_js %}
