@@ -49,14 +49,17 @@ function garantirDatasSistemaPreenchidas() {
         return;
     }
 
-    const periodoPadrao = calcularPeriodoSistema('mes_atual');
+    // Período padrão: data inicial = ontem, data final = hoje (2 dias)
+    const hoje = new Date();
+    const ontem = new Date(hoje);
+    ontem.setDate(ontem.getDate() - 1);
 
     if (!inicio.value) {
-        inicio.value = periodoPadrao.inicio;
+        inicio.value = formatarISO(ontem);
     }
 
     if (!fim.value) {
-        fim.value = periodoPadrao.fim;
+        fim.value = formatarISO(hoje);
     }
 
     fim.min = inicio.value || '';
@@ -335,6 +338,22 @@ async function processarArquivos(e) {
         
         mostrarLoading('Processando conciliação automática...');
         
+        // Iniciar polling de progresso
+        const intervalId = setInterval(async () => {
+            try {
+                const progressoResp = await fetch('/financeiro/conciliacao-lancamentos/api/progresso-conciliacao');
+                if (progressoResp.ok) {
+                    const progresso = await progressoResp.json();
+                    if (progresso.em_andamento) {
+                        const mensagem = `${progresso.mensagem}<br><div class="progress mt-2"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${progresso.percentual}%">${progresso.percentual}%</div></div>`;
+                        mostrarLoading(mensagem);
+                    }
+                }
+            } catch (err) {
+                console.error('Erro ao consultar progresso:', err);
+            }
+        }, 500); // Atualizar a cada 500ms
+        
         // 2. Conciliação automática
         const conciliarResp = await fetch('/financeiro/conciliacao-lancamentos/api/processar-conciliacao', {
             method: 'POST',
@@ -342,6 +361,9 @@ async function processarArquivos(e) {
                 'Content-Type': 'application/json'
             }
         });
+        
+        // Parar polling
+        clearInterval(intervalId);
         
         if (!conciliarResp.ok) throw new Error('Erro na conciliação');
         const conciliarData = await conciliarResp.json();
@@ -1034,7 +1056,13 @@ function formatarBanco(banco) {
 }
 
 function mostrarLoading(mensagem) {
-    document.getElementById('loading-message').textContent = mensagem;
+    const loadingElement = document.getElementById('loading-message');
+    // Usar innerHTML se mensagem contém HTML, senão textContent
+    if (mensagem.includes('<')) {
+        loadingElement.innerHTML = mensagem;
+    } else {
+        loadingElement.textContent = mensagem;
+    }
     document.getElementById('loading-overlay').style.display = 'flex';
 }
 
@@ -1193,6 +1221,10 @@ function normalizarMovimentoSistema(item) {
     normalizado.valor = parseFloat(item.valor || 0);
     normalizado.status = (item.status || 'pendente').toLowerCase();
     normalizado.empresa = item.empresa || item.empresa_nome || '';
+    
+    // BUGFIX: Normalizar nome do banco para garantir compatibilidade com filtros
+    // 'ITAU' → 'itau', 'Banco do Brasil'/'BANCO DO BRASIL' → 'banco_brasil'
+    normalizado.banco = normalizarBancoId(item.banco || item.nome_banco || item.nome_banco_original || '');
 
     aplicarReferenciaExtraida(normalizado, [
         normalizado.ref_unique,
