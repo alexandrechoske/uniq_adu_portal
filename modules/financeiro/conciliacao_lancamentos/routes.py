@@ -1514,7 +1514,22 @@ def movimentos_sistema():
         else:
             # Aplicar filtro de banco manual se especificado e usuário não restrito
             if banco_filtro and banco_filtro != 'todos':
-                query = query.ilike('nome_banco', f'%{banco_filtro}%')
+                # Mapear valores do dropdown para nomes REAIS no banco de dados
+                banco_mapeamento = {
+                    'itau': ['ITAU'],  # Todas as variações de Itaú no banco
+                    'banco_brasil': ['BANCO DO BRASIL', 'Banco do Brasil'],  # Todas as variações de BB
+                    'santander': ['SANTANDER', 'SANTANDER - COMPROMISSADA', 'Santander', 'Santander - Compromissada '],
+                    'bradesco': ['BRADESCO', 'Bradesco']
+                }
+                
+                bancos_para_filtrar = banco_mapeamento.get(banco_filtro.lower())
+                
+                if bancos_para_filtrar:
+                    logger.info(f"[CONCILIACAO] Aplicando filtro para bancos: {bancos_para_filtrar}")
+                    query = query.in_('nome_banco', bancos_para_filtrar)
+                else:
+                    # Fallback: usar ilike se não estiver no mapeamento
+                    query = query.ilike('nome_banco', f'%{banco_filtro}%')
         
         if empresa_filtro and empresa_filtro.lower() != 'todas':
             query = query.ilike('empresa', f'%{empresa_filtro}%')
