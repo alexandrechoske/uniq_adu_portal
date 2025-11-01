@@ -175,9 +175,40 @@
                         <th>Usuário</th>
                         <th>Role</th>
                         <th>Total Acessos</th>
-                        <th>Último Login</th>
-                        <th>Sessão Média</th>
+                        <th>Último Acesso</th>
                         <th>Páginas Favoritas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dados carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Inactive Users Table -->
+    <div class="enhanced-table-section" id="inactive-users-container">
+        <div class="enhanced-table-header">
+            <h2 class="enhanced-table-title">
+                <i class="mdi mdi-account-alert"></i>
+                Usuários Inativos (+15 dias)
+            </h2>
+            <div class="enhanced-table-controls">
+                <div class="enhanced-table-info">
+                    <span class="enhanced-table-count" id="inactive-users-count">Carregando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="enhanced-table-container">
+            <div id="inactive-users-loading" class="component-loading"><div class="spinner"></div></div>
+            <table id="inactive-users-table" class="enhanced-table">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>E-mail</th>
+                        <th>Role</th>
+                        <th>Último Acesso</th>
+                        <th>Dias Inativo</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -296,6 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ANALYTICS_TRY_WRAP('createUsersActivityChart', 'users-activity-loading');
     ANALYTICS_TRY_WRAP('createHourlyHeatmapChart', 'hourly-loading');
     ANALYTICS_TRY_WRAP('updateTopUsersTable', 'top-users-loading');
+    ANALYTICS_TRY_WRAP('updateInactiveUsersTable', 'inactive-users-loading');
     ANALYTICS_TRY_WRAP('updateRecentActivityTable', 'recent-activity-loading');
 
     // Fallback: observar linhas das tabelas para esconder loaders quando houver conteúdo
@@ -310,11 +342,12 @@ document.addEventListener('DOMContentLoaded', function() {
         mo.observe(tbody, { childList: true });
     };
     observeRows('#top-users-table', 'top-users-loading');
+    observeRows('#inactive-users-table', 'inactive-users-loading');
     observeRows('#recent-activity-table', 'recent-activity-loading');
 
     // Safety timeout para evitar loader preso
     setTimeout(() => {
-        ['kpi-loading','daily-loading','top-pages-loading','hourly-loading','users-activity-loading','top-users-loading','recent-activity-loading']
+        ['kpi-loading','daily-loading','top-pages-loading','hourly-loading','users-activity-loading','top-users-loading','inactive-users-loading','recent-activity-loading']
             .forEach(ANALYTICS_HIDE_LOADER);
         console.warn('[ANALYTICS] Safety timeout reached. Forced hiding of loaders.');
     }, 20000);

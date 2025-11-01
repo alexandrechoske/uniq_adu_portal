@@ -86,40 +86,44 @@ async function loadAnalyticsStats() {
         console.log('[ANALYTICS] Fetching data - attempt', loadAttempts);
         
         // Fazer requisições em paralelo
-        const [statsResponse, chartsResponse, usersResponse, activityResponse] = await Promise.all([
+        const [statsResponse, chartsResponse, usersResponse, activityResponse, inactiveUsersResponse] = await Promise.all([
             fetch('/analytics/api/stats?' + new URLSearchParams(currentFilters)),
             fetch('/analytics/api/charts?' + new URLSearchParams(currentFilters)),
             fetch('/analytics/api/top-users?' + new URLSearchParams(currentFilters)),
-            fetch('/analytics/api/recent-activity?' + new URLSearchParams(currentFilters))
+            fetch('/analytics/api/recent-activity?' + new URLSearchParams(currentFilters)),
+            fetch('/analytics/api/inactive-users')
         ]);
         
         console.log('[ANALYTICS] Responses received:', {
             stats: statsResponse.status,
             charts: chartsResponse.status,
             users: usersResponse.status,
-            activity: activityResponse.status
+            activity: activityResponse.status,
+            inactiveUsers: inactiveUsersResponse.status
         });
         
-        if (!statsResponse.ok || !chartsResponse.ok || !usersResponse.ok || !activityResponse.ok) {
+        if (!statsResponse.ok || !chartsResponse.ok || !usersResponse.ok || !activityResponse.ok || !inactiveUsersResponse.ok) {
             throw new Error('Erro ao carregar dados - Status codes: ' + 
-                [statsResponse.status, chartsResponse.status, usersResponse.status, activityResponse.status].join(','));
+                [statsResponse.status, chartsResponse.status, usersResponse.status, activityResponse.status, inactiveUsersResponse.status].join(','));
         }
         
-        const [stats, charts, users, activity] = await Promise.all([
+        const [stats, charts, users, activity, inactiveUsersData] = await Promise.all([
             statsResponse.json(),
             chartsResponse.json(),
             usersResponse.json(),
-            activityResponse.json()
+            activityResponse.json(),
+            inactiveUsersResponse.json()
         ]);
         
         console.log('[ANALYTICS] Data parsed successfully');
         
-        analyticsData = { stats, charts, users, activity };
+        analyticsData = { stats, charts, users, activity, inactiveUsers: inactiveUsersData.inactive_users || [] };
         
         // Atualizar interface
         updateStatsCards(stats);
         updateCharts(charts);
         updateTopUsersTable(users);
+        updateInactiveUsersTable(analyticsData.inactiveUsers);
         updateRecentActivityTable(activity);
         updateFilterSummary();
         
@@ -287,6 +291,24 @@ function createDailyAccessChart(data) {
                             return `${context.dataset.label}: ${context.raw}`;
                         }
                     }
+                },
+                datalabels: {
+                    display: function(context) {
+                        // Mostrar apenas se o valor for maior que 0
+                        return context.dataset.data[context.dataIndex] > 0;
+                    },
+                    align: 'top',
+                    anchor: 'end',
+                    color: function(context) {
+                        return context.datasetIndex === 0 ? '#3498DB' : '#10b981';
+                    },
+                    font: {
+                        size: 10,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
                 }
             },
             scales: {
@@ -315,7 +337,7 @@ function createDailyAccessChart(data) {
                 }
             }
         },
-        plugins: []
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -326,31 +348,68 @@ function createTopPagesChart(data) {
     const labels = data.slice(0, 10).map(item => item.page_name || 'Sem nome');
     const values = data.slice(0, 10).map(item => item.count);
     
+    // Mudar para heatmap (bar horizontal)
     charts.topPages = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
+                label: 'Acessos',
                 data: values,
-                backgroundColor: [
-                    '#3498DB', '#10b981', '#f59e0b', '#ef4444', '#06b6d4',
-                    '#8b5cf6', '#f97316', '#059669', '#ec4899', '#6366f1'
-                ]
+                backgroundColor: values.map(value => {
+                    const max = Math.max(...values);
+                    const intensity = max > 0 ? value / max : 0;
+                    return `rgba(52, 152, 219, ${0.3 + intensity * 0.7})`;
+                }),
+                borderColor: '#3498DB',
+                borderWidth: 1
             }]
         },
         options: {
+            indexAxis: 'y', // Barras horizontais
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 12,
-                        padding: 10
+                    display: false
+                },
+                datalabels: {
+                    display: true,
+                    align: 'end',
+                    anchor: 'end',
+                    color: '#3498DB',
+                    font: {
+                        size: 11,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value;
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        precision: 0
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -395,6 +454,19 @@ function createUsersActivityChart(data) {
                             return `Acessos: ${context.raw}`;
                         }
                     }
+                },
+                datalabels: {
+                    display: true,
+                    align: 'end',
+                    anchor: 'end',
+                    color: '#10b981',
+                    font: {
+                        size: 11,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value;
+                    }
                 }
             },
             scales: { 
@@ -423,7 +495,7 @@ function createUsersActivityChart(data) {
                 } 
             }
         },
-        plugins: []
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -431,47 +503,102 @@ function createHourlyHeatmapChart(data) {
     const ctx = document.getElementById('hourly-heatmap-chart');
     if (!ctx) return;
     
-    // Preparar dados para heatmap por hora
+    // Preparar dados para heatmap por hora com usuários únicos
     const hours = Array.from({length: 24}, (_, i) => i);
     const hourlyData = hours.map(hour => {
         const hourData = data.find(item => item.hour === hour);
         return hourData ? hourData.count : 0;
     });
     
+    const hourlyUsers = hours.map(hour => {
+        const hourData = data.find(item => item.hour === hour);
+        return hourData ? hourData.unique_users : 0;
+    });
+    
     charts.hourlyHeatmap = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: hours.map(h => h.toString().padStart(2, '0') + ':00'),
-            datasets: [{
-                label: 'Acessos por Hora',
-                data: hourlyData,
-                backgroundColor: hourlyData.map(value => {
-                    const max = Math.max(...hourlyData);
-                    const intensity = max > 0 ? value / max : 0;
-                    return `rgba(52, 152, 219, ${0.2 + intensity * 0.8})`;
-                }),
-                borderColor: '#3498DB',
-                borderWidth: 1,
-                borderRadius: 2
-            }]
+            datasets: [
+                {
+                    label: 'Total de Acessos',
+                    data: hourlyData,
+                    backgroundColor: hourlyData.map(value => {
+                        const max = Math.max(...hourlyData);
+                        const intensity = max > 0 ? value / max : 0;
+                        return `rgba(52, 152, 219, ${0.2 + intensity * 0.8})`;
+                    }),
+                    borderColor: '#3498DB',
+                    borderWidth: 1,
+                    borderRadius: 2
+                },
+                {
+                    label: 'Usuários Únicos',
+                    data: hourlyUsers,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 2
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        font: { weight: 'bold' },
+                        padding: 15
+                    }
+                },
+                datalabels: {
+                    display: function(context) {
+                        return context.dataset.data[context.dataIndex] > 0;
+                    },
+                    align: 'end',
+                    anchor: 'end',
+                    color: function(context) {
+                        return context.datasetIndex === 0 ? '#3498DB' : '#10b981';
+                    },
+                    font: {
+                        size: 9,
+                        weight: 'bold'
+                    },
+                    formatter: function(value) {
+                        return value > 0 ? value : '';
+                    }
                 }
             },
             scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 9
+                        }
+                    }
+                },
                 y: {
                     beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
                     ticks: {
-                        precision: 0
+                        precision: 0,
+                        font: {
+                            size: 10
+                        }
                     }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -495,12 +622,53 @@ function updateTopUsersTable(data) {
                 <span class="role-badge role-${user.user_role || 'unknown'}">${user.user_role || 'N/A'}</span>
             </td>
             <td><strong>${user.total_access || 0}</strong></td>
-            <td>${user.last_login ? new Date(user.last_login).toLocaleString('pt-BR') : 'Nunca'}</td>
-            <td>${user.avg_session_minutes || 0} min</td>
+            <td>${user.last_access ? new Date(user.last_access).toLocaleString('pt-BR') : 'N/A'}</td>
             <td>${user.favorite_pages || 'N/A'}</td>
         </tr>
     `).join('');
 }
+
+function updateInactiveUsersTable(data) {
+    const tbody = document.querySelector('#inactive-users-table tbody');
+    const countElement = document.getElementById('inactive-users-count');
+    
+    if (!tbody || !countElement) return;
+    
+    countElement.textContent = `${data.length} usuários inativos`;
+    
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #6b7280;">Nenhum usuário inativo encontrado</td></tr>';
+        return;
+    }
+    
+    // Garantir ordenação decrescente por dias inativos (mais dias primeiro)
+    const sortedData = [...data].sort((a, b) => b.days_inactive - a.days_inactive);
+    
+    tbody.innerHTML = sortedData.map(user => `
+        <tr>
+            <td>
+                <div class="user-info">
+                    <strong>${user.user_name || 'N/A'}</strong>
+                </div>
+            </td>
+            <td>${user.user_email || 'N/A'}</td>
+            <td>
+                <span class="role-badge role-${user.user_role || 'unknown'}">${user.user_role || 'N/A'}</span>
+            </td>
+            <td>${user.last_access || 'Nunca acessou'}</td>
+            <td>
+                <span class="badge badge-warning" style="background-color: ${user.days_inactive > 30 ? '#ef4444' : '#f59e0b'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                    ${user.days_inactive} dias
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Variáveis de paginação
+let currentPage = 1;
+let itemsPerPage = 15;
+let allActivities = [];
 
 function updateRecentActivityTable(data) {
     const tbody = document.querySelector('#recent-activity-table tbody');
@@ -508,9 +676,34 @@ function updateRecentActivityTable(data) {
     
     if (!tbody || !countElement) return;
     
-    countElement.textContent = `${data.length} atividades`;
+    // Armazenar todos os dados
+    allActivities = data;
     
-    tbody.innerHTML = data.map(activity => {
+    // Renderizar primeira página
+    renderActivityPage(1);
+    
+    // Criar controles de paginação
+    createPaginationControls();
+}
+
+function renderActivityPage(page) {
+    const tbody = document.querySelector('#recent-activity-table tbody');
+    const countElement = document.getElementById('activity-count');
+    
+    if (!tbody || !countElement) return;
+    
+    currentPage = page;
+    
+    // Calcular índices
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = allActivities.slice(startIndex, endIndex);
+    
+    // Atualizar contador
+    const totalPages = Math.ceil(allActivities.length / itemsPerPage);
+    countElement.textContent = `${allActivities.length} atividades (Página ${page} de ${totalPages})`;
+    
+    tbody.innerHTML = pageData.map(activity => {
         // Tratamento seguro da data
         let formattedDate = 'Data inválida';
         if (activity.timestamp) {
@@ -542,6 +735,60 @@ function updateRecentActivityTable(data) {
         </tr>
         `;
     }).join('');
+}
+
+function createPaginationControls() {
+    const container = document.getElementById('recent-activity-container');
+    if (!container) return;
+    
+    // Remover controles existentes
+    const existingControls = container.querySelector('.pagination-controls');
+    if (existingControls) {
+        existingControls.remove();
+    }
+    
+    const totalPages = Math.ceil(allActivities.length / itemsPerPage);
+    
+    if (totalPages <= 1) return; // Não mostrar paginação se tiver apenas 1 página
+    
+    const controls = document.createElement('div');
+    controls.className = 'pagination-controls';
+    controls.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px; margin-top: 10px;';
+    
+    // Botão anterior
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '‹ Anterior';
+    prevBtn.className = 'btn btn-sm btn-outline-secondary';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => {
+        if (currentPage > 1) {
+            renderActivityPage(currentPage - 1);
+            createPaginationControls();
+        }
+    };
+    
+    // Informação da página
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+    pageInfo.style.cssText = 'color: #6b7280; font-weight: 500;';
+    
+    // Botão próximo
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Próximo ›';
+    nextBtn.className = 'btn btn-sm btn-outline-secondary';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+            renderActivityPage(currentPage + 1);
+            createPaginationControls();
+        }
+    };
+    
+    controls.appendChild(prevBtn);
+    controls.appendChild(pageInfo);
+    controls.appendChild(nextBtn);
+    
+    container.appendChild(controls);
 }
 
 function updateKPIValue(elementId, value, suffix = '') {
