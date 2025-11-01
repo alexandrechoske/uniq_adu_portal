@@ -105,7 +105,7 @@ def analytics_dashboard():
             logger.warning(f"Usuário sem permissão para acessar analytics portal. Módulos: {accessible_modules}")
             return render_template('errors/403.html'), 403
             
-        return render_template('analytics_portal_new.html', analytics_type='portal')
+        return render_template('analytics.html', analytics_type='portal')
     except Exception as e:
         logger.error(f"Erro ao carregar página de analytics: {e}")
         return f"Erro ao carregar página: {str(e)}", 500
@@ -395,10 +395,10 @@ def get_charts():
         if ids_fora:
             logger.warning(f"[ANALYTICS] {len(ids_fora)} logs de page_access não entraram em nenhum dia do gráfico. IDs: {list(ids_fora)[:10]} ...")
         
-        # Top páginas
+        # Top páginas (filtrar logs sem usuário)
         page_counts = {}
         for log in logs:
-            if log.get('action_type') == 'page_access':
+            if log.get('action_type') == 'page_access' and log.get('user_name'):
                 page_name = log.get('page_name', 'Sem nome')
                 page_counts[page_name] = page_counts.get(page_name, 0) + 1
         
@@ -407,11 +407,11 @@ def get_charts():
             for page, count in sorted(page_counts.items(), key=lambda x: x[1], reverse=True)
         ]
         
-        # Atividade de usuários
+        # Atividade de usuários (filtrar logs sem usuário)
         user_counts = {}
         for log in logs:
-            if log.get('action_type') == 'page_access':
-                user_name = log.get('user_name', 'Usuário')
+            if log.get('action_type') == 'page_access' and log.get('user_name'):
+                user_name = log.get('user_name')
                 user_counts[user_name] = user_counts.get(user_name, 0) + 1
         
         users_activity = [
@@ -419,17 +419,30 @@ def get_charts():
             for user, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)
         ]
         
-        # Mapa de calor por horário
+        # Mapa de calor por horário (com usuários únicos)
         hourly_counts = {}
+        hourly_users = {}
         for log in logs:
             try:
-                hour = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00')).hour
-                hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+                if log.get('action_type') == 'page_access' and log.get('user_name'):
+                    hour = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00')).hour
+                    hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+                    
+                    # Contar usuários únicos por hora
+                    if hour not in hourly_users:
+                        hourly_users[hour] = set()
+                    user_id = log.get('user_id')
+                    if user_id:
+                        hourly_users[hour].add(user_id)
             except:
                 continue
         
         hourly_heatmap = [
-            {'hour': hour, 'count': hourly_counts.get(hour, 0)}
+            {
+                'hour': hour, 
+                'count': hourly_counts.get(hour, 0),
+                'unique_users': len(hourly_users.get(hour, set()))
+            }
             for hour in range(24)
         ]
         
@@ -499,22 +512,24 @@ def get_top_users():
             (log.get('ip_address') == '127.0.0.1')
         )]
 
-        # Agrupar por usuário
+        # Agrupar por usuário (filtrar logs sem usuário)
         user_stats = {}
         for log in logs:
             user_id = log.get('user_id')
-            if not user_id:
+            user_name = log.get('user_name')
+            
+            # Ignorar logs sem usuário (acessos antes do login)
+            if not user_id or not user_name:
                 continue
             
             if user_id not in user_stats:
                 user_stats[user_id] = {
                     'user_id': user_id,
-                    'user_name': log.get('user_name', 'N/A'),
+                    'user_name': user_name,
                     'user_email': log.get('user_email', 'N/A'),
                     'user_role': log.get('user_role', 'N/A'),
                     'total_access': 0,
-                    'last_login': None,
-                    'avg_session_minutes': 30,  # Placeholder
+                    'last_access': None,
                     'favorite_pages': []
                 }
             
@@ -523,10 +538,11 @@ def get_top_users():
                 page_name = log.get('page_name', 'N/A')
                 if page_name not in user_stats[user_id]['favorite_pages']:
                     user_stats[user_id]['favorite_pages'].append(page_name)
-            
-            if log.get('action_type') == 'login':
-                if not user_stats[user_id]['last_login'] or log.get('created_at') > user_stats[user_id]['last_login']:
-                    user_stats[user_id]['last_login'] = log.get('created_at')
+                
+                # Atualizar último acesso (page_access mais recente)
+                log_time = log.get('created_at')
+                if not user_stats[user_id]['last_access'] or log_time > user_stats[user_id]['last_access']:
+                    user_stats[user_id]['last_access'] = log_time
 
         # Converter para lista e ordenar
         top_users = list(user_stats.values())
@@ -546,7 +562,7 @@ def get_top_users():
 @login_required
 def get_recent_activity():
     """
-    API para atividade recente
+    API para atividade recente (últimos 7 dias por padrão)
     """
     try:
         # Obter parâmetros de filtro
@@ -554,23 +570,25 @@ def get_recent_activity():
         user_role = request.args.get('userRole', 'all')
         action_type = request.args.get('actionType', 'all')
         
-        # Calcular datas
+        # Calcular datas - forçar pelo menos 7 dias para a tabela de atividades recentes
         end_date = datetime.now()
         if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            # Mesmo se filtro for 1 dia, pegar 7 dias para a tabela de atividades
+            start_date = end_date - timedelta(days=7)
         elif date_range == '7d':
             start_date = end_date - timedelta(days=7)
         elif date_range == '30d':
             start_date = end_date - timedelta(days=30)
         else:
-            start_date = end_date - timedelta(days=30)
+            start_date = end_date - timedelta(days=7)  # Default: 7 dias
         
         # Query base
         query = supabase_admin.table('access_logs').select('*')
         query = query.gte('created_at', start_date.isoformat())
         query = query.lte('created_at', end_date.isoformat())
+        query = query.not_.is_('user_name', 'null')  # Filtrar registros sem usuário (sintaxe correta Supabase)
         query = query.order('created_at', desc=True)
-        query = query.limit(50)  # Limitar a 50 registros mais recentes
+        query = query.limit(150)  # Limitar a 150 registros mais recentes
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -1568,6 +1586,97 @@ def get_agente_empresas_list():
             'success': False,
             'error': str(e),
             'empresas': []
+        })
+
+@bp.route('/api/inactive-users')
+@login_required
+def get_inactive_users():
+    """
+    API para obter usuários sem acesso há mais de 15 dias
+    """
+    try:
+        from datetime import timezone
+        
+        # Data limite: 15 dias atrás (com timezone aware)
+        now = datetime.now(timezone.utc)
+        inactive_threshold = now - timedelta(days=15)
+        
+        logger.info(f"[INACTIVE_USERS] Buscando usuários inativos desde {inactive_threshold}")
+        
+        # Buscar último acesso de cada usuário nos logs
+        logs_query = supabase_admin.table('access_logs').select('user_id, user_name, user_email, user_role, created_at').order('created_at', desc=True)
+        logs_response = run_with_retries(
+            'analytics.get_inactive_users.logs',
+            lambda: logs_query.execute(),
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+        all_logs = logs_response.data if logs_response.data else []
+        logger.info(f"[INACTIVE_USERS] Total de logs encontrados: {len(all_logs)}")
+        
+        # Filtrar logs de desenvolvimento e sem user_name
+        all_logs = [log for log in all_logs if log.get('user_name') and not (
+            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
+            (log.get('ip_address') == '127.0.0.1')
+        )]
+        logger.info(f"[INACTIVE_USERS] Logs após filtro: {len(all_logs)}")
+        
+        # Mapear último acesso por usuário
+        last_access_map = {}
+        for log in all_logs:
+            user_id = log.get('user_id')
+            user_name = log.get('user_name')
+            
+            if user_id and user_id not in last_access_map:
+                last_access_map[user_id] = {
+                    'last_access': log.get('created_at'),
+                    'user_name': user_name,
+                    'user_email': log.get('user_email', 'N/A'),
+                    'user_role': log.get('user_role', 'N/A')
+                }
+        
+        logger.info(f"[INACTIVE_USERS] Total de usuários únicos: {len(last_access_map)}")
+        
+        # Identificar usuários inativos (mais de 15 dias sem acesso)
+        inactive_users = []
+        for user_id, user_data in last_access_map.items():
+            last_access_str = user_data['last_access']
+            try:
+                last_access = datetime.fromisoformat(last_access_str.replace('Z', '+00:00'))
+                days_inactive = (now - last_access).days
+                
+                logger.debug(f"[INACTIVE_USERS] {user_data['user_name']}: {days_inactive} dias inativo")
+                
+                if days_inactive > 15:
+                    inactive_users.append({
+                        'user_id': user_id,
+                        'user_name': user_data['user_name'],
+                        'user_email': user_data['user_email'],
+                        'user_role': user_data['user_role'],
+                        'last_access': _format_ts_with_policy(last_access_str, 'none'),
+                        'days_inactive': days_inactive
+                    })
+            except Exception as e:
+                logger.warning(f"[INACTIVE_USERS] Erro ao processar usuário {user_id}: {e}")
+                continue
+        
+        # Ordenar por dias inativos (decrescente)
+        inactive_users.sort(key=lambda x: x['days_inactive'], reverse=True)
+        
+        logger.info(f"[ANALYTICS] Encontrados {len(inactive_users)} usuários inativos (+15 dias)")
+        
+        return jsonify({
+            'success': True,
+            'inactive_users': inactive_users
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter usuários inativos: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'inactive_users': []
         })
 
 @bp.route('/api/agente/interaction-details/<log_id>')
