@@ -39,7 +39,7 @@ def _serialize_news(record: Dict[str, Any]) -> Dict[str, Any]:
 
 def _fetch_news(limit: int, fonte: Optional[str] = None) -> List[Dict[str, Any]]:
     """Busca notícias no Supabase ordenadas por ID decrescente (mais recentes primeiro)."""
-    query = supabase_admin.table('comex_news').select('*').order('id', desc=True)
+    query = supabase_admin.table('comex_news').select('*').eq('empresa', 'Unique').order('id', desc=True)
 
     if fonte:
         query = query.eq('source', fonte)
@@ -52,7 +52,7 @@ def _fetch_news(limit: int, fonte: Optional[str] = None) -> List[Dict[str, Any]]
 
 def _fetch_categories() -> List[str]:
     """Retorna lista de fontes/categorias disponíveis."""
-    response = supabase_admin.table('comex_news').select('source').execute()
+    response = supabase_admin.table('comex_news').select('source').eq('empresa', 'Unique').execute()
 
     fontes = {row.get('source') or 'COMEX' for row in (response.data or [])}
     return sorted(fontes)
@@ -109,6 +109,7 @@ def get_noticia_detalhes(noticia_id):
             supabase_admin
             .table('comex_news')
             .select('*')
+            .eq('empresa', 'Unique')
             .eq('id', noticia_id)
             .limit(1)
             .execute()

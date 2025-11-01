@@ -86,6 +86,16 @@
                     </a>
                     {% endif %}
                     
+                    {% if 'dashboard_operacional' in accessible_modules %}
+                    <a href="https://portalunique.com.br/dashboard-interno-mapa/" target="_blank" class="module-card" data-module="dashboard_interno_mapa">
+                        <div class="module-card-header">
+                            <div class="module-icon"><i class="mdi mdi-map-marker-radius"></i></div>
+                            <h4 class="module-title">Dashboard Interno Mapa</h4>
+                        </div>
+                        <p class="module-desc">Visualização geográfica de operações em andamento com mapa interativo</p>
+                    </a>
+                    {% endif %}
+                    
                     {% if 'dash_importacoes_resumido' in accessible_modules or 'importacoes' in accessible_modules %}
                     <a href="{{ url_for('dash_importacoes_resumido.dashboard') }}" class="module-card" data-module="dashboard_importacoes">
                         <div class="module-card-header">
