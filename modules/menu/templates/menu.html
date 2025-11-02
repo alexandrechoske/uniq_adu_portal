@@ -232,6 +232,19 @@
                         </div>
                         <p class="module-desc">{{ t('modules.usuarios.desc') }}</p>
                     </a>
+                    
+                    {% set user_role = session.get('user', {}).get('role') %}
+                    {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
+                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                    <a href="{{ url_for('usuarios.perfis_home') }}" class="module-card" data-module="perfis">
+                        <span class="role-badge admin">MASTER ADMIN</span>
+                        <div class="module-card-header">
+                            <div class="module-icon"><i class="mdi mdi-shield-account"></i></div>
+                            <h4 class="module-title">Perfis de Acesso</h4>
+                        </div>
+                        <p class="module-desc">Gerencie perfis e permissões de acesso ao sistema</p>
+                    </a>
+                    {% endif %}
                     {% endif %}
                     
                     {% if 'analytics_portal' in accessible_modules %}
@@ -264,6 +277,19 @@
                             <h4 class="module-title">Ajuste de Status</h4>
                         </div>
                         <p class="module-desc">Gerencie ajustes operacionais de processos internos.</p>
+                    </a>
+                    {% endif %}
+                    
+                    {% set user_role = session.get('user', {}).get('role') %}
+                    {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
+                    {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
+                    <a href="{{ url_for('usuarios_online.index') }}" class="module-card" data-module="usuarios_online">
+                        <span class="role-badge admin">MASTER ADMIN</span>
+                        <div class="module-card-header">
+                            <div class="module-icon"><i class="mdi mdi-account-multiple-check"></i></div>
+                            <h4 class="module-title">Usuários Online</h4>
+                        </div>
+                        <p class="module-desc">Monitoramento em tempo real dos usuários ativos no portal</p>
                     </a>
                     {% endif %}
                 </div>

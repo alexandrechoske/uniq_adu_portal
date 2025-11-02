@@ -785,6 +785,14 @@
                         <i class="mdi mdi-chart-line"></i>
                         <span class="sidebar-text">Dashboard Operacional</span>
                     </a>
+                    
+                    <a href="/dashboard-interno-mapa"
+                       class="sidebar-item sidebar-page-item"
+                       title="Dashboard Interno Mapa"
+                       target="_blank">
+                        <i class="mdi mdi-map-marker-radius"></i>
+                        <span class="sidebar-text">Dashboard Interno Mapa</span>
+                    </a>
                     {% endif %}
                     
                     {% if 'importacoes' in accessible_modules %}
@@ -927,6 +935,13 @@
                        title="Perfis">
                         <i class="mdi mdi-shield-account"></i>
                         <span class="sidebar-text">Perfis</span>
+                    </a>
+                    
+                    <a href="{{ url_for('usuarios_online.index') }}"
+                       class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios_online.') %}active{% endif %}"
+                       title="Usuários Online">
+                        <i class="mdi mdi-account-multiple-check"></i>
+                        <span class="sidebar-text">Usuários Online</span>
                     </a>
                     {% endif %}
                     {% endif %}
