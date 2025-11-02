@@ -288,19 +288,172 @@
             align-items: center;
             gap: 0.5rem;
         }
+        /* Estilos para o sistema de slider */
+        .screen-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .screen {
+            width: 100%;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+        
+        .screen.hidden {
+            display: none;
+        }
+        
+        .slider-controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+        
+        .slider-nav-buttons {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 0.5rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+        }
+        
+        .slider-nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(30, 41, 59, 0.8);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .slider-nav-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.6);
+            color: #38bdf8;
+        }
+        
+        .slider-nav-btn.active {
+            background: rgba(56, 189, 248, 0.3);
+            border-color: #38bdf8;
+            color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+        
+        .slider-auto-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        
+        .slider-auto-toggle input[type="checkbox"] {
+            width: 40px;
+            height: 20px;
+            appearance: none;
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .slider-auto-toggle input[type="checkbox"]:checked {
+            background: rgba(56, 189, 248, 0.5);
+        }
+        
+        .slider-auto-toggle input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #94a3b8;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .slider-auto-toggle input[type="checkbox"]:checked::before {
+            left: 22px;
+            background: #38bdf8;
+        }
+        
+        .slider-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 9999px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .slider-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+            width: 0%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+        }
     </style>
 </head>
 <body class="antialiased">
 
-    <div class="dashboard-shell min-h-screen w-full p-4 md:p-8 flex flex-col gap-6">
-        <header class="flex flex-col gap-4 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-8">
-            <div class="flex items-center gap-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
-                <div>
-                    <h1 class="text-3xl font-bold text-white">Dashboard de Operações</h1>
-                    <p class="text-base text-gray-400">Unique Soluções Aduaneiras</p>
+    <!-- Controles do Slider -->
+    <div class="slider-controls">
+        <div class="slider-auto-toggle">
+            <span>Auto</span>
+            <input type="checkbox" id="slider-auto-toggle" checked>
+        </div>
+        <div class="slider-progress">
+            <div class="slider-progress-bar" id="slider-progress-bar"></div>
+        </div>
+        <div class="slider-nav-buttons">
+            <button class="slider-nav-btn active" id="btn-screen-dashboard" title="Dashboard de Operações">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                </svg>
+            </button>
+            <button class="slider-nav-btn" id="btn-screen-indicadores" title="Indicadores Operacionais">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"></path>
+                    <path d="M18 17V9"></path>
+                    <path d="M13 17V5"></path>
+                    <path d="M8 17v-3"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 1: Dashboard de Operações (Mapa) -->
+    <div id="dashboard-screen" class="screen">
+        <div class="dashboard-shell min-h-screen w-full p-4 md:p-8 flex flex-col gap-6">
+            <header class="flex flex-col gap-4 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-8">
+                <div class="flex items-center gap-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                    <div>
+                        <h1 class="text-3xl font-bold text-white">Dashboard de Operações</h1>
+                        <p class="text-base text-gray-400">Unique Soluções Aduaneiras</p>
+                    </div>
                 </div>
-            </div>
             <div class="header-exchange-panel">
                 <div class="header-exchange-grid">
                     <div class="currency-pair">
@@ -443,9 +596,278 @@
                 </div>
             </aside>
         </main>
+        </div>
     </div>
+    <!-- Fim Screen 1: Dashboard -->
+
+    <!-- Screen 2: Indicadores Operacionais -->
+    {% include 'dashboard_interno_mapa/indicadores.html' %}
+    <!-- Fim Screen 2: Indicadores -->
 
     <script>
+        // ========== SLIDER SYSTEM ==========
+        let currentScreen = 0; // 0 = dashboard, 1 = indicadores
+        let autoSlideEnabled = true;
+        let autoSlideInterval = null;
+        const SLIDE_DURATION = 20000; // 20 segundos por tela
+        const PROGRESS_INTERVAL = 100; // Atualizar barra a cada 100ms
+        
+        const screens = [
+            { id: 'dashboard-screen', btn: 'btn-screen-dashboard' },
+            { id: 'indicadores-screen', btn: 'btn-screen-indicadores' }
+        ];
+        
+        function showScreen(index) {
+            if (index < 0 || index >= screens.length) return;
+            
+            console.log(`[SLIDER] Mudando para tela ${index}`);
+            currentScreen = index;
+            
+            // Atualizar visibilidade das telas
+            screens.forEach((screen, i) => {
+                const element = document.getElementById(screen.id);
+                const btnElement = document.getElementById(screen.btn);
+                
+                if (i === index) {
+                    element.classList.remove('hidden');
+                    element.style.display = 'block';
+                    btnElement.classList.add('active');
+                } else {
+                    element.classList.add('hidden');
+                    element.style.display = 'none';
+                    btnElement.classList.remove('active');
+                }
+            });
+            
+            // Carregar dados específicos da tela
+            if (index === 1) { // Indicadores
+                loadIndicadoresOperacionais();
+                startIndicadoresRefresh();
+            } else {
+                stopIndicadoresRefresh();
+            }
+            
+            // Reiniciar progresso
+            resetProgressBar();
+        }
+        
+        function nextScreen() {
+            const next = (currentScreen + 1) % screens.length;
+            showScreen(next);
+        }
+        
+        function startAutoSlide() {
+            if (autoSlideInterval) return;
+            
+            console.log('[SLIDER] Auto-slide ativado');
+            autoSlideEnabled = true;
+            updateProgressBar();
+            
+            autoSlideInterval = setInterval(() => {
+                if (autoSlideEnabled) {
+                    nextScreen();
+                }
+            }, SLIDE_DURATION);
+        }
+        
+        function stopAutoSlide() {
+            if (autoSlideInterval) {
+                clearInterval(autoSlideInterval);
+                autoSlideInterval = null;
+            }
+            autoSlideEnabled = false;
+            resetProgressBar();
+            console.log('[SLIDER] Auto-slide desativado');
+        }
+        
+        let progressInterval = null;
+        let progressStartTime = 0;
+        
+        function updateProgressBar() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+            
+            progressStartTime = Date.now();
+            const progressBar = document.getElementById('slider-progress-bar');
+            
+            progressInterval = setInterval(() => {
+                if (!autoSlideEnabled) {
+                    clearInterval(progressInterval);
+                    return;
+                }
+                
+                const elapsed = Date.now() - progressStartTime;
+                const progress = Math.min((elapsed / SLIDE_DURATION) * 100, 100);
+                progressBar.style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                }
+            }, PROGRESS_INTERVAL);
+        }
+        
+        function resetProgressBar() {
+            const progressBar = document.getElementById('slider-progress-bar');
+            progressBar.style.width = '0%';
+            
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            
+            if (autoSlideEnabled) {
+                updateProgressBar();
+            }
+        }
+        
+        // Event listeners para controles
+        document.getElementById('btn-screen-dashboard').addEventListener('click', () => {
+            stopAutoSlide();
+            showScreen(0);
+        });
+        
+        document.getElementById('btn-screen-indicadores').addEventListener('click', () => {
+            stopAutoSlide();
+            showScreen(1);
+        });
+        
+        document.getElementById('slider-auto-toggle').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                startAutoSlide();
+            } else {
+                stopAutoSlide();
+            }
+        });
+        
+        // Inicializar slider
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[SLIDER] Inicializando sistema de slider');
+            showScreen(0); // Começar com dashboard
+            startAutoSlide();
+        });
+        
+        // ========== FIM SLIDER SYSTEM ==========
+        
+        // ========== INDICADORES FUNCTIONS ==========
+        // Função para carregar e atualizar indicadores operacionais
+        async function loadIndicadoresOperacionais() {
+            try {
+                console.log('[INDICADORES] Carregando dados...');
+                const response = await fetch('/dashboard-interno-mapa/api/indicadores-operacionais');
+                
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Erro ao buscar indicadores');
+                }
+                
+                const dados = result.data;
+                console.log('[INDICADORES] Dados recebidos:', dados);
+                
+                // Atualizar cards principais
+                document.getElementById('ind-processos-abertos').textContent = (dados.total_processos_abertos || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-embarcados').textContent = (dados.total_embarcados || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-chegaram').textContent = (dados.total_chegaram || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-em-analise').textContent = (dados.total_em_analise_fiscal || 0).toLocaleString('pt-BR');
+                
+                // Tempo médio de análise
+                const tempoMedio = parseFloat(dados.tempo_medio_analise_dias || 0).toFixed(1);
+                document.getElementById('ind-tempo-medio').textContent = `${tempoMedio} dias`;
+                
+                // Detalhes dos processos em análise - Layout em GALERIA
+                const detalhesContainer = document.getElementById('ind-detalhes-analise');
+                if (dados.detalhe_processos_analise && dados.detalhe_processos_analise.trim()) {
+                    const processos = dados.detalhe_processos_analise.split('\n').filter(p => p.trim());
+                    detalhesContainer.innerHTML = processos.map(processo => {
+                        // Parse: "NOME (CODIGO) - Canal - X dias"
+                        const match = processo.match(/(.+?)\s+\((.+?)\)\s+-\s+(Verde|Amarelo|Vermelho)\s+-\s+(\d+)\s+dias?/i);
+                        if (match) {
+                            const [, nome, codigo, canal, dias] = match;
+                            const canalClass = canal.toLowerCase();
+                            return `
+                                <div class="processo-analise-item ${canalClass}">
+                                    <div class="nome">${nome.trim()}</div>
+                                    <div class="codigo">Código: ${codigo.trim()}</div>
+                                    <div class="badge-canal ${canalClass}">Canal ${canal}</div>
+                                    <div class="dias">${dias} dias em análise</div>
+                                </div>
+                            `;
+                        }
+                        return `<div class="processo-analise-item"><div class="nome">${processo}</div></div>`;
+                    }).join('');
+                } else {
+                    detalhesContainer.innerHTML = '<p class="text-sm text-slate-400 col-span-full">Nenhum processo em análise fiscal no momento</p>';
+                }
+                
+                // Metas e registros
+                document.getElementById('ind-registrados-ano').textContent = (dados.processos_registrados_ano || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-meta-anual').textContent = (dados.meta_anual || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-faltam-meta').textContent = (dados.faltam_para_meta_anual || 0).toLocaleString('pt-BR');
+                
+                // Percentual da meta
+                const percentual = parseFloat(dados.percentual_meta_anual || 0);
+                document.getElementById('ind-percentual-meta').textContent = `${percentual.toFixed(1)}%`;
+                document.getElementById('ind-progress-bar').style.width = `${Math.min(percentual, 100)}%`;
+                
+                // Média mensal
+                const mediaMensal = parseFloat(dados.media_mensal_registros_ano || 0);
+                document.getElementById('ind-media-mensal').textContent = mediaMensal.toFixed(1);
+                
+                // Projeção
+                const projecao = parseInt(dados.projecao_registros_fim_ano || 0);
+                document.getElementById('ind-projecao-fim-ano').textContent = projecao.toLocaleString('pt-BR');
+                
+                // Status da meta
+                const statusMetaEl = document.getElementById('ind-status-meta-text');
+                const metaAnual = parseInt(dados.meta_anual || 0);
+                if (projecao >= metaAnual) {
+                    statusMetaEl.textContent = '✓ Meta será atingida';
+                    statusMetaEl.className = 'text-lg font-semibold text-green-400';
+                } else {
+                    const deficit = metaAnual - projecao;
+                    statusMetaEl.textContent = `⚠ Faltam ${deficit} processos`;
+                    statusMetaEl.className = 'text-lg font-semibold text-amber-400';
+                }
+                
+                // Atualizar timestamp
+                const now = new Date();
+                document.getElementById('indicadores-last-update').textContent = 
+                    `Atualizado às ${now.toLocaleTimeString('pt-BR')}`;
+                
+                console.log('[INDICADORES] Dados carregados com sucesso');
+                
+            } catch (error) {
+                console.error('[INDICADORES] Erro ao carregar:', error);
+                // Não mostra alerta para não interromper a navegação automática
+            }
+        }
+
+        // Auto-refresh a cada 30 segundos quando a tela estiver visível
+        let indicadoresRefreshInterval = null;
+
+        function startIndicadoresRefresh() {
+            if (indicadoresRefreshInterval) return;
+            indicadoresRefreshInterval = setInterval(() => {
+                const screen = document.getElementById('indicadores-screen');
+                if (screen && screen.style.display !== 'none') {
+                    loadIndicadoresOperacionais();
+                }
+            }, 30000); // 30 segundos
+        }
+
+        function stopIndicadoresRefresh() {
+            if (indicadoresRefreshInterval) {
+                clearInterval(indicadoresRefreshInterval);
+                indicadoresRefreshInterval = null;
+            }
+        }
+        // ========== FIM INDICADORES FUNCTIONS ==========
+
         const API_BASE = '/dashboard-interno-mapa/api';
 
         const modalPalette = {

@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários Online - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kpi-cards.css') }}">
+<link rel="stylesheet" href="{{ url_for('shared.static', filename='css/enhanced-table.css') }}">
+<link rel="stylesheet" href="{{ url_for('usuarios_online.static', filename='usuarios_online/usuarios_online.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="usuarios-online-container">
+    <div class="actions-bar module-header-generic">
+        <div class="actions-left">
+            {{ get_breadcrumb_with_module_colors([
+                {'name': 'Menu', 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                {'name': 'Administração', 'icon': 'mdi mdi-shield-crown'},
+                {'name': 'Usuários Online', 'icon': 'mdi mdi-account-multiple-check'}
+            ], 'default') }}
+        </div>
+        <div class="actions-right">
+            <button type="button" class="btn btn-light btn-cleanup" onclick="cleanupSessions()">
+                <i class="mdi mdi-broom"></i>
+                Limpar Sessões Inativas
+            </button>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <div class="page-header-content">
+            <h1 class="page-title">
+                <i class="mdi mdi-account-multiple-check"></i>
+                Usuários Online
+            </h1>
+            <p class="page-description">Monitore em tempo real quem está ativo no portal e em quais páginas estão navegando.</p>
+        </div>
+        <div class="page-header-status">
+            <div class="connection-status pending" id="connection-status">
+                <span class="status-indicator pending"></span>
+                <span id="status-text">Conectando...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-wrapper">
+        <div class="kpi-grid kpi-grid-online">
+            <div class="kpi-card kpi-primary kpi-bordered">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-account-check"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Usuários Online</p>
+                    <p class="kpi-value" id="online-count">0</p>
+                    <p class="kpi-sub-value">Atualização em tempo real</p>
+                </div>
+            </div>
+            <div class="kpi-card kpi-info kpi-bordered">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-account-tie"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Time Interno Ativo</p>
+                    <p class="kpi-value" id="admin-count">0</p>
+                    <p class="kpi-sub-value">Colaboradores conectados agora</p>
+                </div>
+            </div>
+            <div class="kpi-card kpi-success kpi-bordered">
+                <div class="kpi-icon">
+                    <i class="mdi mdi-file-multiple"></i>
+                </div>
+                <div class="kpi-content">
+                    <p class="kpi-label">Páginas Monitoradas</p>
+                    <p class="kpi-value" id="page-count">0</p>
+                    <p class="kpi-sub-value">Rotas distintas ativas neste momento</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="users-section">
+        <div class="section-header">
+            <div>
+                <h2>
+                    <i class="mdi mdi-account-group"></i>
+                    Usuários ativos
+                </h2>
+                <p class="section-description">Detalhes das sessões em tempo real, com última atividade e página atual.</p>
+            </div>
+        </div>
+        <div class="users-table-wrapper">
+            <table class="users-table" id="online-users-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Página Atual</th>
+                        <th>IP</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    <tr class="empty-state-row">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <i class="mdi mdi-account-off-outline"></i>
+                                <h3>Nenhum usuário online</h3>
+                                <p>Assim que um usuário conectar, ele aparecerá aqui automaticamente.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+const socket = io();
+const onlineUsers = new Map();
+
+const usersTableBody = document.getElementById('users-table-body');
+const onlineCount = document.getElementById('online-count');
+const adminCount = document.getElementById('admin-count');
+const pageCount = document.getElementById('page-count');
+const connectionStatus = document.getElementById('connection-status');
+const statusText = document.getElementById('status-text');
+const statusIndicator = connectionStatus ? connectionStatus.querySelector('.status-indicator') : null;
+
+function setConnectionState(state, message) {
+    if (!connectionStatus) {
+        return;
+    }
+
+    connectionStatus.classList.remove('connected', 'disconnected', 'pending');
+    connectionStatus.classList.add(state);
+
+    if (statusText) {
+        statusText.textContent = message;
+    }
+
+    if (statusIndicator) {
+        statusIndicator.classList.remove('connected', 'disconnected', 'pending');
+        statusIndicator.classList.add(state);
+    }
+}
+
+socket.on('connect', () => {
+    console.log('✅ Conectado ao WebSocket');
+    setConnectionState('connected', 'Conectado');
+    socket.emit('join_admin_room');
+    socket.emit('get_online_users');
+});
+
+socket.on('disconnect', () => {
+    console.log('❌ Desconectado do WebSocket');
+    setConnectionState('disconnected', 'Desconectado');
+});
+
+socket.on('connect_error', () => {
+    setConnectionState('disconnected', 'Tentando reconectar...');
+});
+
+socket.on('reconnect_attempt', () => {
+    setConnectionState('pending', 'Reconectando...');
+});
+
+socket.on('initial_online_users', (data) => {
+    console.log('📋 Lista inicial recebida:', data);
+    onlineUsers.clear();
+    data.users.forEach(user => {
+        onlineUsers.set(user.user_id, user);
+    });
+    renderUsers();
+});
+
+socket.on('online_users_list', (data) => {
+    console.log('📊 Lista completa recebida:', data);
+    onlineUsers.clear();
+    data.users.forEach(user => {
+        onlineUsers.set(user.user_id, user);
+    });
+    renderUsers();
+});
+
+socket.on('user_connected', (data) => {
+    console.log('🟢 Usuário conectou:', data);
+    setTimeout(() => {
+        fetch('/usuarios-online/api/online-users')
+            .then(res => res.json())
+            .then(result => {
+                if (result.users) {
+                    const user = result.users.find(u => u.user_id === data.user_id);
+                    if (user) {
+                        onlineUsers.set(data.user_id, user);
+                        renderUsers();
+                    }
+                }
+            })
+            .catch(err => console.error('Erro ao buscar dados do usuário:', err));
+    }, 300);
+});
+
+socket.on('user_disconnected', (data) => {
+    console.log('🔴 Usuário desconectou:', data);
+    setTimeout(() => {
+        fetch('/usuarios-online/api/online-users')
+            .then(res => res.json())
+            .then(result => {
+                if (result.users) {
+                    const stillOnline = result.users.find(u => u.user_id === data.user_id);
+                    if (!stillOnline) {
+                        onlineUsers.delete(data.user_id);
+                        renderUsers();
+                    }
+                }
+            })
+            .catch(() => {
+                onlineUsers.delete(data.user_id);
+                renderUsers();
+            });
+    }, 1000);
+});
+
+socket.on('user_page_changed', (data) => {
+    console.log('📄 Usuário mudou de página:', data);
+    const user = onlineUsers.get(data.user_id);
+    if (user) {
+        user.current_page = data.page;
+        user.page_title = data.title;
+        user.last_activity = data.timestamp;
+        onlineUsers.set(data.user_id, user);
+        renderUsers();
+    } else {
+        socket.emit('get_online_users');
+    }
+});
+
+function renderUsers() {
+    const count = onlineUsers.size;
+    onlineCount.textContent = count;
+
+    const internos = Array.from(onlineUsers.values()).filter(u => u.user_role === 'interno_unique').length;
+    adminCount.textContent = internos;
+
+    const pages = new Set(Array.from(onlineUsers.values()).map(u => u.current_page));
+    pageCount.textContent = pages.size;
+
+    if (count === 0) {
+        usersTableBody.innerHTML = `
+            <tr class="empty-state-row">
+                <td colspan="4">
+                    <div class="empty-state">
+                        <i class="mdi mdi-account-off-outline"></i>
+                        <h3>Nenhum usuário online</h3>
+                        <p>Assim que um usuário conectar, ele aparecerá aqui automaticamente.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const sortedUsers = Array.from(onlineUsers.values()).sort((a, b) => {
+        return new Date(b.last_activity) - new Date(a.last_activity);
+    });
+
+    const rowsHtml = sortedUsers.map(createUserRow).join('');
+    usersTableBody.innerHTML = rowsHtml;
+}
+
+function createUserRow(user) {
+    const initials = getInitials(user.user_name);
+    const roleLabel = getRoleLabel(user.user_role);
+    const timeAgo = formatTimeAgo(user.last_activity);
+
+    let pageDisplay = 'Portal Unique';
+    if (user.page_title && user.page_title !== 'Portal Unique') {
+        pageDisplay = user.page_title;
+    } else if (user.current_page && user.current_page !== '/') {
+        pageDisplay = user.current_page;
+    }
+
+    const roleClass = getRoleClass(user.user_role);
+
+    return `
+        <tr>
+            <td>
+                <div class="user-cell">
+                    <div class="user-avatar" aria-hidden="true">${initials}</div>
+                    <div class="user-info">
+                        <span class="user-name">${user.user_name}</span>
+                        <span class="user-email">${user.user_email}</span>
+                        <span class="user-role-tag ${roleClass}">${roleLabel}</span>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="page-cell" title="${user.current_page || '/'}">
+                    <span class="page-title">${pageDisplay}</span>
+                    <span class="page-path">${user.current_page || '/'}</span>
+                </div>
+            </td>
+            <td>
+                <span class="ip-cell">${user.ip_address || 'N/A'}</span>
+            </td>
+            <td>
+                <div class="status-cell">
+                    <span class="status-badge status-online">Online</span>
+                    <span class="status-time">Atualizado ${timeAgo}</span>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function getInitials(name) {
+    if (!name) return 'U';
+    return name
+        .split(' ')
+        .filter(Boolean)
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+}
+
+function getRoleClass(role) {
+    if (role === 'admin') return 'role-admin';
+    if (role === 'interno_unique') return 'role-interno';
+    return 'role-cliente';
+}
+
+function getRoleLabel(role) {
+    if (role === 'admin') return 'Administrador';
+    if (role === 'interno_unique') return 'Interno';
+    return 'Cliente';
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'agora mesmo';
+
+    try {
+        const now = new Date();
+        const time = new Date(timestamp);
+
+        if (isNaN(time.getTime())) {
+            console.warn('Timestamp inválido:', timestamp);
+            return 'agora mesmo';
+        }
+
+        const diff = Math.floor((now - time) / 1000);
+
+        if (diff < 0) return 'agora mesmo';
+        if (diff < 30) return 'agora mesmo';
+        if (diff < 60) return `${diff}s atrás`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m atrás`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+        return `${Math.floor(diff / 86400)}d atrás`;
+    } catch (error) {
+        console.error('Erro ao formatar timestamp:', error);
+        return 'agora mesmo';
+    }
+}
+
+async function cleanupSessions() {
+    if (!confirm('Deseja limpar todas as sessões inativas (30+ minutos)?')) {
+        return;
+    }
+
+    try {
+        const res = await fetch('/usuarios-online/api/cleanup-sessions', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+            alert('✅ Sessões inativas limpas com sucesso!');
+            socket.emit('get_online_users');
+        } else {
+            alert('❌ Erro ao limpar sessões: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Erro: ' + error.message);
+    }
+}
+
+setInterval(() => {
+    renderUsers();
+}, 10000);
+
+setInterval(() => {
+    socket.emit('get_online_users');
+}, 30000);
+</script>
+{% endblock %}

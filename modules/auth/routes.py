@@ -430,6 +430,13 @@ def login():
                     'user_perfis': user_perfis,
                     'user_perfis_info': user_perfis_info
                 }
+                
+                # Variáveis de sessão adicionais para compatibilidade com WebSocket
+                session['user_id'] = user['id']
+                session['user_name'] = user['name']
+                session['user_role'] = user['role']
+                session['session_id'] = session.get('session_id', os.urandom(16).hex())
+                
                 session['created_at'] = datetime.now().timestamp()
                 session['last_activity'] = datetime.now().timestamp()
                 
