@@ -329,3 +329,50 @@ def api_clear_cache():
         data_cache.clear_user_cache(user_id)
 
     return jsonify({"success": True, "message": "Cache limpo com sucesso"})
+
+
+@dashboard_interno_mapa_bp.route("/api/indicadores-operacionais", methods=["GET"])
+@_apply_auth_decorators
+def api_indicadores_operacionais():
+    """Retorna indicadores operacionais analíticos da view vw_resumo_operacional_analitico."""
+    try:
+        logger.info("[DASH MAPA - INDICADORES] Buscando dados operacionais")
+        
+        response = supabase_admin.table("vw_resumo_operacional_analitico").select("*").execute()
+        
+        if not response.data or len(response.data) == 0:
+            logger.warning("[DASH MAPA - INDICADORES] Nenhum dado retornado")
+            return jsonify({
+                "success": True,
+                "data": {
+                    "total_processos_abertos": 0,
+                    "total_embarcados": 0,
+                    "total_chegaram": 0,
+                    "total_em_analise_fiscal": 0,
+                    "tempo_medio_analise_dias": "0",
+                    "detalhe_processos_analise": "",
+                    "processos_registrados_ano": 0,
+                    "meta_anual": 0,
+                    "faltam_para_meta_anual": 0,
+                    "percentual_meta_anual": "0",
+                    "media_mensal_registros_ano": "0",
+                    "projecao_registros_fim_ano": "0"
+                }
+            })
+        
+        dados = response.data[0]
+        logger.info("[DASH MAPA - INDICADORES] Dados obtidos com sucesso: %s processos abertos", dados.get("total_processos_abertos"))
+        
+        return jsonify({
+            "success": True,
+            "data": dados,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        })
+        
+    except Exception as exc:
+        logger.error("[DASH MAPA - INDICADORES] Erro ao buscar indicadores: %s", exc, exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": "Erro ao buscar indicadores operacionais",
+            "message": str(exc)
+        }), 500
