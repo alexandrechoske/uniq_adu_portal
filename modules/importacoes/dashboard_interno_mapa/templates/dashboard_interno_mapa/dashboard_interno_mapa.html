@@ -307,12 +307,12 @@
         .slider-controls {
             position: fixed;
             bottom: 2rem;
-            right: 2rem;
+            left: 2rem;
             z-index: 1000;
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            align-items: flex-end;
+            align-items: flex-start;
         }
         
         .slider-nav-buttons {
@@ -779,7 +779,7 @@
                 const tempoMedio = parseFloat(dados.tempo_medio_analise_dias || 0).toFixed(1);
                 document.getElementById('ind-tempo-medio').textContent = `${tempoMedio} dias`;
                 
-                // Detalhes dos processos em análise
+                // Detalhes dos processos em análise - Layout em GALERIA
                 const detalhesContainer = document.getElementById('ind-detalhes-analise');
                 if (dados.detalhe_processos_analise && dados.detalhe_processos_analise.trim()) {
                     const processos = dados.detalhe_processos_analise.split('\n').filter(p => p.trim());
@@ -792,18 +792,16 @@
                             return `
                                 <div class="processo-analise-item ${canalClass}">
                                     <div class="nome">${nome.trim()}</div>
-                                    <div class="detalhes">
-                                        <span>Código: ${codigo.trim()}</span>
-                                        <span class="badge-canal ${canalClass}">${canal}</span>
-                                        <span>${dias} dias em análise</span>
-                                    </div>
+                                    <div class="codigo">Código: ${codigo.trim()}</div>
+                                    <div class="badge-canal ${canalClass}">Canal ${canal}</div>
+                                    <div class="dias">${dias} dias em análise</div>
                                 </div>
                             `;
                         }
                         return `<div class="processo-analise-item"><div class="nome">${processo}</div></div>`;
                     }).join('');
                 } else {
-                    detalhesContainer.innerHTML = '<p class="text-sm text-slate-400">Nenhum processo em análise fiscal no momento</p>';
+                    detalhesContainer.innerHTML = '<p class="text-sm text-slate-400 col-span-full">Nenhum processo em análise fiscal no momento</p>';
                 }
                 
                 // Metas e registros
