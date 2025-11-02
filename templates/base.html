@@ -1302,6 +1302,65 @@
     
     <!-- Language Selector Script -->
     <script src="{{ url_for('static', filename='js/language-selector.js') }}"></script>
+    
+    <!-- Socket.IO Client para rastreamento de usuários online -->
+    {% if session.get('user_id') %}
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // Inicializa conexão WebSocket para todos os usuários autenticados
+        (function() {
+            try {
+                // Se já existe conexão, apenas envia page_change
+                if (window.socket && window.socket.connected) {
+                    console.log('🔄 Reutilizando conexão WebSocket existente');
+                    window.socket.emit('page_change', {
+                        page: window.location.pathname,
+                        title: document.title
+                    });
+                    return;
+                }
+                
+                // Cria nova conexão
+                window.socket = io({
+                    reconnection: true,
+                    reconnectionDelay: 1000,
+                    reconnectionAttempts: 5,
+                    transports: ['websocket', 'polling']
+                });
+                
+                window.socket.on('connect', () => {
+                    console.log('🟢 WebSocket conectado');
+                    
+                    // Envia informação da página atual
+                    window.socket.emit('page_change', {
+                        page: window.location.pathname,
+                        title: document.title
+                    });
+                });
+                
+                window.socket.on('disconnect', () => {
+                    console.log('🔴 WebSocket desconectado');
+                });
+                
+                window.socket.on('connect_error', (error) => {
+                    console.error('❌ Erro de conexão WebSocket:', error);
+                });
+                
+                // Heartbeat a cada 30 segundos
+                setInterval(() => {
+                    if (window.socket && window.socket.connected) {
+                        window.socket.emit('heartbeat');
+                    }
+                }, 30000);
+                
+                console.log('✅ Sistema de rastreamento de usuários inicializado');
+            } catch (error) {
+                console.error('❌ Erro ao inicializar WebSocket:', error);
+            }
+        })();
+    </script>
+    {% endif %}
+    {# Mantém alinhamento com condicionais externas #}
     {% endif %}
 </body>
 </html>

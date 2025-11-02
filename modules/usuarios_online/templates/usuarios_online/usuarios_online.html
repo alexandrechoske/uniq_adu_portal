@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários Online - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .usuarios-online-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .header-section {
+        background: linear-gradient(135deg, var(--unique-primary-dark) 0%, var(--unique-secondary) 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid var(--unique-primary-dark);
+    }
+    
+    .stat-number {
+        font-size: 42px;
+        font-weight: 700;
+        color: var(--unique-primary-dark);
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 14px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 20px;
+    }
+    
+    .user-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border: 1px solid #e2e8f0;
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    .user-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .user-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--unique-primary-dark), var(--unique-secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+    
+    .user-info {
+        flex: 1;
+    }
+    
+    .user-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+    
+    .user-role {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .role-admin {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .role-interno {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    
+    .role-cliente {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+    
+    .user-details {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: #64748b;
+    }
+    
+    .detail-row i {
+        width: 18px;
+        text-align: center;
+        color: var(--unique-primary-dark);
+    }
+    
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22c55e;
+        display: inline-block;
+        animation: pulse 2s infinite;
+        margin-right: 5px;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { 
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+        50% { 
+            opacity: 0.7;
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+        }
+    }
+    
+    .connection-status {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s;
+    }
+    
+    .connection-status.connected {
+        background: #22c55e;
+        color: white;
+    }
+    
+    .connection-status.disconnected {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .no-users {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+    
+    .no-users i {
+        font-size: 64px;
+        margin-bottom: 20px;
+        color: #cbd5e1;
+    }
+    
+    .action-button {
+        background: var(--unique-primary-dark);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .action-button:hover {
+        background: var(--unique-secondary);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="usuarios-online-container">
+    <!-- Status de Conexão WebSocket -->
+    <div class="connection-status disconnected" id="connection-status">
+        <i class="mdi mdi-lan-disconnect"></i>
+        <span id="status-text">Conectando...</span>
+    </div>
+    
+    <!-- Cabeçalho -->
+    <div class="header-section">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 8px;">
+                    <i class="mdi mdi-account-multiple"></i> Usuários Online
+                </h1>
+                <p style="opacity: 0.9; margin: 0;">Monitore em tempo real quem está ativo na aplicação</p>
+            </div>
+            <button class="action-button" onclick="cleanupSessions()">
+                <i class="mdi mdi-broom"></i> Limpar Sessões Inativas
+            </button>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="online-count">0</div>
+            <div class="stat-label">
+                <i class="mdi mdi-account-check"></i> Usuários Online
+            </div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--unique-secondary);">
+            <div class="stat-number" id="admin-count" style="color: var(--unique-secondary);">0</div>
+            <div class="stat-label">
+                <i class="mdi mdi-account-tie"></i> Time Interno
+            </div>
+        </div>
+        <div class="stat-card" style="border-left-color: #22c55e;">
+            <div class="stat-number" id="page-count" style="color: #22c55e;">0</div>
+            <div class="stat-label">
+                <i class="mdi mdi-file-document-multiple"></i> Páginas Distintas
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Usuários Online -->
+    <h2 style="margin-bottom: 20px; color: #1e293b; font-weight: 600;">
+        <i class="mdi mdi-account-group"></i> Ativos Agora
+    </h2>
+    <div class="users-grid" id="users-grid">
+        <div class="no-users">
+            <i class="mdi mdi-account-off"></i>
+            <h3 style="margin: 10px 0;">Nenhum usuário online</h3>
+            <p>Os usuários aparecerão aqui em tempo real quando conectarem</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Socket.IO Client - DEVE ser carregado ANTES do código que usa io() -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+
+<script>
+// Inicializa Socket.IO
+const socket = io();
+
+// Armazena usuários online
+const onlineUsers = new Map();
+
+// Elementos DOM
+const usersGrid = document.getElementById('users-grid');
+const onlineCount = document.getElementById('online-count');
+const adminCount = document.getElementById('admin-count');
+const pageCount = document.getElementById('page-count');
+const connectionStatus = document.getElementById('connection-status');
+const statusText = document.getElementById('status-text');
+const statusIcon = connectionStatus.querySelector('i');
+
+// Eventos de conexão
+socket.on('connect', () => {
+    console.log('✅ Conectado ao WebSocket');
+    connectionStatus.className = 'connection-status connected';
+    statusText.textContent = 'Conectado';
+    statusIcon.className = 'mdi mdi-lan-connect';
+    
+    // Entra na room de admins
+    socket.emit('join_admin_room');
+    
+    // Solicita lista inicial
+    socket.emit('get_online_users');
+});
+
+socket.on('disconnect', () => {
+    console.log('❌ Desconectado do WebSocket');
+    connectionStatus.className = 'connection-status disconnected';
+    statusText.textContent = 'Desconectado';
+    statusIcon.className = 'mdi mdi-lan-disconnect';
+});
+
+// Recebe lista inicial de usuários online
+socket.on('initial_online_users', (data) => {
+    console.log('📋 Lista inicial recebida:', data);
+    onlineUsers.clear();
+    data.users.forEach(user => {
+        onlineUsers.set(user.user_id, user);
+    });
+    renderUsers();
+});
+
+// Recebe lista completa (resposta do get_online_users)
+socket.on('online_users_list', (data) => {
+    console.log('📊 Lista completa recebida:', data);
+    onlineUsers.clear();
+    data.users.forEach(user => {
+        onlineUsers.set(user.user_id, user);
+    });
+    renderUsers();
+});
+
+// Usuário conectou
+socket.on('user_connected', (data) => {
+    console.log('🟢 Usuário conectou:', data);
+    
+    // Aguarda um pouco antes de buscar (evita duplicatas)
+    setTimeout(() => {
+        fetch('/usuarios-online/api/online-users')
+            .then(res => res.json())
+            .then(result => {
+                if (result.users) {
+                    const user = result.users.find(u => u.user_id === data.user_id);
+                    if (user) {
+                        onlineUsers.set(data.user_id, user);
+                        renderUsers();
+                    }
+                }
+            })
+            .catch(err => console.error('Erro ao buscar dados do usuário:', err));
+    }, 300);
+});
+
+// Usuário desconectou
+socket.on('user_disconnected', (data) => {
+    console.log('🔴 Usuário desconectou:', data);
+    
+    // Aguarda um pouco antes de remover (pode ser reconexão)
+    setTimeout(() => {
+        // Verifica se o usuário ainda está online antes de remover
+        fetch('/usuarios-online/api/online-users')
+            .then(res => res.json())
+            .then(result => {
+                if (result.users) {
+                    const stillOnline = result.users.find(u => u.user_id === data.user_id);
+                    if (!stillOnline) {
+                        onlineUsers.delete(data.user_id);
+                        renderUsers();
+                    }
+                }
+            })
+            .catch(err => {
+                // Se der erro na API, remove do cache
+                onlineUsers.delete(data.user_id);
+                renderUsers();
+            });
+    }, 1000); // Aguarda 1 segundo (tempo para reconectar)
+});
+
+// Usuário mudou de página
+socket.on('user_page_changed', (data) => {
+    console.log('📄 Usuário mudou de página:', data);
+    
+    const user = onlineUsers.get(data.user_id);
+    if (user) {
+        // Atualiza dados do usuário sem renderizar tudo
+        user.current_page = data.page;
+        user.page_title = data.title;
+        user.last_activity = data.timestamp;
+        
+        // Re-renderiza apenas este usuário (mais eficiente)
+        onlineUsers.set(data.user_id, user);
+        renderUsers();
+        
+        console.log(`✅ Página atualizada: ${data.title} (${data.page})`);
+    } else {
+        // Se o usuário não estava na lista, busca dados completos
+        console.warn('Usuário não encontrado no cache, buscando da API...');
+        socket.emit('get_online_users');
+    }
+});
+
+// Renderiza lista de usuários
+function renderUsers() {
+    const count = onlineUsers.size;
+    onlineCount.textContent = count;
+    
+    // Conta colaboradores internos (interno_unique)
+    const internos = Array.from(onlineUsers.values()).filter(u => u.user_role === 'interno_unique').length;
+    adminCount.textContent = internos;
+    
+    // Conta páginas distintas
+    const pages = new Set(Array.from(onlineUsers.values()).map(u => u.current_page));
+    pageCount.textContent = pages.size;
+    
+    if (count === 0) {
+        usersGrid.innerHTML = `
+            <div class="no-users">
+                <i class="mdi mdi-account-off"></i>
+                <h3 style="margin: 10px 0;">Nenhum usuário online</h3>
+                <p>Os usuários aparecerão aqui em tempo real quando conectarem</p>
+            </div>
+        `;
+        return;
+    }
+    
+    usersGrid.innerHTML = '';
+    
+    // Ordena por last_activity (mais recente primeiro)
+    const sortedUsers = Array.from(onlineUsers.values()).sort((a, b) => {
+        return new Date(b.last_activity) - new Date(a.last_activity);
+    });
+    
+    sortedUsers.forEach(user => {
+        const card = createUserCard(user);
+        usersGrid.appendChild(card);
+    });
+}
+
+// Cria card de usuário
+function createUserCard(user) {
+    const card = document.createElement('div');
+    card.className = 'user-card';
+    
+    const roleClass = getRoleClass(user.user_role);
+    const roleLabel = getRoleLabel(user.user_role);
+    const initials = getInitials(user.user_name);
+    const timeAgo = formatTimeAgo(user.last_activity);
+    
+    // Determina qual página exibir
+    let pageDisplay = 'Portal Unique';
+    if (user.page_title && user.page_title !== 'Portal Unique') {
+        pageDisplay = user.page_title;
+    } else if (user.current_page && user.current_page !== '/') {
+        pageDisplay = user.current_page;
+    }
+    
+    card.innerHTML = `
+        <div class="user-header">
+            <div class="avatar">${initials}</div>
+            <div class="user-info">
+                <div class="user-name">${user.user_name}</div>
+                <span class="user-role ${roleClass}">${roleLabel}</span>
+            </div>
+        </div>
+        <div class="user-details">
+            <div class="detail-row">
+                <i class="mdi mdi-circle status-dot"></i>
+                <span><strong>Online</strong> - ${timeAgo}</span>
+            </div>
+            <div class="detail-row">
+                <i class="mdi mdi-file-document"></i>
+                <span title="${user.current_page || '/'}">${pageDisplay}</span>
+            </div>
+            <div class="detail-row">
+                <i class="mdi mdi-email"></i>
+                <span>${user.user_email}</span>
+            </div>
+            <div class="detail-row">
+                <i class="mdi mdi-ip"></i>
+                <span>${user.ip_address || 'N/A'}</span>
+            </div>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Pega iniciais do nome
+function getInitials(name) {
+    if (!name) return 'U';
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+}
+
+// Classe CSS do role
+function getRoleClass(role) {
+    if (role === 'admin') return 'role-admin';
+    if (role === 'interno_unique') return 'role-interno';
+    return 'role-cliente';
+}
+
+// Label do role
+function getRoleLabel(role) {
+    if (role === 'admin') return 'Administrador';
+    if (role === 'interno_unique') return 'Interno';
+    return 'Cliente';
+}
+
+// Formata tempo relativo
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return 'agora mesmo';
+    
+    try {
+        const now = new Date();
+        const time = new Date(timestamp);
+        
+        // Verifica se a data é válida
+        if (isNaN(time.getTime())) {
+            console.warn('Timestamp inválido:', timestamp);
+            return 'agora mesmo';
+        }
+        
+        const diff = Math.floor((now - time) / 1000); // segundos
+        
+        if (diff < 0) return 'agora mesmo'; // Evita tempo negativo
+        if (diff < 30) return 'agora mesmo';
+        if (diff < 60) return `${diff}s atrás`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m atrás`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+        return `${Math.floor(diff / 86400)}d atrás`;
+    } catch (error) {
+        console.error('Erro ao formatar timestamp:', error);
+        return 'agora mesmo';
+    }
+}
+
+// Limpar sessões inativas
+async function cleanupSessions() {
+    if (!confirm('Deseja limpar todas as sessões inativas (30+ minutos)?')) return;
+    
+    try {
+        const res = await fetch('/usuarios-online/api/cleanup-sessions', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success) {
+            alert('✅ Sessões inativas limpas com sucesso!');
+            socket.emit('get_online_users');
+        } else {
+            alert('❌ Erro ao limpar sessões: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Erro: ' + error.message);
+    }
+}
+
+// Atualiza os tempos relativos a cada 10 segundos
+setInterval(() => {
+    renderUsers(); // Re-renderiza para atualizar "agora mesmo", "1m atrás", etc
+}, 10000);
+
+// Atualiza lista completa a cada 30 segundos (backup do WebSocket)
+setInterval(() => {
+    socket.emit('get_online_users');
+}, 30000);
+</script>
+{% endblock %}

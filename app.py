@@ -14,6 +14,17 @@ configure_logging(level=get_log_level_from_env())
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Initialize Flask-SocketIO para rastreamento de usuários online em tempo real
+from flask_socketio import SocketIO
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",  # Em produção, especificar domínios permitidos
+    async_mode='eventlet',
+    manage_session=True,
+    logger=False,
+    engineio_logger=False
+)
+
 # Configurar sessão para expirar após 12 horas (43200 segundos)
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
@@ -105,6 +116,9 @@ from modules.contabilidade_externa import contabilidade_externa_bp
 # Import i18n blueprint
 from modules.i18n import i18n_bp
 
+# Import usuarios_online blueprint (admin)
+from modules.usuarios_online.routes import bp as usuarios_online_bp
+
 # Register blueprints
 # app.register_blueprint(auth.bp)  # Comentado - usando versão modular
 app.register_blueprint(dashboard.bp)
@@ -164,11 +178,20 @@ print("✅ Portal contabilidade externo registrado")
 app.register_blueprint(i18n_bp)
 print("✅ i18n blueprint registrado")
 
+# Register usuarios_online blueprint (admin)
+app.register_blueprint(usuarios_online_bp)
+print("✅ Usuários Online (Admin) blueprint registrado")
+
 # Register module color helpers for templates
 register_module_color_helpers(app)
 
 # Initialize logging middleware (após registrar todos os blueprints)
 logging_middleware.init_app(app)
+
+# Initialize page tracking middleware (rastreamento de páginas para usuários online)
+from middleware.page_tracking import page_tracking
+page_tracking.init_app(app)
+print("✅ Page Tracking Middleware inicializado")
 
 # -------------------------------------------------------------
 # i18n Language Initialization Middleware
@@ -373,10 +396,17 @@ def test_menu_noticias():
         return "Arquivo de teste não encontrado", 404
 
 if __name__ == '__main__':   
+    # Registrar WebSocket event handlers
+    print("\n[DEBUG] ===== Registrando WebSocket Events =====")
+    from websocket_events import register_events
+    register_events(socketio, extensions.supabase_admin)
+    print("[DEBUG] WebSocket events registrados com sucesso")
+    print("[DEBUG] ======================================\n")
+    
     # Start server based on FLASK_ENV
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
     if flask_env == 'development':
-        app.run(debug=True, host='192.168.0.75', port=5000)
-        # app.run(debug=True, port=5000)
+        # Use socketio.run() ao invés de app.run() para suportar WebSocket
+        socketio.run(app, debug=True, host='192.168.0.75', port=5000)
     else:
-        app.run(debug=app.config.get('DEBUG', False))
+        socketio.run(app, debug=app.config.get('DEBUG', False))
