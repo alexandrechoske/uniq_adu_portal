@@ -269,7 +269,6 @@
                     </a>
                     {% endif %}
 
-                    {# DESABILITADO TEMPORARIAMENTE - Ajuste de Status
                     {% if 'ajuste_status' in accessible_modules %}
                     <a href="{{ url_for('ajuste_status.index') }}" class="module-card" data-module="ajuste_status">
                         <span class="role-badge admin">ADMIN</span>
@@ -280,8 +279,8 @@
                         <p class="module-desc">Gerencie ajustes operacionais de processos internos.</p>
                     </a>
                     {% endif %}
-                    #}
                     
+                    {# DESATIVADO TEMPORARIAMENTE - Usuários Online será reativado futuramente
                     {% set user_role = session.get('user', {}).get('role') %}
                     {% set user_perfil_principal = session.get('user', {}).get('perfil_principal', 'basico') %}
                     {% if user_role == 'admin' and user_perfil_principal == 'master_admin' %}
@@ -294,6 +293,7 @@
                         <p class="module-desc">Monitoramento em tempo real dos usuários ativos no portal</p>
                     </a>
                     {% endif %}
+                    #}
                 </div>
             </div>
             {% endif %}
