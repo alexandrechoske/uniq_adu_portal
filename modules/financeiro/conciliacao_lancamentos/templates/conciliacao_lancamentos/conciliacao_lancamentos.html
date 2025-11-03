@@ -273,15 +273,22 @@
             <div class="conciliar-action">
                 <div class="totals-display">
                     <div class="total-item">
-                        <span class="total-label">Total Selecionado Sistema:</span>
+                        <span class="total-label">Sistema</span>
                         <span class="total-value" id="totalSelSistema">R$ 0,00</span>
                     </div>
-                    <button id="btnConciliarManual" class="btn btn-primary btn-lg" disabled>
-                        <i class="mdi mdi-link-variant"></i>
-                        Conciliar Selecionados
-                    </button>
+                    <div class="action-buttons">
+                        <button id="btnConciliarManual" class="btn btn-primary btn-icon" disabled title="Conciliar Selecionados">
+                            <i class="mdi mdi-link-variant"></i>
+                        </button>
+                        <button id="btnOcultarTransacoes" class="btn btn-warning btn-icon" disabled title="Ocultar Transações">
+                            <i class="mdi mdi-eye-off"></i>
+                        </button>
+                        <button id="btnExportarRelatorio" class="btn btn-success btn-icon" title="Exportar para Excel">
+                            <i class="mdi mdi-file-excel"></i>
+                        </button>
+                    </div>
                     <div class="total-item">
-                        <span class="total-label">Total Selecionado Banco:</span>
+                        <span class="total-label">Banco</span>
                         <span class="total-value" id="totalSelBanco">R$ 0,00</span>
                     </div>
                 </div>

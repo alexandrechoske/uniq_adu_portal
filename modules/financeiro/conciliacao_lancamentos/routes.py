@@ -2560,3 +2560,111 @@ def gerar_dados_teste():
     
     logger.info(f"[CONCILIACAO] Dados de teste gerados: {len(movimentos)} movimentos")
     return movimentos
+
+
+@conciliacao_lancamentos_bp.route('/api/exportar-conciliacao', methods=['POST'])
+@login_required
+def exportar_conciliacao():
+    """Exporta dados de conciliação para Excel com 2 abas (Sistema e Banco)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'Nenhum dado fornecido'}), 400
+        
+        dados_sistema = data.get('sistema', [])
+        dados_banco = data.get('banco', [])
+        
+        logger.info(f"[EXPORTAR] Recebidos {len(dados_sistema)} itens do sistema e {len(dados_banco)} itens do banco")
+        
+        # Criar workbook
+        wb = Workbook()
+        
+        # ===== ABA 1: SISTEMA =====
+        ws_sistema = wb.active
+        ws_sistema.title = "Sistema"
+        
+        # Cabeçalhos
+        headers_sistema = ['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Origem', 'Status']
+        ws_sistema.append(headers_sistema)
+        
+        # Estilizar cabeçalho
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        for cell in ws_sistema[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Adicionar dados do sistema
+        for item in dados_sistema:
+            ws_sistema.append([
+                item.get('data_movimento', ''),
+                item.get('descricao', ''),
+                item.get('valor', 0),
+                item.get('tipo_movimento', ''),
+                item.get('categoria', ''),
+                item.get('origem', ''),
+                'Conciliado' if item.get('conciliado') else 'Pendente'
+            ])
+        
+        # Ajustar largura das colunas
+        ws_sistema.column_dimensions['A'].width = 12
+        ws_sistema.column_dimensions['B'].width = 40
+        ws_sistema.column_dimensions['C'].width = 15
+        ws_sistema.column_dimensions['D'].width = 12
+        ws_sistema.column_dimensions['E'].width = 15
+        ws_sistema.column_dimensions['F'].width = 15
+        ws_sistema.column_dimensions['G'].width = 12
+        
+        # ===== ABA 2: BANCO =====
+        ws_banco = wb.create_sheet(title="Banco")
+        
+        # Cabeçalhos
+        headers_banco = ['Data', 'Banco', 'Conta', 'Descrição', 'Valor', 'Status']
+        ws_banco.append(headers_banco)
+        
+        # Estilizar cabeçalho
+        for cell in ws_banco[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Adicionar dados do banco
+        for item in dados_banco:
+            ws_banco.append([
+                item.get('data_lancamento', ''),
+                item.get('nome_banco', ''),
+                item.get('numero_conta', ''),
+                item.get('descricao', ''),
+                item.get('valor', 0),
+                'Conciliado' if item.get('conciliado') else 'Pendente'
+            ])
+        
+        # Ajustar largura das colunas
+        ws_banco.column_dimensions['A'].width = 12
+        ws_banco.column_dimensions['B'].width = 20
+        ws_banco.column_dimensions['C'].width = 15
+        ws_banco.column_dimensions['D'].width = 40
+        ws_banco.column_dimensions['E'].width = 15
+        ws_banco.column_dimensions['F'].width = 12
+        
+        # Salvar em memória
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Nome do arquivo com timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'conciliacao_bancaria_{timestamp}.xlsx'
+        
+        logger.info(f"[EXPORTAR] Arquivo gerado com sucesso: {filename}")
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"[EXPORTAR] Erro ao exportar: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500

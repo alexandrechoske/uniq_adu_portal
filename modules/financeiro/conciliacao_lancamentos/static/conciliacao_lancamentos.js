@@ -284,6 +284,13 @@ function inicializarEventos() {
     
     // Conciliação manual
     document.getElementById('btnConciliarManual').addEventListener('click', conciliarManual);
+    document.getElementById('btnOcultarTransacoes').addEventListener('click', ocultarTransacoes);
+    
+    // Exportar relatório
+    const btnExportar = document.getElementById('btnExportarRelatorio');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', exportarRelatorio);
+    }
     
     // Filtros da aba Conciliados
     document.getElementById('filtroTipoConciliacao').addEventListener('change', filtrarConciliados);
@@ -675,10 +682,19 @@ function renderizarTabelaBanco() {
     const tbody = document.getElementById('tableBanco');
     if (!tbody) return;
 
+    const totalItensArray = AppState.bancosPendentes.length;
+    const itensOcultos = AppState.bancosPendentes.filter(item => item.oculto === true).length;
+    const itensVisiveis = totalItensArray - itensOcultos;
+    
+    console.log('🎨 renderizarTabelaBanco: Total:', totalItensArray, '| Ocultos:', itensOcultos, '| Visíveis:', itensVisiveis);
+
     const filtroAtual = AppState.filtroBanco || '';
     const termoBusca = (AppState.buscaBanco || '').trim().toLowerCase();
 
     const itensFiltrados = AppState.bancosPendentes.filter(item => {
+        // Filtrar itens ocultos
+        if (item.oculto === true) return false;
+        
         if (filtroAtual && item.banco !== filtroAtual) return false;
         if (!termoBusca) return true;
         const textoComparacao = [
@@ -928,15 +944,168 @@ function atualizarTotaisSelecionados() {
     document.getElementById('totalSelSistema').textContent = formatarMoeda(totalSistema);
     document.getElementById('totalSelBanco').textContent = formatarMoeda(totalBanco);
     
-    // Habilitar botão se houver seleções
-    const btn = document.getElementById('btnConciliarManual');
-    btn.disabled = AppState.sistemasSelecionados.size === 0 || AppState.bancosSelecionados.size === 0;
+    // Habilitar botão Conciliar se houver seleções em ambas as tabelas
+    const btnConciliar = document.getElementById('btnConciliarManual');
+    btnConciliar.disabled = AppState.sistemasSelecionados.size === 0 || AppState.bancosSelecionados.size === 0;
+    
+    // Habilitar botão Ocultar se houver seleções apenas na tabela de banco
+    const btnOcultar = document.getElementById('btnOcultarTransacoes');
+    btnOcultar.disabled = AppState.bancosSelecionados.size === 0;
 }
 
 function calcularTotalSelecionados(items, idsSet) {
     return items
         .filter(item => idsSet.has(item.id))
         .reduce((sum, item) => sum + parseFloat(item.valor || 0), 0);
+}
+
+// ========================================
+// OCULTAR TRANSAÇÕES BANCO
+// ========================================
+function ocultarTransacoes() {
+    // Validar seleção
+    if (AppState.bancosSelecionados.size === 0) {
+        mostrarNotificacao('Selecione pelo menos uma transação de banco para ocultar.', 'warning');
+        return;
+    }
+    
+    console.log('🔍 Ocultando transações...');
+    
+    // Pegar IDs das transações selecionadas
+    const idsOcultar = Array.from(AppState.bancosSelecionados);
+    
+    // Marcar transações como ocultas (não remove do array)
+    AppState.bancosPendentes.forEach(item => {
+        if (idsOcultar.includes(item.id)) {
+            item.oculto = true;
+        }
+    });
+    
+    console.log('✅ Marcadas como ocultas:', idsOcultar.length);
+    
+    // Limpar seleções
+    AppState.bancosSelecionados.clear();
+    
+    // Resetar paginação para página 1
+    AppState.paginacaoBanco.paginaAtual = 1;
+    
+    // Atualizar UI - forçar re-render completo
+    atualizarKPIs();
+    atualizarTotaisSelecionados();
+    renderizarTabelaBanco();
+    
+    console.log('🎯 Renderização completa');
+    
+    mostrarNotificacao(`✅ ${idsOcultar.length} transação(ões) ocultada(s)`, 'success');
+}
+
+/**
+ * Exporta relatório de conciliação em Excel com 2 abas (Sistema e Banco)
+ */
+async function exportarRelatorio() {
+    try {
+        console.log('📊 Iniciando exportação de relatório...');
+        
+        // Coletar dados do sistema (todos não conciliados + conciliados da aba)
+        const dadosSistema = [];
+        
+        // Adicionar pendentes do sistema (visíveis após filtros)
+        AppState.sistemasPendentes.forEach(item => {
+            dadosSistema.push({
+                data_movimento: item.data_movimento,
+                descricao: item.descricao,
+                valor: item.valor,
+                tipo_movimento: item.tipo_movimento,
+                categoria: item.categoria,
+                origem: item.origem,
+                conciliado: false
+            });
+        });
+        
+        // Coletar dados do banco (excluindo ocultos)
+        const dadosBanco = [];
+        
+        // Adicionar pendentes do banco (visíveis após filtros, excluindo ocultos)
+        AppState.bancosPendentes.forEach(item => {
+            if (item.oculto !== true) { // Excluir ocultos
+                dadosBanco.push({
+                    data_lancamento: item.data_lancamento,
+                    nome_banco: item.banco,
+                    numero_conta: item.conta,
+                    descricao: item.descricao,
+                    valor: item.valor,
+                    conciliado: false
+                });
+            }
+        });
+        
+        // Adicionar conciliados se estivermos na aba de conciliados
+        if (AppState.abaAtual === 'conciliados') {
+            AppState.conciliados.forEach(item => {
+                // Adicionar ao sistema
+                if (item.id_sistema) {
+                    dadosSistema.push({
+                        data_movimento: item.data_sistema,
+                        descricao: item.descricao_sistema,
+                        valor: item.valor,
+                        tipo_movimento: item.tipo_movimento,
+                        categoria: item.categoria,
+                        origem: item.origem,
+                        conciliado: true
+                    });
+                }
+                
+                // Adicionar ao banco
+                if (item.id_banco) {
+                    dadosBanco.push({
+                        data_lancamento: item.data_banco,
+                        nome_banco: item.banco,
+                        numero_conta: item.conta,
+                        descricao: item.descricao_banco,
+                        valor: item.valor,
+                        conciliado: true
+                    });
+                }
+            });
+        }
+        
+        console.log(`📤 Exportando ${dadosSistema.length} itens do sistema e ${dadosBanco.length} itens do banco`);
+        
+        // Enviar para backend
+        const response = await fetch('/financeiro/conciliacao-lancamentos/api/exportar-conciliacao', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sistema: dadosSistema,
+                banco: dadosBanco
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao exportar');
+        }
+        
+        // Baixar arquivo
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conciliacao_bancaria_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        console.log('✅ Exportação concluída com sucesso');
+        mostrarNotificacao('✅ Relatório exportado com sucesso!', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro na exportação:', error);
+        mostrarNotificacao(`❌ Erro ao exportar: ${error.message}`, 'error');
+    }
 }
 
 function conciliarManual() {
