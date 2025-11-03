@@ -22,6 +22,7 @@ COPY . /app
 # Se usar .env, o compose passará via env_file; nada a expor aqui
 EXPOSE 8000
 
-# Suba com gunicorn (troque app:app se o módulo/variável mudar)
-CMD ["gunicorn", "-w", "3", "-k", "gthread", "--threads", "8", "--timeout", "120", "-b", "0.0.0.0:8000", "app:app"]
+# Suba com gunicorn usando gevent para suportar Socket.IO WebSocket
+# IMPORTANTE: Socket.IO requer gevent ou eventlet workers, não pode usar gthread
+CMD ["gunicorn", "-w", "2", "--worker-class", "gevent", "--worker-connections", "1000", "--timeout", "120", "-b", "0.0.0.0:8000", "app:app"]
 
