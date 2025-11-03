@@ -974,6 +974,7 @@
                     </a>
                     {% endif %}
 
+                    {# DESABILITADO TEMPORARIAMENTE - Ajuste de Status
                     {% if 'ajuste_status' in accessible_modules %}
                     <a href="{{ url_for('ajuste_status.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('ajuste_status.') %}active{% endif %}"
@@ -982,6 +983,7 @@
                         <span class="sidebar-text">Ajuste de Status</span>
                     </a>
                     {% endif %}
+                    #}
                 </div>
                 {% endif %}
                 
