@@ -25,6 +25,11 @@ def register_events(socketio, supabase_admin):
     def handle_connect():
         """Quando usuário conecta via WebSocket"""
         try:
+            # DEBUG: Log inicial
+            print(f"\n[WEBSOCKET] 🔌 Nova tentativa de conexão - SID: {request.sid}")
+            print(f"[WEBSOCKET] Headers: {dict(request.headers)}")
+            print(f"[WEBSOCKET] Session keys: {list(session.keys()) if session else 'Session vazia'}")
+            
             # Pega user_id da sessão Flask
             user_id = session.get('user_id')
             user_name = session.get('user_name', 'Usuário')
@@ -32,8 +37,14 @@ def register_events(socketio, supabase_admin):
             session_id = session.get('session_id', request.sid)
             is_admin_user = (user_role == 'admin')
             
+            print(f"[WEBSOCKET] user_id: {user_id}")
+            print(f"[WEBSOCKET] user_name: {user_name}")
+            print(f"[WEBSOCKET] user_role: {user_role}")
+            print(f"[WEBSOCKET] is_admin: {is_admin_user}")
+            
             if not user_id:
                 logger.warning(f"Tentativa de conexão sem autenticação. SID: {request.sid}")
+                print(f"[WEBSOCKET] ❌ CONEXÃO RECUSADA - sem user_id na sessão")
                 disconnect()
                 return False
             
