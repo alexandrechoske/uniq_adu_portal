@@ -118,12 +118,6 @@ function obterPeriodoSistemaSelecionado() {
     };
 }
 
-function obterEmpresaSelecionada() {
-    const checked = document.querySelector('input[name="empresa_filtro"]:checked');
-    const valor = checked ? checked.value : 'todas';
-    return valor || 'todas';
-}
-
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
@@ -398,18 +392,24 @@ async function processarArquivos(e) {
         return;
     }
 
-    const bancoSelecionado = document.getElementById('banco_origem').value;
-    const empresaSelecionada = obterEmpresaSelecionada();
-    AppState.empresaSelecionada = empresaSelecionada;
+    // Validar se há contas selecionadas
+    if (!contasSelecionadas || contasSelecionadas.length === 0) {
+        mostrarNotificacao('Selecione ao menos uma conta bancária para processar.', 'warning');
+        return;
+    }
 
     const formData = new FormData();
     AppState.arquivosCarregados.forEach(file => {
         formData.append('arquivo_bancario', file);
     });
-    formData.append('banco_origem', bancoSelecionado);
+    
+    // Adicionar contas selecionadas
+    contasSelecionadas.forEach(conta => {
+        formData.append('contas_selecionadas', conta);
+    });
+    
     formData.append('data_inicio_sistema', periodo.inicio);
     formData.append('data_fim_sistema', periodo.fim);
-    formData.append('empresa', empresaSelecionada);
     
     try {
         mostrarLoading('Carregando lançamentos do sistema...');
@@ -419,13 +419,10 @@ async function processarArquivos(e) {
             data_fim: periodo.fim
         });
 
-        if (bancoSelecionado && bancoSelecionado !== 'auto') {
-            params.append('banco', bancoSelecionado);
-        }
-
-        if (empresaSelecionada && empresaSelecionada !== 'todas') {
-            params.append('empresa', empresaSelecionada);
-        }
+        // Adicionar contas selecionadas aos parâmetros
+        contasSelecionadas.forEach(conta => {
+            params.append('contas', conta);
+        });
 
         const sistemaResp = await fetch(`/financeiro/conciliacao-lancamentos/api/movimentos-sistema?${params.toString()}`);
         const sistemaData = await sistemaResp.json();

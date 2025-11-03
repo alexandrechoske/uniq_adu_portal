@@ -1471,8 +1471,7 @@ def movimentos_sistema():
         logger.info("[CONCILIACAO] Buscando movimentos da tabela fin_conciliacao_movimentos")
         
         # Parâmetros de filtro
-        banco_filtro = request.args.get('banco', 'todos')
-        empresa_filtro = request.args.get('empresa', 'todas')
+        contas_selecionadas = request.args.getlist('contas')  # Nova: lista de contas
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         
@@ -1483,9 +1482,8 @@ def movimentos_sistema():
             data_fim = hoje.strftime('%Y-%m-%d')
         
         logger.info(
-            "[CONCILIACAO] Filtros - Banco: %s, Empresa: %s, Data: %s a %s",
-            banco_filtro,
-            empresa_filtro,
+            "[CONCILIACAO] Filtros - Contas: %s, Data: %s a %s",
+            contas_selecionadas,
             data_inicio,
             data_fim
         )
@@ -1501,6 +1499,11 @@ def movimentos_sistema():
         # Aplicar filtro de data
         query = query.gte('data_lancamento', data_inicio).lte('data_lancamento', data_fim)
         
+        # Aplicar filtro de contas se selecionadas
+        if contas_selecionadas:
+            logger.info(f"[CONCILIACAO] Aplicando filtro para contas: {contas_selecionadas}")
+            query = query.in_('numero_conta', contas_selecionadas)
+        
         # URGENTE: Verificar se usuário tem perfil restrito (financeiroconciliacaoitaubb)
         # Usuários edicleia, juliano, rafael devem ver apenas Itaú e Banco do Brasil
         if usuario_restrito_itau_bb():
@@ -1511,28 +1514,6 @@ def movimentos_sistema():
             # - 'BANCO DO BRASIL' (287 registros)
             bancos_permitidos = ['ITAU', 'Banco do Brasil', 'BANCO DO BRASIL']
             query = query.in_('nome_banco', bancos_permitidos)
-        else:
-            # Aplicar filtro de banco manual se especificado e usuário não restrito
-            if banco_filtro and banco_filtro != 'todos':
-                # Mapear valores do dropdown para nomes REAIS no banco de dados
-                banco_mapeamento = {
-                    'itau': ['ITAU'],  # Todas as variações de Itaú no banco
-                    'banco_brasil': ['BANCO DO BRASIL', 'Banco do Brasil'],  # Todas as variações de BB
-                    'santander': ['SANTANDER', 'SANTANDER - COMPROMISSADA', 'Santander', 'Santander - Compromissada '],
-                    'bradesco': ['BRADESCO', 'Bradesco']
-                }
-                
-                bancos_para_filtrar = banco_mapeamento.get(banco_filtro.lower())
-                
-                if bancos_para_filtrar:
-                    logger.info(f"[CONCILIACAO] Aplicando filtro para bancos: {bancos_para_filtrar}")
-                    query = query.in_('nome_banco', bancos_para_filtrar)
-                else:
-                    # Fallback: usar ilike se não estiver no mapeamento
-                    query = query.ilike('nome_banco', f'%{banco_filtro}%')
-        
-        if empresa_filtro and empresa_filtro.lower() != 'todas':
-            query = query.ilike('empresa', f'%{empresa_filtro}%')
         
         # Executar query (sem limite para pegar todos os registros do período)
         response = query.order('data_lancamento', desc=True).execute()
@@ -1572,8 +1553,7 @@ def movimentos_sistema():
 
             session['registros_sistema'] = len(movimentos)
             session['ultimo_carregamento_sistema'] = {
-                'banco': banco_filtro,
-                'empresa': empresa_filtro,
+                'contas': contas_selecionadas,
                 'data_inicio': data_inicio,
                 'data_fim': data_fim,
                 'total_registros': len(movimentos)
@@ -1586,8 +1566,7 @@ def movimentos_sistema():
                 'data': movimentos,
                 'total': len(movimentos),
                 'filtros': {
-                    'banco': banco_filtro,
-                    'empresa': empresa_filtro,
+                    'contas': contas_selecionadas,
                     'data_inicio': data_inicio,
                     'data_fim': data_fim
                 }
@@ -1600,8 +1579,7 @@ def movimentos_sistema():
                 'total': 0,
                 'message': 'Nenhum movimento encontrado para o período',
                 'filtros': {
-                    'banco': banco_filtro,
-                    'empresa': empresa_filtro,
+                    'contas': contas_selecionadas,
                     'data_inicio': data_inicio,
                     'data_fim': data_fim
                 }
