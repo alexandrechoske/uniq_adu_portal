@@ -16,10 +16,14 @@ app.config.from_object(Config)
 
 # Initialize Flask-SocketIO para rastreamento de usuários online em tempo real
 from flask_socketio import SocketIO
+
+# Configurar CORS baseado no ambiente
+ALLOWED_ORIGINS = os.getenv('SOCKETIO_CORS_ORIGINS', '*').split(',')
+
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",  # Em produção, especificar domínios permitidos
-    async_mode='eventlet',
+    cors_allowed_origins=ALLOWED_ORIGINS,  # Controlado por variável de ambiente
+    async_mode='gevent',  # Deve corresponder ao worker do Gunicorn (gevent)
     manage_session=True,
     logger=False,
     engineio_logger=False
