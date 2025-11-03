@@ -937,12 +937,14 @@
                         <span class="sidebar-text">Perfis</span>
                     </a>
                     
+                    {# DESATIVADO TEMPORARIAMENTE - Usuários Online será reativado futuramente
                     <a href="{{ url_for('usuarios_online.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios_online.') %}active{% endif %}"
                        title="Usuários Online">
                         <i class="mdi mdi-account-multiple-check"></i>
                         <span class="sidebar-text">Usuários Online</span>
                     </a>
+                    #}
                     {% endif %}
                     {% endif %}
                     
@@ -974,7 +976,6 @@
                     </a>
                     {% endif %}
 
-                    {# DESABILITADO TEMPORARIAMENTE - Ajuste de Status
                     {% if 'ajuste_status' in accessible_modules %}
                     <a href="{{ url_for('ajuste_status.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('ajuste_status.') %}active{% endif %}"
@@ -983,7 +984,6 @@
                         <span class="sidebar-text">Ajuste de Status</span>
                     </a>
                     {% endif %}
-                    #}
                 </div>
                 {% endif %}
                 
