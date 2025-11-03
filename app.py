@@ -32,7 +32,7 @@ socketio = SocketIO(
 # Configurar sessão para expirar após 12 horas (43200 segundos)
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
-app.config['SESSION_COOKIE_SECURE'] = False  # True apenas em HTTPS
+app.config['SESSION_COOKIE_SECURE'] = True  # True apenas em HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
