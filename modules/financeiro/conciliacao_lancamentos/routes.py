@@ -1719,6 +1719,50 @@ def limpar_sessao():
         logger.error(f"[CONCILIACAO] Erro ao limpar sessão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+@conciliacao_lancamentos_bp.route('/api/contas-disponiveis', methods=['GET'])
+@login_required
+def api_contas_disponiveis():
+    """
+    API para buscar contas bancárias disponíveis para filtro
+    
+    Returns:
+        JSON com lista de contas únicas padronizadas
+    """
+    try:
+        logger.info("[CONCILIACAO] Buscando contas disponíveis")
+        
+        # Buscar contas únicas da tabela fin_conciliacao_movimentos
+        response = supabase_admin.table('fin_conciliacao_movimentos')\
+            .select('numero_conta')\
+            .not_.is_('numero_conta', 'null')\
+            .execute()
+        
+        # Extrair contas únicas e padronizar
+        contas_set = set()
+        for row in response.data:
+            conta = row.get('numero_conta', '').strip()
+            if conta and conta.lower() not in ['aplicacao', 'brasil']:  # Filtrar contas inválidas
+                contas_set.add(conta)
+        
+        # Ordenar alfabeticamente
+        contas_list = sorted(list(contas_set))
+        
+        logger.info(f"[CONCILIACAO] {len(contas_list)} contas encontradas")
+        
+        return jsonify({
+            'success': True,
+            'contas': contas_list,
+            'total': len(contas_list)
+        })
+        
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro ao buscar contas: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'contas': []
+        }), 500
+
 @conciliacao_lancamentos_bp.route('/api/progresso-conciliacao', methods=['GET'])
 def progresso_conciliacao_endpoint():
     """Endpoint para consultar progresso da conciliação em tempo real"""

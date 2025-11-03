@@ -89,36 +89,11 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="form-label">Banco (opcional, auto-detectado)</label>
-                                <select id="banco_origem" class="form-select">
-                                    <option value="auto">🔍 Identificar Automaticamente</option>
-                                    <option value="itau">🏦 Itaú</option>
-                                    {% if not perfil_restrito_itau_bb %}
-                                    <option value="santander">🏦 Santander</option>
-                                    {% endif %}
-                                    <option value="banco_brasil">🏦 Banco do Brasil</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="form-group">
-                                <label class="form-label">Empresa dos Lançamentos</label>
-                                <div class="empresa-radio-group">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroTodas" value="todas" checked>
-                                        <label class="form-check-label" for="empresaFiltroTodas">Todas</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Consultoria">
-                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Consultoria</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Soluções">
-                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Soluções</label>
-                                    </div>
-                                </div>
+                                <label class="form-label">Contas Bancárias</label>
+                                <button type="button" id="btnSelecionarContas" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalSelecionarContas">
+                                    <i class="mdi mdi-bank"></i> Selecionar Contas (0)
+                                </button>
+                                <small class="form-text text-muted">Selecione uma ou mais contas para filtrar</small>
                             </div>
                         </div>
                     </div>
@@ -515,6 +490,44 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Seleção de Contas -->
+<div class="modal fade" id="modalSelecionarContas" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="mdi mdi-bank"></i> Selecionar Contas Bancárias</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="buscarConta" class="form-control" placeholder="🔍 Buscar conta...">
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="selecionarTodasContas">
+                    <label class="form-check-label fw-bold" for="selecionarTodasContas">
+                        Selecionar Todas
+                    </label>
+                </div>
+                <hr>
+                <div id="listaContas" class="conta-list">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando contas...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnAplicarContas">
+                    <i class="mdi mdi-check"></i> Aplicar (<span id="contadorContasSelecionadas">0</span>)
+                </button>
             </div>
         </div>
     </div>

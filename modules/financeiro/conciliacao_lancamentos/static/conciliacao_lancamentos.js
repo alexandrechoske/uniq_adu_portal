@@ -134,7 +134,140 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarEventos();
     inicializarDragAndDrop();
     inicializarOrdenacao();
+    inicializarModalContas(); // Novo: modal de seleção de contas
 });
+
+// ========================================
+// MODAL DE SELEÇÃO DE CONTAS
+// ========================================
+let contasDisponiveis = [];
+let contasSelecionadas = [];
+
+function inicializarModalContas() {
+    const modal = document.getElementById('modalSelecionarContas');
+    const btnAplicar = document.getElementById('btnAplicarContas');
+    const btnSelecionar = document.getElementById('btnSelecionarContas');
+    const buscarInput = document.getElementById('buscarConta');
+    const selecionarTodas = document.getElementById('selecionarTodasContas');
+    
+    // Carregar contas quando o modal abrir
+    modal.addEventListener('show.bs.modal', carregarContasDisponiveis);
+    
+    // Aplicar seleção
+    btnAplicar.addEventListener('click', aplicarSelecaoContas);
+    
+    // Busca de contas
+    buscarInput.addEventListener('input', filtrarListaContas);
+    
+    // Selecionar todas
+    selecionarTodas.addEventListener('change', toggleSelecionarTodasContas);
+}
+
+async function carregarContasDisponiveis() {
+    const listaContas = document.getElementById('listaContas');
+    
+    try {
+        console.log('🏦 Carregando contas disponíveis...');
+        
+        const response = await fetch('/financeiro/conciliacao-lancamentos/api/contas-disponiveis');
+        const data = await response.json();
+        
+        if (data.success) {
+            contasDisponiveis = data.contas;
+            console.log(`✅ ${data.total} contas carregadas`);
+            renderizarListaContas(contasDisponiveis);
+        } else {
+            throw new Error(data.error || 'Erro ao carregar contas');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar contas:', error);
+        listaContas.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="mdi mdi-alert"></i>
+                Erro ao carregar contas: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function renderizarListaContas(contas) {
+    const listaContas = document.getElementById('listaContas');
+    
+    if (contas.length === 0) {
+        listaContas.innerHTML = `
+            <div class="text-center py-3 text-muted">
+                <i class="mdi mdi-information"></i>
+                <p>Nenhuma conta encontrada</p>
+            </div>
+        `;
+        return;
+    }
+    
+    listaContas.innerHTML = contas.map(conta => `
+        <div class="conta-item">
+            <div class="form-check">
+                <input class="form-check-input conta-checkbox" type="checkbox" 
+                       value="${conta}" id="conta-${conta.replace(/[^a-zA-Z0-9]/g, '')}"
+                       ${contasSelecionadas.includes(conta) ? 'checked' : ''}>
+                <label class="form-check-label" for="conta-${conta.replace(/[^a-zA-Z0-9]/g, '')}">
+                    <span class="conta-badge">${conta}</span>
+                </label>
+            </div>
+        </div>
+    `).join('');
+    
+    // Adicionar event listeners
+    document.querySelectorAll('.conta-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', atualizarContadorContas);
+    });
+    
+    atualizarContadorContas();
+}
+
+function filtrarListaContas() {
+    const busca = document.getElementById('buscarConta').value.toLowerCase();
+    const contasFiltradas = contasDisponiveis.filter(conta => 
+        conta.toLowerCase().includes(busca)
+    );
+    renderizarListaContas(contasFiltradas);
+}
+
+function toggleSelecionarTodasContas(e) {
+    const checkboxes = document.querySelectorAll('.conta-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = e.target.checked;
+    });
+    atualizarContadorContas();
+}
+
+function atualizarContadorContas() {
+    const checkboxes = document.querySelectorAll('.conta-checkbox:checked');
+    const contador = document.getElementById('contadorContasSelecionadas');
+    contador.textContent = checkboxes.length;
+    
+    // Atualizar checkbox "Selecionar Todas"
+    const selecionarTodas = document.getElementById('selecionarTodasContas');
+    const totalCheckboxes = document.querySelectorAll('.conta-checkbox').length;
+    selecionarTodas.checked = checkboxes.length === totalCheckboxes && totalCheckboxes > 0;
+}
+
+function aplicarSelecaoContas() {
+    const checkboxes = document.querySelectorAll('.conta-checkbox:checked');
+    contasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Atualizar botão de seleção
+    const btnSelecionar = document.getElementById('btnSelecionarContas');
+    btnSelecionar.innerHTML = `
+        <i class="mdi mdi-bank"></i> Selecionar Contas (${contasSelecionadas.length})
+    `;
+    
+    console.log('✅ Contas selecionadas:', contasSelecionadas);
+    
+    // Fechar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecionarContas'));
+    modal.hide();
+}
 
 function inicializarEventos() {
     // Navegação de abas

@@ -701,3 +701,69 @@
         min-width: unset;
     }
 }
+
+/* ========================================
+   MODAL DE SELEÇÃO DE CONTAS
+   ======================================== */
+#modalSelecionarContas .modal-dialog {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0 auto;
+}
+
+#modalSelecionarContas .modal-content {
+    margin-top: 60px;
+    max-height: 70vh;
+    max-width: 500px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+}
+
+#modalSelecionarContas .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.conta-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.conta-item {
+    padding: 10px;
+    border-bottom: 1px solid #f1f3f5;
+    transition: background-color 0.2s;
+}
+
+.conta-item:last-child {
+    border-bottom: none;
+}
+
+.conta-item:hover {
+    background-color: #f8f9fa;
+}
+
+.conta-item .form-check-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.conta-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
