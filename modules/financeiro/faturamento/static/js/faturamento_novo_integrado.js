@@ -13,6 +13,17 @@ class FaturamentoControllerNovo {
         this.dataLabelsAtivos = false; // Estado dos rótulos de dados
         this.empresaAtual = 'ambos'; // Filtro de empresa padrão
         
+        // Filtros avançados
+        this.filtros = {
+            start_date: '',
+            end_date: '',
+            ano: '',
+            mes: '',
+            empresa: '',
+            centro_resultado: '',
+            cliente: ''
+        };
+        
         // Configurações globais
         Chart.register(ChartDataLabels);
         Chart.defaults.plugins.datalabels.display = false;
@@ -36,11 +47,371 @@ class FaturamentoControllerNovo {
             this.setupToggleLabels();
             this.setupEmpresaFilters(); // Novo método para configurar filtros de empresa
             this.setupSectorFunctionality(); // Configurar funcionalidade do setor
+            this.setupFilterModal(); // Configurar modal de filtros
             await this.buscarAnosDisponiveis();
             await this.carregarTodosOsDados();
         } catch (error) {
             console.error('Erro na inicialização:', error);
         }
+    }
+    
+    setupFilterModal() {
+        console.log('Configurando modal de filtros...');
+        
+        // Botão para abrir modal
+        const openFiltersBtn = document.getElementById('open-filters');
+        if (openFiltersBtn) {
+            openFiltersBtn.addEventListener('click', () => {
+                console.log('Botão filtros clicado');
+                this.openFiltersModal();
+            });
+            console.log('✅ Botão open-filters configurado');
+        } else {
+            console.warn('⚠️ Botão open-filters não encontrado');
+        }
+        
+        // Botão para fechar modal
+        const closeModalBtn = document.getElementById('close-modal');
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                this.closeFiltersModal();
+            });
+        }
+        
+        // Botão aplicar filtros
+        const applyFiltersBtn = document.getElementById('apply-filters');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                this.applyFilters();
+            });
+        }
+        
+        // Botão limpar filtros
+        const clearFiltersBtn = document.getElementById('clear-filters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                this.resetFilters();
+            });
+        }
+        
+        // Botão remover filtros na actions bar
+        const resetFiltersBtn = document.getElementById('reset-filters');
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', () => {
+                this.resetFilters();
+            });
+        }
+        
+        // Listener para ajustar datas quando ano é selecionado
+        const anoSelect = document.getElementById('ano-select');
+        if (anoSelect) {
+            anoSelect.addEventListener('change', (e) => {
+                const ano = e.target.value;
+                if (ano) {
+                    const startDate = document.getElementById('start-date');
+                    const endDate = document.getElementById('end-date');
+                    const mesSelect = document.getElementById('mes-select');
+                    
+                    if (startDate) startDate.value = `${ano}-01-01`;
+                    if (endDate) endDate.value = `${ano}-12-31`;
+                    if (mesSelect) mesSelect.value = ''; // Limpar seleção de mês
+                }
+            });
+        }
+        
+        // Listener para ajustar datas quando mês é selecionado
+        const mesSelect = document.getElementById('mes-select');
+        if (mesSelect) {
+            mesSelect.addEventListener('change', (e) => {
+                const mes = e.target.value;
+                const anoSelect = document.getElementById('ano-select');
+                const ano = anoSelect?.value || new Date().getFullYear();
+                
+                if (mes) {
+                    const ultimoDia = new Date(ano, parseInt(mes), 0).getDate();
+                    const startDate = document.getElementById('start-date');
+                    const endDate = document.getElementById('end-date');
+                    
+                    if (startDate) startDate.value = `${ano}-${mes.padStart(2, '0')}-01`;
+                    if (endDate) endDate.value = `${ano}-${mes.padStart(2, '0')}-${ultimoDia}`;
+                } else if (anoSelect?.value) {
+                    // Se limpar mês mas mantém ano, volta para ano completo
+                    const startDate = document.getElementById('start-date');
+                    const endDate = document.getElementById('end-date');
+                    
+                    if (startDate) startDate.value = `${ano}-01-01`;
+                    if (endDate) endDate.value = `${ano}-12-31`;
+                }
+            });
+        }
+        
+        // Fechar modal ao clicar fora
+        const modal = document.getElementById('filter-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'filter-modal') {
+                    this.closeFiltersModal();
+                }
+            });
+        }
+    }
+    
+    openFiltersModal() {
+        console.log('Abrindo modal de filtros...');
+        const modal = document.getElementById('filter-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            console.log('✅ Modal exibido');
+            
+            // Carregar opções dinâmicas
+            this.loadFilterOptions();
+        } else {
+            console.error('❌ Modal filter-modal não encontrado no DOM');
+        }
+    }
+    
+    closeFiltersModal() {
+        const modal = document.getElementById('filter-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            console.log('Modal fechado');
+        }
+    }
+    
+    async loadFilterOptions() {
+        console.log('Carregando opções de filtros...');
+        
+        // Carregar clientes
+        const loadingClientes = document.getElementById('loading-clientes');
+        if (loadingClientes) loadingClientes.style.display = 'block';
+        
+        try {
+            const response = await fetch('/financeiro/faturamento/api/clientes');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('cliente-select');
+                if (select) {
+                    // Manter apenas a primeira opção (Todos)
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    data.data.forEach(cliente => {
+                        const option = document.createElement('option');
+                        option.value = cliente;
+                        option.textContent = cliente;
+                        select.appendChild(option);
+                    });
+                    console.log(`✅ ${data.data.length} clientes carregados`);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
+        } finally {
+            if (loadingClientes) loadingClientes.style.display = 'none';
+        }
+        
+        // Carregar centros de resultado
+        const loadingCentros = document.getElementById('loading-centros');
+        if (loadingCentros) loadingCentros.style.display = 'block';
+        
+        try {
+            const response = await fetch('/financeiro/faturamento/api/centros-resultado');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('centro-resultado-select');
+                if (select) {
+                    // Manter apenas a primeira opção (Todos)
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    data.data.forEach(centro => {
+                        const option = document.createElement('option');
+                        option.value = centro;
+                        option.textContent = centro;
+                        select.appendChild(option);
+                    });
+                    console.log(`✅ ${data.data.length} centros carregados`);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar centros:', error);
+        } finally {
+            if (loadingCentros) loadingCentros.style.display = 'none';
+        }
+    }
+    
+    applyFilters() {
+        console.log('Aplicando filtros...');
+        
+        // Coletar valores dos filtros
+        const startDate = document.getElementById('start-date')?.value;
+        const endDate = document.getElementById('end-date')?.value;
+        const anoSelecionado = document.getElementById('ano-select')?.value;
+        const mesSelecionado = document.getElementById('mes-select')?.value;
+        const empresaSelecionada = document.getElementById('empresa-select')?.value;
+        const centroResultado = document.getElementById('centro-resultado-select')?.value;
+        const cliente = document.getElementById('cliente-select')?.value;
+        
+        // Lógica de ajuste de datas
+        if (anoSelecionado) {
+            if (mesSelecionado) {
+                // Mês específico de um ano
+                const ultimoDia = new Date(anoSelecionado, parseInt(mesSelecionado), 0).getDate();
+                this.filtros.start_date = `${anoSelecionado}-${mesSelecionado.padStart(2, '0')}-01`;
+                this.filtros.end_date = `${anoSelecionado}-${mesSelecionado.padStart(2, '0')}-${ultimoDia}`;
+                this.filtros.ano = anoSelecionado;
+                this.filtros.mes = mesSelecionado;
+            } else {
+                // Ano completo
+                this.filtros.start_date = `${anoSelecionado}-01-01`;
+                this.filtros.end_date = `${anoSelecionado}-12-31`;
+                this.filtros.ano = anoSelecionado;
+                this.filtros.mes = '';
+            }
+        } else if (startDate && endDate) {
+            // Usar datas personalizadas
+            this.filtros.start_date = startDate;
+            this.filtros.end_date = endDate;
+            this.filtros.ano = '';
+            this.filtros.mes = '';
+        } else {
+            // Sem filtro de data
+            this.filtros.start_date = '';
+            this.filtros.end_date = '';
+            this.filtros.ano = '';
+            this.filtros.mes = '';
+        }
+        
+        // Aplicar outros filtros
+        this.filtros.empresa = empresaSelecionada;
+        this.filtros.centro_resultado = centroResultado;
+        this.filtros.cliente = cliente;
+        
+        console.log('✅ Filtros aplicados:', this.filtros);
+        console.log('✅ this.filtros objeto completo:', JSON.stringify(this.filtros, null, 2));
+        
+        // Atualizar resumo de filtros
+        this.atualizarResumoFiltros();
+        
+        // Mostrar botão de remover filtros se houver filtros ativos
+        if (this.temFiltrosAtivos()) {
+            const resetBtn = document.getElementById('reset-filters');
+            if (resetBtn) resetBtn.style.display = 'inline-block';
+        }
+        
+        // Fechar modal
+        this.closeFiltersModal();
+        
+        // Recarregar dados com filtros
+        this.carregarTodosOsDados();
+    }
+    
+    temFiltrosAtivos() {
+        return this.filtros.start_date !== '' ||
+               this.filtros.end_date !== '' ||
+               this.filtros.empresa !== '' ||
+               this.filtros.centro_resultado !== '' ||
+               this.filtros.cliente !== '';
+    }
+    
+    atualizarResumoFiltros() {
+        const parts = [];
+        
+        // Período
+        if (this.filtros.start_date && this.filtros.end_date) {
+            const startDate = new Date(this.filtros.start_date);
+            const endDate = new Date(this.filtros.end_date);
+            
+            // Verificar se é um ano completo
+            if (startDate.getMonth() === 0 && startDate.getDate() === 1 &&
+                endDate.getMonth() === 11 && endDate.getDate() === 31 &&
+                startDate.getFullYear() === endDate.getFullYear()) {
+                parts.push(`Ano ${startDate.getFullYear()}`);
+            } else if (this.filtros.mes) {
+                const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                parts.push(`${meses[parseInt(this.filtros.mes) - 1]}/${startDate.getFullYear()}`);
+            } else {
+                parts.push(`${startDate.toLocaleDateString('pt-BR')} a ${endDate.toLocaleDateString('pt-BR')}`);
+            }
+        }
+        
+        // Empresa
+        if (this.filtros.empresa) {
+            const empresaNome = this.filtros.empresa === 'consultoria' ? 'Consultoria' : 'IMP/EXP';
+            parts.push(empresaNome);
+        }
+        
+        // Centro de Resultado
+        if (this.filtros.centro_resultado) {
+            parts.push(`CR: ${this.filtros.centro_resultado}`);
+        }
+        
+        // Cliente
+        if (this.filtros.cliente) {
+            const clienteNome = this.filtros.cliente.length > 30 
+                ? this.filtros.cliente.substring(0, 27) + '...' 
+                : this.filtros.cliente;
+            parts.push(`Cliente: ${clienteNome}`);
+        }
+        
+        // Atualizar texto do resumo
+        const resumoTexto = parts.length > 0 ? parts.join(' • ') : 'Todos os dados';
+        const filterSummary = document.getElementById('filter-summary-text');
+        if (filterSummary) {
+            filterSummary.textContent = resumoTexto;
+        }
+        
+        console.log('Resumo de filtros:', resumoTexto);
+    }
+    
+    resetFilters() {
+        console.log('Resetando filtros...');
+        
+        const currentYear = new Date().getFullYear();
+        
+        // Resetar objeto de filtros
+        this.filtros = {
+            start_date: '',
+            end_date: '',
+            ano: '',
+            mes: '',
+            empresa: '',
+            centro_resultado: '',
+            cliente: ''
+        };
+        
+        // Limpar campos do formulário
+        const startDate = document.getElementById('start-date');
+        const endDate = document.getElementById('end-date');
+        const anoSelect = document.getElementById('ano-select');
+        const mesSelect = document.getElementById('mes-select');
+        const empresaSelect = document.getElementById('empresa-select');
+        const centroSelect = document.getElementById('centro-resultado-select');
+        const clienteSelect = document.getElementById('cliente-select');
+        
+        if (startDate) startDate.value = '';
+        if (endDate) endDate.value = '';
+        if (anoSelect) anoSelect.value = currentYear;
+        if (mesSelect) mesSelect.value = '';
+        if (empresaSelect) empresaSelect.value = '';
+        if (centroSelect) centroSelect.value = '';
+        if (clienteSelect) clienteSelect.value = '';
+        
+        // Esconder botão de remover filtros
+        const resetBtn = document.getElementById('reset-filters');
+        if (resetBtn) resetBtn.style.display = 'none';
+        
+        // Atualizar resumo
+        this.atualizarResumoFiltros();
+        
+        // Recarregar dados sem filtros
+        this.carregarTodosOsDados();
+        
+        console.log('Filtros resetados e dados recarregados');
     }
     
     setupToggleLabels() {
@@ -195,10 +566,48 @@ class FaturamentoControllerNovo {
         }
     }
     
+    construirUrlComFiltros(baseUrl) {
+        console.log('🔍 construirUrlComFiltros chamado com baseUrl:', baseUrl);
+        console.log('🔍 this.filtros atual:', JSON.stringify(this.filtros, null, 2));
+        
+        const params = new URLSearchParams();
+        
+        // Adicionar filtros de data
+        if (this.filtros.start_date) {
+            params.append('start_date', this.filtros.start_date);
+        }
+        if (this.filtros.end_date) {
+            params.append('end_date', this.filtros.end_date);
+        }
+        
+        // Adicionar filtro de empresa
+        if (this.filtros.empresa) {
+            params.append('empresa', this.filtros.empresa);
+        }
+        
+        // Adicionar filtro de centro de resultado
+        if (this.filtros.centro_resultado) {
+            params.append('centro_resultado', this.filtros.centro_resultado);
+        }
+        
+        // Adicionar filtro de cliente
+        if (this.filtros.cliente) {
+            params.append('cliente', this.filtros.cliente);
+        }
+        
+        const queryString = params.toString();
+        const finalUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+        console.log('🎯 URL FINAL construída:', finalUrl);
+        console.log('🎯 Query string:', queryString);
+        return finalUrl;
+    }
+    
     async buscarAnosDisponiveis() {
         try {
             console.log('🔄 Buscando anos disponíveis...');
-            const response = await fetch('/financeiro/faturamento/api/geral/comparativo_anos');
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/comparativo_anos');
+            console.log('📡 URL com filtros:', url);
+            const response = await fetch(url);
             console.log('📡 Response anos:', response.status);
             const data = await response.json();
             console.log('📊 Data anos:', data);
@@ -257,36 +666,58 @@ class FaturamentoControllerNovo {
     async carregarTodosOsDados() {
         console.log('Carregando todos os dados...');
         
-        const loadingElements = [
-            'loading-kpis',
-            'loading-comparativo', 
-            'loading-centro-resultado',
-            'loading-categoria-operacao',
-            'loading-top-clientes'
-        ];
+        // Adicionar skeleton aos KPIs
+        const kpiCards = document.querySelectorAll('.kpi-card');
+        kpiCards.forEach(card => card.classList.add('skeleton-loader'));
         
-        // Mostrar loadings
-        loadingElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'block';
+        // Adicionar skeleton aos gráficos
+        const charts = [
+            'comparativo-chart',
+            'hierarquico-chart',
+            'centro-resultado-chart',
+            'categoria-operacao-chart'
+        ];
+        charts.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas && canvas.parentElement) {
+                canvas.parentElement.classList.add('skeleton-chart');
+                canvas.style.opacity = '0';
+            }
         });
+        
+        // Adicionar skeleton à tabela de Top Clientes
+        const topClientesTable = document.querySelector('#top-clientes-table');
+        if (topClientesTable) {
+            topClientesTable.classList.add('skeleton-loader');
+        }
         
         try {
             await Promise.all([
                 this.carregarKPIs(),
                 this.carregarGraficoComparativo(),
-                this.setupGraficoHierarquico(),  // Substituindo os antigos gráficos de rosca
+                this.setupGraficoHierarquico(),
                 this.carregarTopClientes(),
                 this.carregarTabelaComparativa()
             ]);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
         } finally {
-            // Esconder loadings
-            loadingElements.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.style.display = 'none';
+            // Remover skeleton dos KPIs
+            kpiCards.forEach(card => card.classList.remove('skeleton-loader'));
+            
+            // Remover skeleton dos gráficos
+            charts.forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas && canvas.parentElement) {
+                    canvas.parentElement.classList.remove('skeleton-chart');
+                    canvas.style.opacity = '1';
+                }
             });
+            
+            // Remover skeleton da tabela
+            if (topClientesTable) {
+                topClientesTable.classList.remove('skeleton-loader');
+            }
         }
     }
     
@@ -294,14 +725,10 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando KPIs...');
             
-            // Obter empresa selecionada dos botões de filtro
-            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
-            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
-            
-            // Usar o endpoint comparativo que tem todos os anos com filtro de empresa
-            const url = `/financeiro/faturamento/api/geral/comparativo_anos?empresa=${encodeURIComponent(empresaSelecionada)}`;
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/comparativo_anos');
             const response = await fetch(url);
-            console.log('📡 Response KPIs:', response.status, 'Empresa:', empresaSelecionada);
+            console.log('📡 Response KPIs:', response.status);
             const data = await response.json();
             console.log('📊 Data KPIs:', data);
             
@@ -573,14 +1000,9 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando gráfico comparativo...');
             
-            // Incluir parâmetro de empresa na URL
-            const params = new URLSearchParams();
-            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
-                params.append('empresa', this.empresaAtual);
-            }
-            
-            const url = `/financeiro/faturamento/api/geral/comparativo_anos?${params.toString()}`;
-            console.log(`📡 URL: ${url}`);
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/comparativo_anos');
+            console.log(`📡 URL com filtros: ${url}`);
             
             const response = await fetch(url);
             console.log('📡 Response comparativo:', response.status);
@@ -865,13 +1287,8 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando gráfico centro resultado...');
             
-            // Incluir parâmetro de empresa na URL
-            const params = new URLSearchParams();
-            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
-                params.append('empresa', this.empresaAtual);
-            }
-            
-            const url = `/financeiro/faturamento/api/geral/centro_resultado?${params.toString()}`;
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/centro_resultado');
             console.log(`📡 URL: ${url}`);
             
             const response = await fetch(url);
@@ -975,13 +1392,8 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando gráfico categoria operação...');
             
-            // Incluir parâmetro de empresa na URL
-            const params = new URLSearchParams();
-            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
-                params.append('empresa', this.empresaAtual);
-            }
-            
-            const url = `/financeiro/faturamento/api/geral/categoria_operacao?${params.toString()}`;
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/categoria_operacao');
             console.log(`📡 URL: ${url}`);
             
             const response = await fetch(url);
@@ -1076,17 +1488,17 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando top clientes...');
             
-            // Incluir parâmetro de empresa na URL
-            const params = new URLSearchParams();
-            params.append('limit', '10');
-            if (this.empresaAtual && this.empresaAtual !== 'ambos') {
-                params.append('empresa', this.empresaAtual);
-            }
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const baseUrl = '/financeiro/faturamento/api/geral/top_clientes';
+            const url = this.construirUrlComFiltros(baseUrl);
             
-            const url = `/financeiro/faturamento/api/geral/top_clientes?${params.toString()}`;
-            console.log(`📡 URL: ${url}`);
+            // Adicionar limite de 10 itens
+            const separator = url.includes('?') ? '&' : '?';
+            const finalUrl = `${url}${separator}limit=10`;
             
-            const response = await fetch(url);
+            console.log(`📡 URL com filtros: ${finalUrl}`);
+            
+            const response = await fetch(finalUrl);
             console.log('📡 Response top clientes:', response.status);
             const data = await response.json();
             console.log('📊 Data top clientes:', data);
@@ -1144,13 +1556,10 @@ class FaturamentoControllerNovo {
         try {
             console.log('🔄 Carregando tabela comparativa...');
             
-            // Obter empresa selecionada dos botões de filtro
-            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
-            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
-            
-            const url = `/financeiro/faturamento/api/geral/comparativo_anos?empresa=${encodeURIComponent(empresaSelecionada)}`;
+            // Usar construirUrlComFiltros para incluir TODOS os filtros
+            const url = this.construirUrlComFiltros('/financeiro/faturamento/api/geral/comparativo_anos');
             const response = await fetch(url);
-            console.log('📡 Response tabela:', response.status, 'Empresa:', empresaSelecionada);
+            console.log('📡 Response tabela:', response.status);
             const data = await response.json();
             console.log('📊 Data tabela:', data);
             
@@ -1939,13 +2348,39 @@ class FaturamentoControllerNovo {
     
     async carregarDadosHierarquicos() {
         try {
+            // Parâmetros específicos da hierarquia
             const params = new URLSearchParams({
                 nivel: this.estadoHierarquico.nivel,
-                parent: this.estadoHierarquico.parent,
-                empresa: this.empresaAtual,
-                start_date: `${this.currentAno}-01-01`,
-                end_date: `${this.currentAno}-12-31`
+                parent: this.estadoHierarquico.parent
             });
+            
+            // Adicionar filtros de data (usar filtros do modal ou fallback para ano atual)
+            if (this.filtros.start_date && this.filtros.end_date) {
+                params.append('start_date', this.filtros.start_date);
+                params.append('end_date', this.filtros.end_date);
+            } else {
+                params.append('start_date', `${this.currentAno}-01-01`);
+                params.append('end_date', `${this.currentAno}-12-31`);
+            }
+            
+            // Adicionar filtro de empresa
+            if (this.filtros.empresa) {
+                params.append('empresa', this.filtros.empresa);
+            } else if (this.empresaAtual) {
+                params.append('empresa', this.empresaAtual);
+            }
+            
+            // Adicionar filtro de centro de resultado
+            if (this.filtros.centro_resultado) {
+                params.append('centro_resultado', this.filtros.centro_resultado);
+            }
+            
+            // Adicionar filtro de cliente
+            if (this.filtros.cliente) {
+                params.append('cliente', this.filtros.cliente);
+            }
+            
+            console.log('🔍 Hierarquia - Params:', params.toString());
             
             const response = await fetch(`/financeiro/faturamento/api/geral/dados_hierarquicos?${params}`);
             const data = await response.json();
@@ -2002,17 +2437,17 @@ class FaturamentoControllerNovo {
                     },
                     datalabels: {
                         display: true,
-                        anchor: 'end',
-                        align: 'top',
+                        anchor: 'center',  // Centralizar na barra
+                        align: 'center',   // Centralizar na barra
                         formatter: (value, context) => {
                             const percentual = percentuais[context.dataIndex];
                             return `R$ ${this.formatarMoedaCompacta(value)}\n(${percentual.toFixed(1)}%)`;
                         },
                         font: {
                             weight: 'bold',
-                            size: 11
+                            size: 12
                         },
-                        color: '#333'
+                        color: '#fff'  // Branco para contraste com as barras coloridas
                     },
                     tooltip: {
                         callbacks: {

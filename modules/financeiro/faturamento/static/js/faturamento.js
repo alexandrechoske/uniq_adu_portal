@@ -14,7 +14,9 @@ class FaturamentoController {
             start_date: '2015-01-01',  // Buscar desde 2015 para ter todos os anos
             end_date: `${this.currentAno}-12-31`,
             empresa: '',
-            centro_resultado: ''
+            centro_resultado: '',
+            cliente: '',
+            mes: ''
         };
         
         // Controle de visualização de anos (padrão: últimos 5 anos)
@@ -85,6 +87,7 @@ class FaturamentoController {
     
     init() {
         this.setupEventListeners();
+        this.updateFilterSummary(); // Inicializar resumo de filtros
         this.loadData();
     }
     
@@ -100,6 +103,33 @@ class FaturamentoController {
         $('#close-modal').on('click', () => this.closeFiltersModal());
         $('#apply-filters').on('click', () => this.applyFilters());
         $('#clear-filters').on('click', () => this.resetFilters());
+        $('#reset-filters').on('click', () => this.resetFilters());
+        
+        // Listener para ajustar datas quando ano é selecionado
+        $('#ano-select').on('change', (e) => {
+            const ano = e.target.value;
+            if (ano) {
+                $('#start-date').val(`${ano}-01-01`);
+                $('#end-date').val(`${ano}-12-31`);
+                $('#mes-select').val(''); // Limpar seleção de mês
+            }
+        });
+        
+        // Listener para ajustar datas quando mês é selecionado
+        $('#mes-select').on('change', (e) => {
+            const mes = e.target.value;
+            const ano = $('#ano-select').val() || new Date().getFullYear();
+            
+            if (mes) {
+                const ultimoDia = new Date(ano, parseInt(mes), 0).getDate();
+                $('#start-date').val(`${ano}-${mes.padStart(2, '0')}-01`);
+                $('#end-date').val(`${ano}-${mes.padStart(2, '0')}-${ultimoDia}`);
+            } else if ($('#ano-select').val()) {
+                // Se limpar mês mas mantém ano, volta para ano completo
+                $('#start-date').val(`${ano}-01-01`);
+                $('#end-date').val(`${ano}-12-31`);
+            }
+        });
         
         // Setor filter - Removed as we now load all sectors at once
         // $('#setor-select').on('change', (e) => {
@@ -160,7 +190,7 @@ class FaturamentoController {
     // Enhanced KPIs for new dashboard
     async loadEnhancedKPIs() {
         try {
-            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}&cliente=${this.filters.cliente || ''}`);
             
             if (response.success && response.data) {
                 const anos = Object.keys(response.data);
@@ -199,7 +229,7 @@ class FaturamentoController {
 
     async loadComparativoAnos() {
         try {
-            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}&cliente=${this.filters.cliente || ''}`);
             
             if (response.success && response.data) {
                 this.renderComparativoChart(response.data);
@@ -231,7 +261,7 @@ class FaturamentoController {
 
     async loadResumoMensal() {
         try {
-            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}`);
+            const response = await $.get(`/financeiro/faturamento/api/geral/comparativo_anos?start_date=${this.filters.start_date}&end_date=${this.filters.end_date}&empresa=${this.filters.empresa}&centro_resultado=${this.filters.centro_resultado}&cliente=${this.filters.cliente || ''}`);
             
             if (response.success && response.data) {
                 this.renderResumoMensal(response.data);
@@ -1357,8 +1387,59 @@ class FaturamentoController {
         const modal = document.getElementById('filter-modal');
         if (modal) {
             modal.style.display = 'block';
-            // Set current year in select
-            $('#ano-select').val(this.currentAno);
+            
+            // Preencher campos com valores atuais
+            $('#start-date').val(this.filters.start_date || '');
+            $('#end-date').val(this.filters.end_date || '');
+            $('#empresa-select').val(this.filters.empresa || '');
+            $('#centro-resultado-select').val(this.filters.centro_resultado || '');
+            $('#cliente-select').val(this.filters.cliente || '');
+            $('#mes-select').val(this.filters.mes || '');
+            
+            // Detectar ano do start_date se existir
+            if (this.filters.start_date) {
+                const ano = this.filters.start_date.split('-')[0];
+                $('#ano-select').val(ano);
+            }
+            
+            // Carregar opções dinâmicas
+            this.loadFilterOptions();
+        }
+    }
+    
+    async loadFilterOptions() {
+        // Carregar clientes
+        $('#loading-clientes').show();
+        try {
+            const response = await $.get('/financeiro/faturamento/api/clientes');
+            if (response.success) {
+                const select = $('#cliente-select');
+                select.find('option:not(:first)').remove(); // Remove todas exceto "Todos"
+                response.data.forEach(cliente => {
+                    select.append(`<option value="${cliente}">${cliente}</option>`);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
+        } finally {
+            $('#loading-clientes').hide();
+        }
+        
+        // Carregar centros de resultado
+        $('#loading-centros').show();
+        try {
+            const response = await $.get('/financeiro/faturamento/api/centros-resultado');
+            if (response.success) {
+                const select = $('#centro-resultado-select');
+                select.find('option:not(:first)').remove(); // Remove todas exceto "Todos"
+                response.data.forEach(centro => {
+                    select.append(`<option value="${centro}">${centro}</option>`);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar centros:', error);
+        } finally {
+            $('#loading-centros').hide();
         }
     }
     
@@ -1370,10 +1451,46 @@ class FaturamentoController {
     }
     
     applyFilters() {
-        const ano = $('#ano-select').val();
-        this.currentAno = ano;
-        $('#filter-summary-text').text(`Vendo dados do ano ${ano}`);
-        $('#reset-filters').show();
+        // Coletar valores dos filtros
+        const startDate = $('#start-date').val();
+        const endDate = $('#end-date').val();
+        const anoSelecionado = $('#ano-select').val();
+        const mesSelecionado = $('#mes-select').val();
+        const empresaSelecionada = $('#empresa-select').val();
+        const centroResultado = $('#centro-resultado-select').val();
+        const cliente = $('#cliente-select').val();
+        
+        // Se ano foi selecionado, ajusta datas automaticamente
+        if (anoSelecionado) {
+            if (mesSelecionado) {
+                // Mês específico de um ano
+                const ultimoDia = new Date(anoSelecionado, parseInt(mesSelecionado), 0).getDate();
+                this.filters.start_date = `${anoSelecionado}-${mesSelecionado.padStart(2, '0')}-01`;
+                this.filters.end_date = `${anoSelecionado}-${mesSelecionado.padStart(2, '0')}-${ultimoDia}`;
+            } else {
+                // Ano completo
+                this.filters.start_date = `${anoSelecionado}-01-01`;
+                this.filters.end_date = `${anoSelecionado}-12-31`;
+            }
+        } else if (startDate && endDate) {
+            // Usar datas personalizadas
+            this.filters.start_date = startDate;
+            this.filters.end_date = endDate;
+        }
+        
+        // Aplicar outros filtros
+        this.filters.empresa = empresaSelecionada;
+        this.filters.centro_resultado = centroResultado;
+        this.filters.cliente = cliente;
+        this.filters.mes = mesSelecionado;
+        
+        // Atualizar resumo de filtros
+        this.updateFilterSummary();
+        
+        // Mostrar botão de remover filtros
+        if (this.hasActiveFilters()) {
+            $('#reset-filters').show();
+        }
         
         // Fechar modal
         this.closeFiltersModal();
@@ -1382,12 +1499,87 @@ class FaturamentoController {
         this.loadData();
     }
     
-    resetFilters() {
-        this.currentAno = new Date().getFullYear();
-        $('#filter-summary-text').text('Vendo dados do ano atual');
-        $('#reset-filters').hide();
-        $('#ano-select').val(this.currentAno);
+    hasActiveFilters() {
+        const currentYear = new Date().getFullYear();
+        return this.filters.start_date !== `${currentYear}-01-01` ||
+               this.filters.end_date !== `${currentYear}-12-31` ||
+               this.filters.empresa !== '' ||
+               this.filters.centro_resultado !== '' ||
+               this.filters.cliente !== '' ||
+               this.filters.mes !== '';
+    }
+    
+    updateFilterSummary() {
+        const parts = [];
         
+        // Período
+        if (this.filters.start_date && this.filters.end_date) {
+            const startDate = new Date(this.filters.start_date);
+            const endDate = new Date(this.filters.end_date);
+            
+            // Verificar se é um ano completo
+            if (startDate.getMonth() === 0 && startDate.getDate() === 1 &&
+                endDate.getMonth() === 11 && endDate.getDate() === 31 &&
+                startDate.getFullYear() === endDate.getFullYear()) {
+                parts.push(`Ano ${startDate.getFullYear()}`);
+            } else if (this.filters.mes) {
+                const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                parts.push(`${meses[parseInt(this.filters.mes) - 1]}/${startDate.getFullYear()}`);
+            } else {
+                parts.push(`${startDate.toLocaleDateString('pt-BR')} a ${endDate.toLocaleDateString('pt-BR')}`);
+            }
+        }
+        
+        // Empresa
+        if (this.filters.empresa) {
+            const empresaNome = this.filters.empresa === 'consultoria' ? 'Consultoria' : 'IMP/EXP';
+            parts.push(empresaNome);
+        }
+        
+        // Centro de Resultado
+        if (this.filters.centro_resultado) {
+            parts.push(`CR: ${this.filters.centro_resultado}`);
+        }
+        
+        // Cliente
+        if (this.filters.cliente) {
+            parts.push(`Cliente: ${this.filters.cliente}`);
+        }
+        
+        // Atualizar texto do resumo
+        const resumoTexto = parts.length > 0 ? parts.join(' • ') : 'Todos os dados';
+        $('#filter-summary-text').text(resumoTexto);
+    }
+    
+    resetFilters() {
+        const currentYear = new Date().getFullYear();
+        
+        // Reset filters to default
+        this.filters = {
+            start_date: `${currentYear}-01-01`,
+            end_date: `${currentYear}-12-31`,
+            empresa: '',
+            centro_resultado: '',
+            cliente: '',
+            mes: ''
+        };
+        
+        // Reset UI
+        $('#start-date').val('');
+        $('#end-date').val('');
+        $('#ano-select').val(currentYear);
+        $('#mes-select').val('');
+        $('#empresa-select').val('');
+        $('#centro-resultado-select').val('');
+        $('#cliente-select').val('');
+        
+        // Update summary
+        this.updateFilterSummary();
+        
+        // Hide reset button
+        $('#reset-filters').hide();
+        
+        // Reload data
         this.loadData();
     }
     

@@ -56,6 +56,70 @@ def api_empresas():
             'error': str(e)
         }), 500
 
+@faturamento_bp.route('/api/clientes')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_clientes():
+    """API para buscar clientes disponíveis"""
+    try:
+        # Buscar clientes distintos da tabela de faturamento
+        response = supabase_admin.table('fin_faturamento_anual').select('cliente').execute()
+        dados = response.data
+        
+        # Extrair clientes únicos
+        clientes_set = set()
+        for item in dados:
+            if item.get('cliente') and item['cliente'].strip():
+                clientes_set.add(item['cliente'].strip())
+        
+        clientes_lista = sorted(list(clientes_set))
+        
+        print(f"📊 Clientes encontrados: {len(clientes_lista)}")
+        
+        return jsonify({
+            'success': True,
+            'data': clientes_lista
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar clientes: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
+@faturamento_bp.route('/api/centros-resultado')
+@login_required
+@perfil_required('financeiro', 'faturamento')
+def api_centros_resultado():
+    """API para buscar centros de resultado disponíveis"""
+    try:
+        # Buscar centros de resultado distintos da tabela de faturamento
+        response = supabase_admin.table('fin_faturamento_anual').select('centro_resultado').execute()
+        dados = response.data
+        
+        # Extrair centros únicos
+        centros_set = set()
+        for item in dados:
+            if item.get('centro_resultado') and item['centro_resultado'].strip():
+                centros_set.add(item['centro_resultado'].strip())
+        
+        centros_lista = sorted(list(centros_set))
+        
+        print(f"📊 Centros de resultado encontrados: {len(centros_lista)}")
+        
+        return jsonify({
+            'success': True,
+            'data': centros_lista
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar centros de resultado: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': str(e)
+        }), 500
+
 @faturamento_bp.route('/api/geral/kpis')
 @login_required
 @perfil_required('financeiro', 'faturamento')
@@ -217,10 +281,21 @@ def api_geral_proporcao():
 def api_geral_comparativo_anos():
     """API para comparativo anual usando nova classificação por meta_grupo"""
     try:
+        # Pegar filtros
         empresa = request.args.get('empresa', '')
+        start_date = request.args.get('start_date', '')
+        end_date = request.args.get('end_date', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Usar a view atualizada com meta_grupo
-        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('data, valor, meta_grupo')
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('data, valor, meta_grupo, centro_resultado, cliente')
+        
+        # Aplicar filtro de data
+        if start_date:
+            query = query.gte('data', start_date)
+        if end_date:
+            query = query.lte('data', end_date)
         
         # Aplicar filtro baseado no meta_grupo se especificado
         if empresa and empresa.strip() and empresa != 'ambos':
@@ -229,11 +304,19 @@ def api_geral_comparativo_anos():
             elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
                 query = query.eq('meta_grupo', 'IMP/EXP')
         
+        # Aplicar filtro de centro de resultado
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+        
+        # Aplicar filtro de cliente
+        if cliente:
+            query = query.eq('cliente', cliente)
+        
         response = query.execute()
         dados = response.data
         
         # Log para debug
-        print(f"📊 Comparativo anos - Empresa: {empresa}, Registros: {len(dados)}")
+        print(f"📊 Comparativo anos - Empresa: {empresa}, Start: {start_date}, End: {end_date}, CR: {centro_resultado}, Cliente: {cliente}, Registros: {len(dados)}")
         
         # Agrupar dados por ano e mês
         anos_data = defaultdict(lambda: defaultdict(float))
@@ -652,10 +735,12 @@ def api_geral_top_clientes():
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         limit = int(request.args.get('limit', 10))
         
         # Usar a view atualizada com meta_grupo
-        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('cliente, valor, meta_grupo')
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('cliente, valor, meta_grupo, centro_resultado')
         
         # Aplicar filtros
         if start_date:
@@ -669,9 +754,20 @@ def api_geral_top_clientes():
                 query = query.eq('meta_grupo', 'Consultoria')
             elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
                 query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        # Filtro por centro de resultado
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+        
+        # Filtro por cliente
+        if cliente:
+            query = query.eq('cliente', cliente)
             
         response = query.execute()
         dados = response.data
+        
+        # Log para debug
+        print(f"📊 Top Clientes - Start: {start_date}, End: {end_date}, Empresa: {empresa}, CR: {centro_resultado}, Cliente: {cliente}, Registros: {len(dados)}")
         
         # Buscar mapeamento de clientes para padronização (se existir)
         try:
@@ -819,8 +915,10 @@ def api_geral_dados_hierarquicos():
         empresa = request.args.get('empresa', '')
         nivel = request.args.get('nivel', 'meta_grupo')  # meta_grupo, centro_resultado, categoria, classe
         parent = request.args.get('parent', '')  # Filtro do nível pai
+        centro_resultado = request.args.get('centro_resultado', '')  # Filtro adicional
+        cliente = request.args.get('cliente', '')  # Filtro adicional
         
-        print(f"🌳 [DADOS_HIERARQUICOS] Nível: {nivel}, Parent: {parent}, Empresa: {empresa}")
+        print(f"🌳 [DADOS_HIERARQUICOS] Nível: {nivel}, Parent: {parent}, Empresa: {empresa}, Centro: {centro_resultado}, Cliente: {cliente}")
         
         # Campos para seleção baseados no nível
         campos_por_nivel = {
@@ -859,6 +957,14 @@ def api_geral_dados_hierarquicos():
                 query = query.eq('centro_resultado', parent)
             elif nivel == 'classe':
                 query = query.eq('categoria', parent)
+        
+        # Aplicar filtro de centro de resultado (se fornecido)
+        if centro_resultado and centro_resultado.strip():
+            query = query.eq('centro_resultado', centro_resultado)
+        
+        # Aplicar filtro de cliente (se fornecido)
+        if cliente and cliente.strip():
+            query = query.eq('cliente', cliente)
         
         response = query.execute()
         dados = response.data
