@@ -24,7 +24,7 @@ socketio = SocketIO(
     app,
     cors_allowed_origins=ALLOWED_ORIGINS,  # Controlado por variável de ambiente
     async_mode='gevent',  # Deve corresponder ao worker do Gunicorn (gevent)
-    manage_session=True,
+    manage_session=True,  # CRÍTICO: permite acesso à sessão Flask
     logger=False,
     engineio_logger=False
 )
@@ -32,7 +32,7 @@ socketio = SocketIO(
 # Configurar sessão para expirar após 12 horas (43200 segundos)
 from datetime import timedelta
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
-app.config['SESSION_COOKIE_SECURE'] = True  # True apenas em HTTPS
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # True apenas em produção HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
