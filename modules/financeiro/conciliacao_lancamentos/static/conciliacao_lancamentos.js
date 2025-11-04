@@ -136,6 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========================================
 let contasDisponiveis = [];
 let contasSelecionadas = [];
+let infoContasUsuario = {
+    carregado: false,
+    restrito: false,
+    contas: [],
+    success: false
+};
+let promessaContasUsuario = null;
 
 function inicializarModalContas() {
     const modal = document.getElementById('modalSelecionarContas');
@@ -159,17 +166,44 @@ function inicializarModalContas() {
 
 async function carregarContasDisponiveis() {
     const listaContas = document.getElementById('listaContas');
+    const btnAplicar = document.getElementById('btnAplicarContas');
+    const selecionarTodas = document.getElementById('selecionarTodasContas');
     
     try {
         console.log('🏦 Carregando contas disponíveis...');
-        
+
+        const infoUsuario = await obterInfoContasUsuario();
+
         const response = await fetch('/financeiro/conciliacao-lancamentos/api/contas-disponiveis');
         const data = await response.json();
         
         if (data.success) {
-            contasDisponiveis = data.contas;
-            console.log(`✅ ${data.total} contas carregadas`);
+            let contasFiltradas = data.contas;
+
+            if (infoUsuario.success && infoUsuario.restrito) {
+                contasFiltradas = data.contas.filter(conta => infoUsuario.contas.includes(conta));
+                console.log(`🔒 Usuário restrito. Exibindo ${contasFiltradas.length} de ${data.contas.length} contas permitidas.`);
+            }
+
+            contasDisponiveis = contasFiltradas;
+            contasSelecionadas = contasSelecionadas.filter(conta => contasDisponiveis.includes(conta));
+            atualizarBotaoSelecionarContas();
+            console.log(`✅ ${contasDisponiveis.length} contas disponíveis para seleção`);
             renderizarListaContas(contasDisponiveis);
+
+            if (contasDisponiveis.length === 0 && infoUsuario.restrito) {
+                listaContas.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="mdi mdi-information"></i>
+                        Você não possui contas atribuídas. Solicite ao administrador para liberar o acesso.
+                    </div>
+                `;
+                if (btnAplicar) btnAplicar.disabled = true;
+                if (selecionarTodas) selecionarTodas.disabled = true;
+            } else {
+                if (btnAplicar) btnAplicar.disabled = false;
+                if (selecionarTodas) selecionarTodas.disabled = false;
+            }
         } else {
             throw new Error(data.error || 'Erro ao carregar contas');
         }
@@ -182,6 +216,8 @@ async function carregarContasDisponiveis() {
                 Erro ao carregar contas: ${error.message}
             </div>
         `;
+        if (btnAplicar) btnAplicar.disabled = true;
+        if (selecionarTodas) selecionarTodas.disabled = true;
     }
 }
 
@@ -250,17 +286,22 @@ function aplicarSelecaoContas() {
     const checkboxes = document.querySelectorAll('.conta-checkbox:checked');
     contasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
     
-    // Atualizar botão de seleção
-    const btnSelecionar = document.getElementById('btnSelecionarContas');
-    btnSelecionar.innerHTML = `
-        <i class="mdi mdi-bank"></i> Selecionar Contas (${contasSelecionadas.length})
-    `;
+    atualizarBotaoSelecionarContas();
     
     console.log('✅ Contas selecionadas:', contasSelecionadas);
     
     // Fechar modal
     const modal = bootstrap.Modal.getInstance(document.getElementById('modalSelecionarContas'));
     modal.hide();
+}
+
+function atualizarBotaoSelecionarContas() {
+    const btnSelecionar = document.getElementById('btnSelecionarContas');
+    if (btnSelecionar) {
+        btnSelecionar.innerHTML = `
+            <i class="mdi mdi-bank"></i> Selecionar Contas (${contasSelecionadas.length})
+        `;
+    }
 }
 
 function inicializarEventos() {
@@ -286,10 +327,16 @@ function inicializarEventos() {
     document.getElementById('btnConciliarManual').addEventListener('click', conciliarManual);
     document.getElementById('btnOcultarTransacoes').addEventListener('click', ocultarTransacoes);
     
-    // Exportar relatório
+    // Exportar relatório (botão no topo da página)
     const btnExportar = document.getElementById('btnExportarRelatorio');
     if (btnExportar) {
         btnExportar.addEventListener('click', exportarRelatorio);
+    }
+    
+    // Gestão de Usuários e Contas (apenas para admins)
+    const btnGestaoUsuarios = document.getElementById('btnGestaoUsuarios');
+    if (btnGestaoUsuarios) {
+        btnGestaoUsuarios.addEventListener('click', abrirModalGestaoUsuarios);
     }
     
     // Filtros da aba Conciliados
@@ -299,6 +346,107 @@ function inicializarEventos() {
     
     // Limpar sessão
     document.getElementById('btnLimparSessao').addEventListener('click', limparSessao);
+    
+    // Carregar contas atribuídas ao usuário (se for analista)
+    carregarContasAtribuidas();
+}
+
+// ========================================
+// EXIBIR CONTAS ATRIBUÍDAS DO USUÁRIO
+// ========================================
+async function obterInfoContasUsuario(forceRefresh = false) {
+    if (infoContasUsuario.carregado && !forceRefresh) {
+        return infoContasUsuario;
+    }
+
+    if (promessaContasUsuario && !forceRefresh) {
+        return promessaContasUsuario;
+    }
+
+    promessaContasUsuario = (async () => {
+        try {
+            console.log('🔍 Verificando contas atribuídas ao usuário...');
+            const response = await fetch('/financeiro/conciliacao-lancamentos/api/minhas-contas');
+            const data = await response.json();
+            console.log('📡 Resposta /api/minhas-contas:', data);
+
+            infoContasUsuario = {
+                carregado: true,
+                restrito: Boolean(data.restrito),
+                contas: Array.isArray(data.contas) ? data.contas : [],
+                success: data.success !== false
+            };
+
+            return infoContasUsuario;
+        } catch (error) {
+            console.error('❌ Erro ao consultar contas atribuídas:', error);
+            infoContasUsuario = {
+                carregado: true,
+                restrito: false,
+                contas: [],
+                success: false,
+                error
+            };
+            throw error;
+        } finally {
+            promessaContasUsuario = null;
+        }
+    })();
+
+    return promessaContasUsuario;
+}
+
+async function carregarContasAtribuidas() {
+    try {
+        const dados = await obterInfoContasUsuario();
+
+        const containerInfo = document.getElementById('contasAtribuidasInfo');
+        const listaContas = document.getElementById('contasAtribuidasLista');
+
+        if (!dados.success) {
+            console.warn('⚠️ Não foi possível obter contas atribuídas do usuário');
+            if (containerInfo) {
+                containerInfo.style.display = 'none';
+            }
+            return;
+        }
+
+        if (dados.restrito && dados.contas.length > 0) {
+            if (listaContas) {
+                listaContas.innerHTML = dados.contas.map(conta => `
+                    <span class="conta-chip">
+                        <i class="mdi mdi-bank"></i>
+                        ${conta}
+                    </span>
+                `).join('');
+            }
+            if (containerInfo) {
+                containerInfo.style.display = 'flex';
+            }
+            console.log(`✅ Exibindo ${dados.contas.length} conta(s) atribuída(s):`, dados.contas);
+        } else if (dados.restrito && dados.contas.length === 0) {
+            console.warn('⚠️ Usuário é analista mas não tem contas atribuídas');
+            if (listaContas) {
+                listaContas.innerHTML = `
+                    <span class="text-muted small">Nenhuma conta atribuída. Contate um administrador.</span>
+                `;
+            }
+            if (containerInfo) {
+                containerInfo.style.display = 'flex';
+            }
+        } else {
+            console.log('ℹ️ Usuário sem restrições de conta (não é analista ou possui acesso total)');
+            if (containerInfo) {
+                containerInfo.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar contas atribuídas:', error);
+        const containerInfo = document.getElementById('contasAtribuidasInfo');
+        if (containerInfo) {
+            containerInfo.style.display = 'none';
+        }
+    }
 }
 
 // ========================================
@@ -399,7 +547,40 @@ async function processarArquivos(e) {
         return;
     }
 
-    // Validar se há contas selecionadas
+    // Verificar se usuário é analista e aplicar filtro de contas
+    try {
+        const minhasContasResp = await fetch('/financeiro/conciliacao-lancamentos/api/minhas-contas');
+        const minhasContasData = await minhasContasResp.json();
+        
+        if (minhasContasData.success && minhasContasData.restrito) {
+            // Usuário é analista - filtrar contas permitidas
+            const contasPermitidas = minhasContasData.contas || [];
+            
+            if (contasPermitidas.length === 0) {
+                mostrarNotificacao('⚠️ Você não tem contas atribuídas. Contate o administrador.', 'warning');
+                return;
+            }
+            
+            // Filtrar apenas contas que o usuário tem permissão
+            const contasValidas = contasSelecionadas.filter(c => contasPermitidas.includes(c));
+            
+            if (contasValidas.length === 0) {
+                mostrarNotificacao(`⚠️ Você não tem permissão para acessar as contas selecionadas. Contas permitidas: ${contasPermitidas.join(', ')}`, 'warning');
+                return;
+            }
+            
+            if (contasValidas.length < contasSelecionadas.length) {
+                console.log(`🔒 Filtro aplicado: ${contasSelecionadas.length} → ${contasValidas.length} contas`);
+                contasSelecionadas = contasValidas;
+                mostrarNotificacao(`🔒 Processando apenas contas permitidas: ${contasValidas.join(', ')}`, 'info');
+            }
+        }
+    } catch (error) {
+        console.warn('[PERFIL] Erro ao verificar permissões de contas:', error);
+        // Continuar normalmente se houver erro na verificação
+    }
+
+    // Validar se há contas selecionadas (após filtro)
     if (!contasSelecionadas || contasSelecionadas.length === 0) {
         mostrarNotificacao('Selecione ao menos uma conta bancária para processar.', 'warning');
         return;
@@ -1012,12 +1193,12 @@ async function exportarRelatorio() {
         // Adicionar pendentes do sistema (visíveis após filtros)
         AppState.sistemasPendentes.forEach(item => {
             dadosSistema.push({
-                data_movimento: item.data_movimento,
-                descricao: item.descricao,
-                valor: item.valor,
-                tipo_movimento: item.tipo_movimento,
-                categoria: item.categoria,
-                origem: item.origem,
+                data_movimento: item.data_lancamento || item.data || '',
+                descricao: item.descricao || '',
+                valor: item.valor || 0,
+                tipo_movimento: item.tipo_lancamento || '',
+                categoria: item.ref_unique || '',
+                origem: item.empresa || '',
                 conciliado: false
             });
         });
@@ -2021,6 +2202,221 @@ function definirTipoConciliacaoAutomatica(criterios) {
     }
 
     return 'auto_valor';
+}
+
+// ========================================
+// GESTÃO DE USUÁRIOS E CONTAS
+// ========================================
+
+let todasContasDisponiveis = [];
+let usuariosAnalistas = [];
+
+async function abrirModalGestaoUsuarios() {
+    console.log('🔧 Abrindo modal de gestão de contas...');
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalGestaoUsuarios'));
+    modal.show();
+    
+    await carregarContasEUsuarios();
+}
+
+async function carregarContasEUsuarios() {
+    const container = document.getElementById('listaContasUsuarios');
+    
+    try {
+        container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Carregando...</p></div>';
+        
+        // Buscar usuários com perfil analista
+        const responseUsuarios = await fetch('/financeiro/conciliacao-lancamentos/api/usuarios-perfil-analista');
+        const dataUsuarios = await responseUsuarios.json();
+        
+        if (!dataUsuarios.success) {
+            throw new Error(dataUsuarios.error || 'Erro ao buscar usuários');
+        }
+        
+        usuariosAnalistas = dataUsuarios.usuarios;
+        
+        // Buscar todas as contas disponíveis
+        const responseContas = await fetch('/financeiro/conciliacao-lancamentos/api/contas-disponiveis');
+        const dataContas = await responseContas.json();
+        
+        if (!dataContas.success) {
+            throw new Error(dataContas.error || 'Erro ao buscar contas');
+        }
+        
+        todasContasDisponiveis = dataContas.contas;
+        
+        console.log(`✅ Carregadas ${todasContasDisponiveis.length} contas e ${usuariosAnalistas.length} usuários`);
+        
+        // Renderizar lista de contas
+        await renderizarListaContasUsuarios();
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="mdi mdi-alert"></i> Erro ao carregar dados: ${error.message}
+            </div>
+        `;
+    }
+}
+
+async function renderizarListaContasUsuarios() {
+    const container = document.getElementById('listaContasUsuarios');
+    
+    if (todasContasDisponiveis.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="mdi mdi-alert-circle"></i>
+                Nenhuma conta encontrada no sistema.
+            </div>
+        `;
+        return;
+    }
+    
+    // Buscar usuários atribuídos para cada conta
+    const contasComUsuarios = await Promise.all(
+        todasContasDisponiveis.map(async (conta) => {
+            // Buscar quais usuários têm essa conta
+            const usuariosComEssaConta = await Promise.all(
+                usuariosAnalistas.map(async (usuario) => {
+                    const response = await fetch(`/financeiro/conciliacao-lancamentos/api/contas-usuario/${usuario.id}`);
+                    const data = await response.json();
+                    const temConta = data.success && data.contas.includes(conta);
+                    return { usuario, temConta };
+                })
+            );
+            
+            return {
+                conta,
+                usuarios: usuariosComEssaConta
+            };
+        })
+    );
+    
+    // Renderizar cards de contas
+    container.innerHTML = contasComUsuarios.map(item => {
+        const usuariosSelecionados = item.usuarios.filter(u => u.temConta).length;
+        
+        return `
+            <div class="conta-card" data-conta="${item.conta}">
+                <div class="conta-header">
+                    <div class="conta-info">
+                        <i class="mdi mdi-bank conta-icon"></i>
+                        <div class="conta-details">
+                            <h6>Conta: ${item.conta}</h6>
+                            <small class="text-muted">Selecione os usuários que podem acessar esta conta</small>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge-usuario-count">${usuariosSelecionados} usuário(s)</span>
+                        <button class="btn btn-sm btn-primary btn-salvar-usuarios ms-2" onclick="salvarUsuariosConta('${item.conta}')">
+                            <i class="mdi mdi-content-save"></i> Salvar
+                        </button>
+                    </div>
+                </div>
+                <div class="usuarios-checkboxes">
+                    ${item.usuarios.map(({ usuario, temConta }) => {
+                        const checked = temConta ? 'checked' : '';
+                        const idCheckbox = `usuario_${item.conta.replace(/[^a-zA-Z0-9]/g, '_')}_${usuario.id}`;
+                        const iniciais = usuario.username.substring(0, 2).toUpperCase();
+                        
+                        return `
+                            <div class="usuario-checkbox-item">
+                                <div class="form-check">
+                                    <input 
+                                        class="form-check-input" 
+                                        type="checkbox" 
+                                        id="${idCheckbox}" 
+                                        value="${usuario.id}"
+                                        data-conta="${item.conta}"
+                                        ${checked}
+                                        onchange="atualizarContadorUsuarios('${item.conta}')">
+                                    <label class="form-check-label d-flex align-items-center" for="${idCheckbox}">
+                                        <span class="usuario-avatar-small">${iniciais}</span>
+                                        <span>${usuario.username}</span>
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function atualizarContadorUsuarios(conta) {
+    const card = document.querySelector(`.conta-card[data-conta="${conta}"]`);
+    const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+    const badge = card.querySelector('.badge-usuario-count');
+    badge.textContent = `${checkboxes.length} usuário(s)`;
+}
+
+async function salvarUsuariosConta(conta) {
+    const card = document.querySelector(`.conta-card[data-conta="${conta}"]`);
+    const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
+    const usuariosSelecionados = Array.from(checkboxes).map(cb => cb.value);
+    
+    const btnSalvar = card.querySelector('.btn-salvar-usuarios');
+    const textoOriginal = btnSalvar.innerHTML;
+    
+    try {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+        
+        console.log(`💾 Salvando ${usuariosSelecionados.length} usuários para conta ${conta}`);
+        
+        // Atualizar cada usuário com essa conta
+        const promises = usuariosAnalistas.map(async (usuario) => {
+            const temMarcado = usuariosSelecionados.includes(usuario.id);
+            
+            // Buscar contas atuais do usuário
+            const responseGet = await fetch(`/financeiro/conciliacao-lancamentos/api/contas-usuario/${usuario.id}`);
+            const dataGet = await responseGet.json();
+            const contasAtuais = dataGet.success ? dataGet.contas : [];
+            
+            // Adicionar ou remover a conta
+            let novasContas = [...contasAtuais];
+            if (temMarcado && !novasContas.includes(conta)) {
+                novasContas.push(conta);
+            } else if (!temMarcado && novasContas.includes(conta)) {
+                novasContas = novasContas.filter(c => c !== conta);
+            }
+            
+            // Salvar apenas se houve mudança
+            if (JSON.stringify(contasAtuais.sort()) !== JSON.stringify(novasContas.sort())) {
+                const response = await fetch(`/financeiro/conciliacao-lancamentos/api/contas-usuario/${usuario.id}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contas: novasContas })
+                });
+                return response.json();
+            }
+            return { success: true };
+        });
+        
+        await Promise.all(promises);
+        
+        btnSalvar.innerHTML = '<i class="mdi mdi-check"></i> Salvo!';
+        btnSalvar.classList.remove('btn-primary');
+        btnSalvar.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.classList.remove('btn-success');
+            btnSalvar.classList.add('btn-primary');
+            btnSalvar.disabled = false;
+        }, 2000);
+        
+        mostrarNotificacao(`✅ Conta ${conta} atualizada com sucesso!`, 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar usuários:', error);
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+        mostrarNotificacao(`❌ Erro: ${error.message}`, 'error');
+    }
 }
 
 console.log('✅ Conciliação V2 carregada');

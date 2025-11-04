@@ -28,6 +28,12 @@
                 <i class="mdi mdi-information-variant"></i>
                 Como conciliamos?
             </button>
+            {% if session.user.role == 'admin' or 'admin_financeiro' in (session.user.perfis | map(attribute='perfil_nome') | list) %}
+            <button id="btnGestaoUsuarios" class="btn btn-outline-primary">
+                <i class="mdi mdi-account-cog"></i>
+                Gestão de Contas
+            </button>
+            {% endif %}
             <button id="btnLimparSessao" class="btn btn-secondary" style="display: none;">
                 <i class="mdi mdi-refresh"></i>
                 Nova Sessão
@@ -52,16 +58,29 @@
 
     <!-- Navegação por Abas -->
     <div class="tabs-navigation">
-        <button class="tab-btn active" data-tab="conciliar">
-            <i class="mdi mdi-file-compare"></i>
-            Conciliar
-            <span class="tab-badge" id="badge-pendentes">0</span>
-        </button>
-        <button class="tab-btn" data-tab="conciliados">
-            <i class="mdi mdi-check-circle"></i>
-            Conciliados
-            <span class="tab-badge" id="badge-conciliados">0</span>
-        </button>
+        <div class="tabs-buttons">
+            <button class="tab-btn active" data-tab="conciliar">
+                <i class="mdi mdi-file-compare"></i>
+                Conciliar
+                <span class="tab-badge" id="badge-pendentes">0</span>
+            </button>
+            <button class="tab-btn" data-tab="conciliados">
+                <i class="mdi mdi-check-circle"></i>
+                Conciliados
+                <span class="tab-badge" id="badge-conciliados">0</span>
+            </button>
+        </div>
+        
+        <!-- Info de Contas Atribuídas -->
+        <div id="contasAtribuidasInfo" class="contas-info" style="display: none;">
+            <div class="contas-info-header">
+                <i class="mdi mdi-bank-check"></i>
+                <span>Minhas Contas:</span>
+            </div>
+            <div id="contasAtribuidasLista" class="contas-info-lista">
+                <span class="spinner-border spinner-border-sm"></span>
+            </div>
+        </div>
     </div>
 
     <!-- ABA 1: CONCILIAR (Ação) -->
@@ -226,9 +245,7 @@
                                 <select id="filtroBanco" class="form-select form-select-sm ms-2">
                                     <option value="">Todos os bancos</option>
                                     <option value="itau">Itaú</option>
-                                    {% if not perfil_restrito_itau_bb %}
                                     <option value="santander">Santander</option>
-                                    {% endif %}
                                     <option value="banco_brasil">Banco do Brasil</option>
                                 </select>
                             </div>
@@ -283,9 +300,6 @@
                         <button id="btnOcultarTransacoes" class="btn btn-warning btn-icon" disabled title="Ocultar Transações">
                             <i class="mdi mdi-eye-off"></i>
                         </button>
-                        <button id="btnExportarRelatorio" class="btn btn-success btn-icon" title="Exportar para Excel">
-                            <i class="mdi mdi-file-excel"></i>
-                        </button>
                     </div>
                     <div class="total-item">
                         <span class="total-label">Banco</span>
@@ -320,9 +334,7 @@
                         <select id="filtroBancoConciliados" class="form-select">
                             <option value="">Todos</option>
                             <option value="itau">Itaú</option>
-                            {% if not perfil_restrito_itau_bb %}
                             <option value="santander">Santander</option>
-                            {% endif %}
                             <option value="banco_brasil">Banco do Brasil</option>
                         </select>
                     </div>
@@ -497,6 +509,43 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Gestão de Usuários e Contas -->
+<div class="modal fade" id="modalGestaoUsuarios" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title w-100 text-center">
+                    <i class="mdi mdi-bank-transfer"></i> Gestão de Acessos por Conta Bancária
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="mdi mdi-information"></i>
+                    <strong>Como funciona:</strong> Selecione os usuários que podem acessar cada conta bancária.
+                    <br>
+                    <small class="text-muted">Apenas usuários com perfil <strong>financeiro_conciliacao_analista</strong> estão listados.</small>
+                </div>
+
+                <!-- Lista de Contas -->
+                <div id="listaContasUsuarios" class="contas-usuarios-list">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando contas...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Fechar
+                </button>
             </div>
         </div>
     </div>

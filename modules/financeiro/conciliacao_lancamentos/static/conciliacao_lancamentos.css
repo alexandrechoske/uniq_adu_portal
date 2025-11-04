@@ -42,10 +42,85 @@
    ======================================== */
 .tabs-navigation {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 10px;
     margin-bottom: 30px;
     border-bottom: 2px solid #e9ecef;
     padding-bottom: 0;
+}
+
+.tabs-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Info de Contas Atribuídas */
+.contas-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.contas-info-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+}
+
+.contas-info-header i {
+    font-size: 1.2rem;
+    color: #28a745;
+}
+
+.contas-info-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.conta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #fff;
+    border: 1px solid #28a745;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #28a745;
+    white-space: nowrap;
+}
+
+.conta-chip i {
+    font-size: 0.9rem;
 }
 
 .tab-btn {
@@ -813,3 +888,141 @@
     font-weight: 600;
     font-family: 'Courier New', monospace;
 }
+
+/* ===================================
+   MODAL DE GESTÃO DE CONTAS E USUÁRIOS
+   =================================== */
+
+/* Centralizar modal */
+.modal-dialog-centered {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 3.5rem);
+}
+
+/* Cabeçalho do modal */
+#modalGestaoUsuarios .modal-header {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    border-bottom: none;
+}
+
+#modalGestaoUsuarios .modal-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.contas-usuarios-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Card de Conta */
+.conta-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.conta-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #fff;
+    border-color: #0d6efd;
+}
+
+.conta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.conta-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.conta-icon {
+    font-size: 32px;
+    color: #0d6efd;
+}
+
+.conta-details h6 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.conta-details small {
+    color: #6c757d;
+    font-size: 12px;
+}
+
+/* Grid de Usuários */
+.usuarios-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+}
+
+.usuario-checkbox-item {
+    flex: 0 0 calc(50% - 5px);
+    min-width: 200px;
+}
+
+.usuario-checkbox-item .form-check {
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    transition: all 0.2s;
+    background: white;
+}
+
+.usuario-checkbox-item .form-check:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd;
+}
+
+.usuario-checkbox-item .form-check-input:checked ~ .form-check-label {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+/* Avatar pequeno para checkboxes */
+.usuario-avatar-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+.btn-salvar-usuarios {
+    font-size: 12px;
+    padding: 6px 12px;
+}
+
+.badge-usuario-count {
+    background: #198754;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+

@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 import pandas as pd
 import logging
+import json
 from datetime import datetime, timedelta
 from extensions import supabase, supabase_admin
 from decorators.perfil_decorators import perfil_required
@@ -81,25 +82,6 @@ def obter_perfis_usuario() -> List[str]:
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao obter perfis do usuário: {e}")
         return []
-
-def usuario_restrito_itau_bb() -> bool:
-    """
-    Verifica se o usuário possui perfil restrito a Itaú e Banco do Brasil
-    
-    Perfil: financeiroconciliacaoitaubb
-    Usuários: edicleia, juliano, rafael
-    
-    Returns:
-        True se o usuário deve ver apenas Itaú e BB, False caso contrário
-    """
-    try:
-        perfis = obter_perfis_usuario()
-        restrito = 'financeiroconciliacaoitaubb' in perfis
-        logger.info(f"[CONCILIACAO] Perfil restrito detectado: {restrito}")
-        return restrito
-    except Exception as e:
-        logger.error(f"[CONCILIACAO] Erro ao verificar perfil restrito: {e}")
-        return False
 
 def normalizar_nome_banco(nome_banco: str) -> str:
     """
@@ -890,16 +872,12 @@ class ProcessadorBancos:
 def index():
     """Página principal da conciliação de lançamentos."""
     try:
-        # Verificar se usuário tem perfil restrito (só Itaú e BB)
-        perfil_restrito = usuario_restrito_itau_bb()
-        
         # Verificar bypass da API primeiro
         if verificar_api_bypass():
             logger.info(f"[CONCILIACAO] Acesso via bypass da API")
             return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                                  module_name='Conciliação de Lançamentos',
-                                 page_title='Conciliação de Lançamentos',
-                                 perfil_restrito_itau_bb=perfil_restrito)
+                                 page_title='Conciliação de Lançamentos')
         
         # Log de acesso
         access_logger.log_page_access('Conciliação de Lançamentos', 'financeiro')
@@ -910,8 +888,7 @@ def index():
         
         return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                              module_name='Conciliação de Lançamentos',
-                             page_title='Conciliação de Lançamentos',
-                             perfil_restrito_itau_bb=perfil_restrito)
+                             page_title='Conciliação de Lançamentos')
         
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao carregar página: {str(e)}")
@@ -1503,17 +1480,6 @@ def movimentos_sistema():
         if contas_selecionadas:
             logger.info(f"[CONCILIACAO] Aplicando filtro para contas: {contas_selecionadas}")
             query = query.in_('numero_conta', contas_selecionadas)
-        
-        # URGENTE: Verificar se usuário tem perfil restrito (financeiroconciliacaoitaubb)
-        # Usuários edicleia, juliano, rafael devem ver apenas Itaú e Banco do Brasil
-        if usuario_restrito_itau_bb():
-            logger.info("[CONCILIACAO] Usuário com perfil restrito - aplicando filtro Itaú + BB")
-            # Lista completa de variações conforme nomes REAIS no banco de dados:
-            # - 'ITAU' (3567 registros)
-            # - 'Banco do Brasil' (1132 registros) 
-            # - 'BANCO DO BRASIL' (287 registros)
-            bancos_permitidos = ['ITAU', 'Banco do Brasil', 'BANCO DO BRASIL']
-            query = query.in_('nome_banco', bancos_permitidos)
         
         # Executar query (sem limite para pegar todos os registros do período)
         response = query.order('data_lancamento', desc=True).execute()
@@ -2667,4 +2633,268 @@ def exportar_conciliacao():
         
     except Exception as e:
         logger.error(f"[EXPORTAR] Erro ao exportar: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/usuarios-perfil-analista', methods=['GET'])
+def usuarios_perfil_analista():
+    """Lista usuários com perfil 'financeiro_conciliacao_analista'"""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not verificar_api_bypass():
+            # Se não tem bypass, verificar permissões
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        logger.info("[CONTAS-USERS] Buscando usuários com perfil financeiro_conciliacao_analista")
+        
+        try:
+            # Buscar usuários onde perfil_principal = 'financeiro_conciliacao_analista'
+            # OU onde perfis_json contenha o perfil
+            usuarios_response = supabase_admin.table('users')\
+                .select('id, name, email, perfil_principal, perfis_json')\
+                .eq('is_active', True)\
+                .order('name')\
+                .execute()
+            
+            if not usuarios_response.data:
+                logger.info("[CONTAS-USERS] Nenhum usuário encontrado")
+                return jsonify({'success': True, 'usuarios': []})
+            
+            # Filtrar usuários que têm o perfil analista
+            usuarios_filtrados = []
+            for user in usuarios_response.data:
+                perfil_principal = user.get('perfil_principal', '')
+                perfis_json = user.get('perfis_json', [])
+                
+                # Verificar se tem o perfil
+                tem_perfil = False
+                
+                # Caso 1: perfil_principal
+                if perfil_principal == 'financeiro_conciliacao_analista':
+                    tem_perfil = True
+                
+                # Caso 2: perfis_json como lista
+                elif isinstance(perfis_json, list):
+                    for perfil in perfis_json:
+                        # Formato 1: String simples "financeiro_conciliacao_analista"
+                        if isinstance(perfil, str) and perfil == 'financeiro_conciliacao_analista':
+                            tem_perfil = True
+                            break
+                        # Formato 2: Objeto {"perfil_nome": "financeiro_conciliacao_analista"}
+                        elif isinstance(perfil, dict) and perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                            tem_perfil = True
+                            break
+                
+                if tem_perfil:
+                    usuarios_filtrados.append({
+                        'id': user['id'],
+                        'username': user['name'],  # Usando 'name' como 'username'
+                        'email': user['email'],
+                        'nome_completo': user.get('name')  # Também usando 'name'
+                    })
+            
+            logger.info(f"[CONTAS-USERS] Encontrados {len(usuarios_filtrados)} usuários com perfil analista")
+            return jsonify({'success': True, 'usuarios': usuarios_filtrados})
+            
+        except Exception as query_error:
+            logger.error(f"[CONTAS-USERS] Erro nas queries: {str(query_error)}", exc_info=True)
+            return jsonify({'success': False, 'error': f'Erro ao consultar banco: {str(query_error)}'}), 500
+            
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro geral: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/contas-usuario/<user_id>', methods=['GET'])
+def get_contas_usuario(user_id):
+    """Busca contas atribuídas a um usuário específico"""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not verificar_api_bypass():
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        logger.info(f"[CONTAS-USERS] Buscando contas do usuário {user_id}")
+        
+        response = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas = [item['numero_conta'] for item in response.data] if response.data else []
+        
+        logger.info(f"[CONTAS-USERS] Usuário {user_id} tem {len(contas)} contas")
+        return jsonify({'success': True, 'contas': contas})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao buscar contas: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/contas-usuario/<user_id>', methods=['POST'])
+def salvar_contas_usuario(user_id):
+    """Salva contas atribuídas a um usuário (substitui todas)"""
+    try:
+        # Verificar bypass da API ou autenticação
+        current_user_id = None
+        if not verificar_api_bypass():
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            current_user_id = session.get('user', {}).get('id')
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        data = request.get_json()
+        contas = data.get('contas', [])
+        
+        logger.info(f"[CONTAS-USERS] Salvando {len(contas)} contas para usuário {user_id}")
+        
+        # 1. Remover todas as contas existentes do usuário
+        supabase_admin.table('fin_contas_users_conciliacao')\
+            .delete()\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        # 2. Inserir novas contas
+        if contas:
+            registros = [
+                {
+                    'user_id': user_id,
+                    'numero_conta': conta,
+                    'created_by': current_user_id,
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                for conta in contas
+            ]
+            
+            supabase_admin.table('fin_contas_users_conciliacao')\
+                .insert(registros)\
+                .execute()
+        
+        logger.info(f"[CONTAS-USERS] Contas salvas com sucesso para usuário {user_id}")
+        return jsonify({'success': True, 'message': f'{len(contas)} conta(s) salva(s) com sucesso'})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao salvar contas: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/minhas-contas', methods=['GET'])
+def minhas_contas():
+    """Retorna as contas que o usuário logado tem acesso (para analistas)"""
+    try:
+        # Verificar bypass ou sessão
+        if verificar_api_bypass():
+            logger.info("[CONTAS-USERS] Acesso via API bypass - retornando vazio")
+            return jsonify({'success': True, 'contas': [], 'restrito': False})
+        
+        user = session.get('user', {})
+        user_id = user.get('id')
+        user_email = user.get('email', 'N/A')
+        user_perfis = user.get('perfis')
+        perfis_source = 'session.perfis'
+        
+        logger.info(f"[CONTAS-USERS] Verificando contas para: {user_email} (ID: {user_id})")
+        logger.info(f"[CONTAS-USERS] Perfis (session.perfis): {user_perfis}")
+        
+        if not user_id:
+            logger.warning("[CONTAS-USERS] Usuário não encontrado na sessão")
+            return jsonify({'success': False, 'error': 'Usuário não autenticado'}), 401
+        
+        # Fallback: tentar session.perfis_json
+        if not user_perfis:
+            raw_perfis_session = user.get('perfis_json')
+            perfis_source = 'session.perfis_json'
+            logger.info(f"[CONTAS-USERS] Perfis (session.perfis_json): {raw_perfis_session}")
+            if isinstance(raw_perfis_session, list):
+                user_perfis = raw_perfis_session
+            elif isinstance(raw_perfis_session, str):
+                try:
+                    user_perfis = json.loads(raw_perfis_session)
+                except json.JSONDecodeError:
+                    logger.warning("[CONTAS-USERS] Não foi possível decodificar perfis_json da sessão")
+                    user_perfis = None
+        
+        # Fallback final: buscar no banco
+        if not user_perfis:
+            logger.info("[CONTAS-USERS] Buscando perfis no banco para garantir consistência")
+            response_user = supabase_admin.table('users')\
+                .select('perfis_json')\
+                .eq('id', user_id)\
+                .single()\
+                .execute()
+            raw_perfis_db = None
+            if response_user:
+                data_obj = None
+                if isinstance(response_user, dict):
+                    data_obj = response_user.get('data')
+                else:
+                    data_obj = getattr(response_user, 'data', None)
+                if isinstance(data_obj, list):
+                    if data_obj:
+                        raw_perfis_db = data_obj[0].get('perfis_json')
+                elif isinstance(data_obj, dict):
+                    raw_perfis_db = data_obj.get('perfis_json')
+            perfis_source = 'database.perfis_json'
+            logger.info(f"[CONTAS-USERS] Perfis (database): {raw_perfis_db}")
+            if isinstance(raw_perfis_db, list):
+                user_perfis = raw_perfis_db
+            elif isinstance(raw_perfis_db, str):
+                try:
+                    user_perfis = json.loads(raw_perfis_db)
+                except json.JSONDecodeError:
+                    logger.warning("[CONTAS-USERS] Não foi possível decodificar perfis_json do banco")
+                    user_perfis = None
+        
+        logger.info(f"[CONTAS-USERS] Perfis finais ({perfis_source}): {user_perfis}")
+        
+        # Verificar se é analista (formato string ou objeto)
+        is_analista = False
+        if isinstance(user_perfis, list):
+            for perfil in user_perfis:
+                if isinstance(perfil, str) and perfil == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    logger.info("[CONTAS-USERS] ✓ Perfil analista encontrado (string)")
+                    break
+                elif isinstance(perfil, dict) and perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    logger.info("[CONTAS-USERS] ✓ Perfil analista encontrado (dict)")
+                    break
+        
+        if not is_analista:
+            logger.info(f"[CONTAS-USERS] {user_email} NÃO é analista - sem restrições")
+            return jsonify({'success': True, 'contas': [], 'restrito': False})
+        
+        logger.info(f"[CONTAS-USERS] Buscando contas atribuídas para {user_email}...")
+        
+        response = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas = [item['numero_conta'] for item in response.data] if response.data else []
+        
+        logger.info(f"[CONTAS-USERS] ✅ {user_email} tem acesso a {len(contas)} contas: {contas}")
+        return jsonify({'success': True, 'contas': contas, 'restrito': True})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao buscar minhas contas: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
