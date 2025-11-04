@@ -547,6 +547,12 @@ async function processarArquivos(e) {
         return;
     }
 
+    // Validar se há contas selecionadas ANTES de verificar permissões
+    if (!contasSelecionadas || contasSelecionadas.length === 0) {
+        mostrarNotificacao('Selecione ao menos uma conta bancária para continuar.', 'warning');
+        return;
+    }
+
     // Verificar se usuário é analista e aplicar filtro de contas
     try {
         const minhasContasResp = await fetch('/financeiro/conciliacao-lancamentos/api/minhas-contas');
@@ -565,7 +571,8 @@ async function processarArquivos(e) {
             const contasValidas = contasSelecionadas.filter(c => contasPermitidas.includes(c));
             
             if (contasValidas.length === 0) {
-                mostrarNotificacao(`⚠️ Você não tem permissão para acessar as contas selecionadas. Contas permitidas: ${contasPermitidas.join(', ')}`, 'warning');
+                // Usuário selecionou contas, mas nenhuma é válida
+                mostrarNotificacao(`⚠️ Você não tem permissão para acessar as contas selecionadas. Contas disponíveis: ${contasPermitidas.join(', ')}`, 'warning');
                 return;
             }
             
@@ -578,12 +585,6 @@ async function processarArquivos(e) {
     } catch (error) {
         console.warn('[PERFIL] Erro ao verificar permissões de contas:', error);
         // Continuar normalmente se houver erro na verificação
-    }
-
-    // Validar se há contas selecionadas (após filtro)
-    if (!contasSelecionadas || contasSelecionadas.length === 0) {
-        mostrarNotificacao('Selecione ao menos uma conta bancária para processar.', 'warning');
-        return;
     }
 
     const formData = new FormData();

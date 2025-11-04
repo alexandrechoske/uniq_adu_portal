@@ -44,6 +44,81 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Bypass API key para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
 
+# Função auxiliar para validar contas do usuário analista
+def validar_e_obter_contas_usuario(user_id, contas_selecionadas):
+    """
+    Valida se usuário é analista e se as contas selecionadas são permitidas.
+    
+    Args:
+        user_id: ID do usuário
+        contas_selecionadas: Lista de contas que o usuário selecionou
+        
+    Returns:
+        tuple: (bool sucesso, list contas_validas, str mensagem_erro)
+    """
+    try:
+        # 1. Verificar se usuário é analista
+        user_data = session.get('user', {})
+        user_perfis = user_data.get('perfis', [])
+        
+        # Fallback para perfis_json se perfis estiver vazio
+        if not user_perfis:
+            raw_perfis = user_data.get('perfis_json')
+            if isinstance(raw_perfis, str):
+                user_perfis = json.loads(raw_perfis)
+            elif isinstance(raw_perfis, list):
+                user_perfis = raw_perfis
+        
+        # Verificar se é analista
+        is_analista = False
+        for perfil in user_perfis:
+            if isinstance(perfil, str):
+                if perfil == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    break
+            elif isinstance(perfil, dict):
+                if perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    break
+        
+        logger.info(f"[VALIDACAO-CONTAS] Usuário {user_id} - Analista: {is_analista}")
+        
+        # Se não é analista, não precisa validar contas (admin/interno)
+        if not is_analista:
+            logger.info(f"[VALIDACAO-CONTAS] Usuário não é analista - sem restrições")
+            return True, contas_selecionadas, None
+        
+        # 2. Analista DEVE ter selecionado contas
+        if not contas_selecionadas or len(contas_selecionadas) == 0:
+            logger.warning(f"[VALIDACAO-CONTAS] Analista {user_id} não selecionou contas")
+            return False, [], "Você precisa selecionar ao menos uma conta bancária para conciliar"
+        
+        # 3. Buscar contas permitidas para este usuário
+        response_contas = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas_permitidas = [c['numero_conta'] for c in response_contas.data]
+        
+        logger.info(f"[VALIDACAO-CONTAS] Usuário {user_id} tem {len(contas_permitidas)} conta(s) permitida(s): {contas_permitidas}")
+        logger.info(f"[VALIDACAO-CONTAS] Usuário selecionou {len(contas_selecionadas)} conta(s): {contas_selecionadas}")
+        
+        # 4. Validar se TODAS as contas selecionadas são permitidas
+        contas_invalidas = [c for c in contas_selecionadas if c not in contas_permitidas]
+        
+        if contas_invalidas:
+            logger.error(f"[VALIDACAO-CONTAS] Contas não autorizadas: {contas_invalidas}")
+            return False, [], f"Você não tem permissão para acessar as contas: {', '.join(contas_invalidas)}"
+        
+        # 5. Sucesso - contas válidas
+        logger.info(f"[VALIDACAO-CONTAS] ✅ Todas as contas são válidas")
+        return True, contas_selecionadas, None
+        
+    except Exception as e:
+        logger.error(f"[VALIDACAO-CONTAS] Erro ao validar: {e}")
+        return False, [], f"Erro ao validar permissões: {str(e)}"
+
 # Variável global para rastrear progresso da conciliação
 progresso_conciliacao = {
     'em_andamento': False,
@@ -1090,10 +1165,28 @@ def carregar_dados_conciliacao():
                 
                 logger.info(f"[PROCESSAR] Buscando dados do sistema para período: {data_inicio} a {data_fim}")
                 
+                # VALIDAÇÃO: Obter e validar contas selecionadas
+                contas_selecionadas = request.form.getlist('contas_selecionadas')
+                user_id = session.get('user', {}).get('id')
+                
+                sucesso, contas_validas, erro = validar_e_obter_contas_usuario(user_id, contas_selecionadas)
+                
+                if not sucesso:
+                    logger.warning(f"[PROCESSAR] Validação de contas falhou: {erro}")
+                    return jsonify({'success': False, 'error': erro}), 400
+                
+                contas_selecionadas = contas_validas
+                logger.info(f"[PROCESSAR] ✅ Contas validadas: {contas_selecionadas}")
+                
                 # Buscar movimentos do sistema via view
                 query = supabase_admin.table('vw_fin_movimentos_caixa').select('*')
                 query = query.gte('data_lancamento', data_inicio)
                 query = query.lte('data_lancamento', data_fim)
+                
+                # FILTRAR POR CONTAS SELECIONADAS
+                if contas_selecionadas and len(contas_selecionadas) > 0:
+                    logger.info(f"[PROCESSAR] Aplicando filtro de contas: {contas_selecionadas}")
+                    query = query.in_('numero_conta', contas_selecionadas)
                 
                 response_sistema = query.execute()
                 
@@ -1458,8 +1551,19 @@ def movimentos_sistema():
             data_inicio = hoje.replace(day=1).strftime('%Y-%m-%d')
             data_fim = hoje.strftime('%Y-%m-%d')
         
+        # VALIDAÇÃO: Verificar se analista selecionou contas
+        user_id = session.get('user', {}).get('id')
+        sucesso, contas_validas, erro = validar_e_obter_contas_usuario(user_id, contas_selecionadas)
+        
+        if not sucesso:
+            logger.warning(f"[CONCILIACAO] Validação falhou: {erro}")
+            return jsonify({'success': False, 'error': erro}), 400
+        
+        # Usar contas validadas
+        contas_selecionadas = contas_validas
+        
         logger.info(
-            "[CONCILIACAO] Filtros - Contas: %s, Data: %s a %s",
+            "[CONCILIACAO] ✅ Contas validadas - Contas: %s, Data: %s a %s",
             contas_selecionadas,
             data_inicio,
             data_fim
