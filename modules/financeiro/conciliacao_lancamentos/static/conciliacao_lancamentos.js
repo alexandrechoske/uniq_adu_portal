@@ -1211,7 +1211,7 @@ async function exportarRelatorio() {
         AppState.bancosPendentes.forEach(item => {
             if (item.oculto !== true) { // Excluir ocultos
                 dadosBanco.push({
-                    data_lancamento: item.data_lancamento,
+                    data_lancamento: item.data || item.data_lancamento || '',
                     nome_banco: item.banco,
                     numero_conta: item.conta,
                     descricao: item.descricao,
@@ -1240,7 +1240,7 @@ async function exportarRelatorio() {
                 // Adicionar ao banco
                 if (item.id_banco) {
                     dadosBanco.push({
-                        data_lancamento: item.data_banco,
+                        data_lancamento: item.data_banco || item.data || item.data_lancamento || '',
                         nome_banco: item.banco,
                         numero_conta: item.conta,
                         descricao: item.descricao_banco,

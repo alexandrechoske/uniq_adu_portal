@@ -46,10 +46,34 @@
     100% { background-position: calc(200px + 100%) 0; }
 }
 
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.3; }
+}
+
 .skeleton-loader {
     position: relative;
     overflow: hidden;
     pointer-events: none;
+    background-color: #f6f7f8;
+    background-image: linear-gradient(
+        90deg,
+        #f6f7f8 0px,
+        #edeef2 40px,
+        #f6f7f8 80px
+    );
+    background-size: 200px 100%;
+    animation: skeleton-shimmer 2s infinite;
+    border-radius: 6px;
 }
 
 .skeleton-loader::before {
@@ -59,42 +83,53 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.8) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
-    background-size: 200px 100%;
-    animation: skeleton-loading 1.5s infinite;
+    background: none;
+    animation: none;
     z-index: 1;
 }
 
 .skeleton-loader .kpi-value,
 .skeleton-loader .kpi-label {
     color: transparent !important;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: #e9ecef !important;
     border-radius: 4px;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 0.4; }
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 0.3; }
 }
 
 .skeleton-chart {
     position: relative;
     min-height: 300px;
-    background: linear-gradient(
+    background-color: #f6f7f8;
+    background-image: linear-gradient(
         90deg,
-        #f0f0f0 25%,
-        #e0e0e0 50%,
-        #f0f0f0 75%
+        #f6f7f8 0px,
+        #edeef2 40px,
+        #f6f7f8 80px
     );
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    background-size: 200px 100%;
+    animation: skeleton-shimmer 2s infinite;
     border-radius: 8px;
+}
+
+.skeleton-table {
+    background-color: #f6f7f8;
+    border-radius: 6px;
+}
+
+.skeleton-table tbody tr {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-table th,
+.skeleton-table td {
+    background-color: #e9ecef !important;
+    height: 20px;
+    border-radius: 4px;
 }
 
 .last-update {

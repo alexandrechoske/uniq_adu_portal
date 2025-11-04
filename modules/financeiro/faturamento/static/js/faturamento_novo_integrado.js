@@ -1542,7 +1542,7 @@ class FaturamentoControllerNovo {
                 <td class="fw-bold" title="${nomeCliente}">${nomeClienteTruncado}</td>
                 <td class="text-end">${this.formatarMoeda(cliente.valor)}</td>
                 <td class="text-center">
-                    <span class="badge bg-primary">${cliente.percentual.toFixed(1)}%</span>
+                    <span class="badge bg-primary">${cliente.percentual}%</span>
                 </td>
             `;
             

@@ -804,7 +804,7 @@ def api_geral_top_clientes():
             resultado.append({
                 'cliente': cliente,
                 'valor': valor,
-                'percentual': percentual
+                'percentual': round(percentual)  # Arredondar para inteiro
             })
         
         # Ordenar por valor decrescente e pegar top N
