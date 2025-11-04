@@ -1,7 +1,16 @@
 /**
  * Dashboard Executivo RH - JavaScript
  * Baseado no Dashboard Executivo Financeiro
- * Versão: 3.0 - Implementação Completa
+ * Versão: 3.7 - Novos KPIs de Admissões e Demissões
+ * Data: 04/11/2025
+ * 
+ * Novidades v3.7:
+ * - Adicionados KPIs de Total de Admissões e Total de Demissões no período
+ * 
+ * Correções anteriores (v3.6):
+ * - IDs corretos para campos de data personalizada (data-inicio e data-fim)
+ * - Adição do parâmetro empresa na requisição API
+ * - Logs de debug para troubleshooting
  */
 
 // ========================================
@@ -21,7 +30,8 @@ let chartDispersaoTempoSalario = null;
 Chart.register(ChartDataLabels);
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📊 Dashboard Executivo RH - Inicializado (v3.0)');
+    console.log('📊 Dashboard Executivo RH - Inicializado (v3.6 - Correção de Filtros)');
+    console.log('✅ Correções aplicadas: IDs de data, filtro de empresa, logs de debug');
     
     // Inicializar componentes
     inicializarFiltros();
@@ -240,15 +250,25 @@ async function carregarDadosDashboard() {
         // Calcular datas baseado no período selecionado
         const { inicio, fim } = calcularPeriodo(periodo);
         
+        console.log('📅 Período calculado:', { periodo, inicio, fim, empresa, departamento });
+        
         // Buscar dados da API
         const params = new URLSearchParams({
             periodo_inicio: inicio,
             periodo_fim: fim
         });
         
+        // Adicionar empresa ao filtro
+        if (empresa && empresa !== 'todas') {
+            params.append('empresa', empresa);
+        }
+        
+        // Adicionar departamento ao filtro
         if (departamento !== 'todos') {
             params.append('departamentos[]', departamento);
         }
+        
+        console.log('🔗 URL da API:', `/rh/dashboard/api/dados?${params.toString()}`);
         
         const response = await fetch(`/rh/dashboard/api/dados?${params.toString()}`, {
             credentials: 'same-origin'
@@ -314,10 +334,20 @@ function calcularPeriodo(periodo) {
             break;
             
         case 'personalizado':
-            const dataInicio = document.getElementById('data-inicio-filter').value;
-            const dataFim = document.getElementById('data-fim-filter').value;
-            inicio = dataInicio ? new Date(dataInicio) : new Date(hoje.getFullYear(), 0, 1);
-            fim = dataFim ? new Date(dataFim) : hoje;
+            // CORREÇÃO: IDs corretos dos campos de data
+            const dataInicioInput = document.getElementById('data-inicio');
+            const dataFimInput = document.getElementById('data-fim');
+            
+            if (!dataInicioInput || !dataFimInput) {
+                console.error('❌ Campos de data personalizada não encontrados');
+                inicio = new Date(hoje.getFullYear(), 0, 1);
+                fim = hoje;
+            } else {
+                const dataInicio = dataInicioInput.value;
+                const dataFim = dataFimInput.value;
+                inicio = dataInicio ? new Date(dataInicio) : new Date(hoje.getFullYear(), 0, 1);
+                fim = dataFim ? new Date(dataFim) : hoje;
+            }
             break;
             
         default:
@@ -522,6 +552,24 @@ function renderizarKPIs(dados) {
             elemento.textContent = dados.idade_media.valor + ' anos';
         }
         atualizarVariacaoKPI('kpi-idade-media-variacao', dados.idade_media.variacao);
+    }
+    
+    // KPI 11: Total de Admissões
+    if (dados.total_admissoes) {
+        const elemento = document.getElementById('kpi-admissoes-valor');
+        if (elemento) {
+            elemento.textContent = formatarNumero(dados.total_admissoes.valor);
+        }
+        atualizarVariacaoKPI('kpi-admissoes-variacao', dados.total_admissoes.variacao);
+    }
+    
+    // KPI 12: Total de Demissões
+    if (dados.total_demissoes) {
+        const elemento = document.getElementById('kpi-demissoes-valor');
+        if (elemento) {
+            elemento.textContent = formatarNumero(dados.total_demissoes.valor);
+        }
+        atualizarVariacaoKPI('kpi-demissoes-variacao', dados.total_demissoes.variacao);
     }
     
     console.log('✅ KPIs renderizados com sucesso');

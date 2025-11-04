@@ -15,6 +15,7 @@ from extensions import supabase_admin as supabase
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
+import os
 
 # ========================================
 # PÁGINAS HTML
@@ -81,6 +82,8 @@ def api_dados_dashboard():
         print(f"\n📊 ========== DASHBOARD EXECUTIVO RH ==========")
         print(f"📊 Período: {periodo_inicio} a {periodo_fim}")
         print(f"📊 Departamentos filtrados: {departamentos_ids if departamentos_ids else 'Todos'}")
+        print(f"📊 Tipo de departamentos_ids: {type(departamentos_ids)}")
+        print(f"📊 Departamentos IDs (detalhado): {repr(departamentos_ids)}")
         
         # Calcular KPIs
         kpis = calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids)
@@ -134,6 +137,37 @@ def api_refresh_dados():
         
     except Exception as e:
         print(f"❌ Erro ao atualizar dados: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+@dashboard_rh_bp.route('/api/debug/departamentos', methods=['GET'])
+def api_debug_departamentos():
+    """
+    API DEBUG: Lista todos os departamentos com IDs
+    TEMPORÁRIO - Para debug de filtros
+    """
+    try:
+        # Verificar chave de bypass
+        api_bypass_key = os.getenv('API_BYPASS_KEY')
+        if request.headers.get('X-API-Key') != api_bypass_key:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        
+        response = supabase.table('rh_departamentos')\
+            .select('id, nome_departamento')\
+            .order('nome_departamento')\
+            .execute()
+        
+        departamentos = response.data if response.data else []
+        
+        return jsonify({
+            'success': True,
+            'data': departamentos
+        })
+        
+    except Exception as e:
         return jsonify({
             'success': False,
             'message': str(e)
@@ -211,6 +245,12 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     # KPI 10: Idade Média
     kpis['idade_media'] = calcular_kpi_idade_media()
     
+    # KPI 11: Total de Admissões no Período - COM FILTRO
+    kpis['total_admissoes'] = calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids)
+    
+    # KPI 12: Total de Demissões no Período - COM FILTRO
+    kpis['total_demissoes'] = calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids)
+    
     print("✅ KPIs calculados com sucesso!\n")
     return kpis
 
@@ -220,20 +260,29 @@ def calcular_kpi_headcount(departamentos_ids=None):
     KPI 1: Headcount - Total de Colaboradores Ativos
     
     Lógica:
-    - COUNT(*) WHERE status = 'Ativo' AND data_desligamento IS NULL
+    - COUNT(*) da view vw_colaboradores_atual (já filtra apenas ativos)
     - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
-        query = supabase.table('rh_colaboradores')\
-            .select('id', count='exact')\
-            .eq('status', 'Ativo')\
-            .is_('data_desligamento', 'null')
+        print(f"   🔍 Calculando Headcount...")
+        print(f"   🔍 Departamentos IDs recebidos: {departamentos_ids}")
+        print(f"   🔍 Tipo: {type(departamentos_ids)}")
+        
+        # CORREÇÃO: Usar view vw_colaboradores_atual em vez de rh_colaboradores
+        # A view já tem o join com histórico e traz departamento_id
+        # NOTA: A view usa 'id' e não 'colaborador_id'
+        query = supabase.table('vw_colaboradores_atual')\
+            .select('id', count='exact')
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
+            print(f"   🔍 Aplicando filtro .in_('departamento_id', {departamentos_ids})")
             query = query.in_('departamento_id', departamentos_ids)
         
         response = query.execute()
+        
+        print(f"   🔍 Response count: {response.count}")
+        print(f"   🔍 Response data length: {len(response.data) if response.data else 0}")
         
         headcount = response.count if response.count is not None else 0
         
@@ -251,6 +300,8 @@ def calcular_kpi_headcount(departamentos_ids=None):
         }
     except Exception as e:
         print(f"   ❌ Erro ao calcular headcount: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             'valor': 0,
             'variacao': 0,
@@ -268,17 +319,16 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departam
     - Turnover (%) = (Desligamentos no Período / Headcount Médio) × 100
     
     Lógica:
-    - Usar data_desligamento da tabela rh_colaboradores
-    - NÃO usar histórico (pode ter múltiplos registros)
+    - Buscar desligamentos do histórico no período
     - Se departamentos_ids fornecido, filtrar por esses departamentos
     """
     try:
-        # Contar desligamentos no período usando data_desligamento
-        query_demissoes = supabase.table('rh_colaboradores')\
+        # Contar desligamentos no período usando histórico
+        query_demissoes = supabase.table('rh_historico_colaborador')\
             .select('id', count='exact')\
-            .not_.is_('data_desligamento', 'null')\
-            .gte('data_desligamento', periodo_inicio)\
-            .lte('data_desligamento', periodo_fim)
+            .eq('tipo_evento', 'Demissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -635,6 +685,104 @@ def calcular_kpi_idade_media():
         }
 
 
+def calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids=None):
+    """
+    KPI 11: Total de Admissões no Período
+    
+    Lógica:
+    - Conta eventos de 'Admissão' no histórico dentro do período
+    - Aplica filtro de departamento se fornecido
+    """
+    try:
+        print(f"   🔍 Calculando total de admissões no período {periodo_inicio} a {periodo_fim}")
+        if departamentos_ids:
+            print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        
+        # Buscar admissões do histórico
+        query = supabase.table('rh_historico_colaborador')\
+            .select('id', count='exact')\
+            .eq('tipo_evento', 'Admissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query = query.in_('departamento_id', departamentos_ids)
+        
+        response = query.execute()
+        total_admissoes = response.count if response.count is not None else 0
+        
+        print(f"   ✅ Total de Admissões: {total_admissoes}")
+        
+        return {
+            'valor': total_admissoes,
+            'variacao': 0,
+            'label': 'Admissões no Período',
+            'icone': 'mdi-account-plus',
+            'cor': '#28a745'
+        }
+    except Exception as e:
+        print(f"   ❌ Erro ao calcular total de admissões: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'valor': 0,
+            'variacao': 0,
+            'label': 'Admissões no Período',
+            'icone': 'mdi-account-plus',
+            'cor': '#28a745'
+        }
+
+
+def calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids=None):
+    """
+    KPI 12: Total de Demissões no Período
+    
+    Lógica:
+    - Conta eventos de 'Demissão' no histórico dentro do período
+    - Aplica filtro de departamento se fornecido
+    """
+    try:
+        print(f"   🔍 Calculando total de demissões no período {periodo_inicio} a {periodo_fim}")
+        if departamentos_ids:
+            print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        
+        # Buscar demissões do histórico
+        query = supabase.table('rh_historico_colaborador')\
+            .select('id', count='exact')\
+            .eq('tipo_evento', 'Demissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de departamento se fornecido
+        if departamentos_ids:
+            query = query.in_('departamento_id', departamentos_ids)
+        
+        response = query.execute()
+        total_demissoes = response.count if response.count is not None else 0
+        
+        print(f"   ✅ Total de Demissões: {total_demissoes}")
+        
+        return {
+            'valor': total_demissoes,
+            'variacao': 0,
+            'label': 'Demissões no Período',
+            'icone': 'mdi-account-minus',
+            'cor': '#dc3545'
+        }
+    except Exception as e:
+        print(f"   ❌ Erro ao calcular total de demissões: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'valor': 0,
+            'variacao': 0,
+            'label': 'Demissões no Período',
+            'icone': 'mdi-account-minus',
+            'cor': '#dc3545'
+        }
+
+
 def calcular_kpi_custo_total(departamentos_ids=None):
     """
     KPI 5, 6, 7: Custos de Pessoal (Salários, Benefícios e Total)
@@ -811,12 +959,12 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
         
         print(f"   📊 Total de meses a processar: {len(meses)}")
         
-        # 🔥 OTIMIZAÇÃO: Buscar todas as admissões do período de uma vez
-        query_admissoes = supabase.table('rh_colaboradores')\
-            .select('data_admissao')\
-            .not_.is_('data_admissao', 'null')\
-            .gte('data_admissao', periodo_inicio)\
-            .lte('data_admissao', periodo_fim)
+        # 🔥 CORREÇÃO: Buscar admissões do histórico (tem departamento_id)
+        query_admissoes = supabase.table('rh_historico_colaborador')\
+            .select('data_evento')\
+            .eq('tipo_evento', 'Admissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -824,12 +972,12 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
         
         response_admissoes = query_admissoes.execute()
         
-        # 🔥 OTIMIZAÇÃO: Buscar todos os desligamentos do período de uma vez
-        query_desligamentos = supabase.table('rh_colaboradores')\
-            .select('data_desligamento')\
-            .not_.is_('data_desligamento', 'null')\
-            .gte('data_desligamento', periodo_inicio)\
-            .lte('data_desligamento', periodo_fim)
+        # 🔥 CORREÇÃO: Buscar desligamentos do histórico (tem departamento_id)
+        query_desligamentos = supabase.table('rh_historico_colaborador')\
+            .select('data_evento')\
+            .eq('tipo_evento', 'Demissão')\
+            .gte('data_evento', periodo_inicio)\
+            .lte('data_evento', periodo_fim)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -844,35 +992,34 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
         if response_admissoes.data:
             print(f"   🔍 Primeiras 3 admissões:")
             for i, adm in enumerate(response_admissoes.data[:3]):
-                print(f"      {i+1}. {adm.get('data_admissao')}")
+                print(f"      {i+1}. {adm.get('data_evento')}")
         
         if response_desligamentos.data:
             print(f"   🔍 Primeiros 3 desligamentos:")
             for i, desl in enumerate(response_desligamentos.data[:3]):
-                print(f"      {i+1}. {desl.get('data_desligamento')}")
+                print(f"      {i+1}. {desl.get('data_evento')}")
         
         # Agrupar eventos por mês em Python
         admissoes_por_mes = defaultdict(int)
         desligamentos_por_mes = defaultdict(int)
         
         for evento in (response_admissoes.data or []):
-            data_admissao = evento.get('data_admissao')
-            if data_admissao:
-                mes = data_admissao[:7]  # YYYY-MM
+            data_evento = evento.get('data_evento')
+            if data_evento:
+                mes = data_evento[:7]  # YYYY-MM
                 admissoes_por_mes[mes] += 1
         
         for evento in (response_desligamentos.data or []):
-            data_desligamento = evento.get('data_desligamento')
-            if data_desligamento:
-                mes = data_desligamento[:7]  # YYYY-MM
+            data_evento = evento.get('data_evento')
+            if data_evento:
+                mes = data_evento[:7]  # YYYY-MM
                 desligamentos_por_mes[mes] += 1
         
-        # Buscar headcount inicial (antes do período)
-        # Contar colaboradores admitidos antes do período_inicio e que ainda estavam ativos
-        query_headcount_inicial = supabase.table('rh_colaboradores')\
-            .select('id', count='exact')\
-            .lt('data_admissao', periodo_inicio)\
-            .or_(f'data_desligamento.is.null,data_desligamento.gte.{periodo_inicio}')
+        # Buscar headcount inicial usando view vw_colaboradores_atual
+        # Contar colaboradores que estavam ativos no início do período
+        # NOTA: A view usa 'id' e não 'colaborador_id'
+        query_headcount_inicial = supabase.table('vw_colaboradores_atual')\
+            .select('id', count='exact')
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -1380,8 +1527,10 @@ def calcular_tabela_vagas_abertas_mais_tempo():
         print(f"   🔍 Buscando todas as vagas abertas")
         
         # Buscar TODAS as vagas com status 'Aberta'
+        # NOTA: rh_vagas NÃO TEM departamento_id, apenas cargo_id
+        # NOTA: rh_vagas NÃO TEM salario_base, tem faixa_salarial_min e faixa_salarial_max
         response_vagas = supabase.table('rh_vagas')\
-            .select('id, titulo, data_abertura, cargo_id, localizacao, departamento_id, status, salario_base')\
+            .select('id, titulo, data_abertura, cargo_id, localizacao, status, faixa_salarial_min, faixa_salarial_max')\
             .eq('status', 'Aberta')\
             .execute()
         
@@ -1413,20 +1562,9 @@ def calcular_tabela_vagas_abertas_mais_tempo():
             
             print(f"   📊 Cargos mapeados: {len(cargos_map)}")
         
-        # Buscar nomes dos departamentos
-        departamentos_ids = [v['departamento_id'] for v in todas_vagas if v.get('departamento_id')]
-        departamentos_map = {}
-        
-        if departamentos_ids:
-            response_deps = supabase.table('rh_departamentos')\
-                .select('id, nome_departamento')\
-                .in_('id', departamentos_ids)\
-                .execute()
-            
-            for dept in (response_deps.data or []):
-                departamentos_map[dept['id']] = dept['nome_departamento']
-            
-            print(f"   📊 Departamentos mapeados: {len(departamentos_map)}")
+        # NOTA: Vagas NÃO têm departamento direto - apenas cargo
+        # Se precisar mostrar departamento, deve vir do cargo do colaborador
+
         
         # Calcular dados de todas as vagas (SEM FILTRO DE 15 DIAS)
         hoje = datetime.now()
@@ -1452,16 +1590,26 @@ def calcular_tabela_vagas_abertas_mais_tempo():
                 else:
                     status_urgencia = 'baixa'
                 
-                # Calcular custo estimado (salário base)
-                salario_base = vaga.get('salario_base')
-                custo_estimado = float(salario_base) if salario_base else 0.0
+                # Calcular custo estimado usando faixa salarial (média entre min e max)
+                faixa_min = vaga.get('faixa_salarial_min')
+                faixa_max = vaga.get('faixa_salarial_max')
+                
+                if faixa_min and faixa_max:
+                    custo_estimado = (float(faixa_min) + float(faixa_max)) / 2
+                elif faixa_min:
+                    custo_estimado = float(faixa_min)
+                elif faixa_max:
+                    custo_estimado = float(faixa_max)
+                else:
+                    custo_estimado = 0.0
+                
                 custo_estimado_formatado = f"R$ {custo_estimado:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.') if custo_estimado > 0 else "Não especificado"
                 
                 tabela_vagas.append({
                     'id': vaga.get('id'),
                     'titulo': vaga.get('titulo', 'Sem título'),
                     'cargo': cargos_map.get(vaga.get('cargo_id'), 'Não especificado'),
-                    'departamento': departamentos_map.get(vaga.get('departamento_id'), 'Não especificado'),
+                    'departamento': 'N/A',  # Vagas não têm departamento direto
                     'localizacao': vaga.get('localizacao', 'Não especificado'),
                     'data_abertura': data_abertura.strftime('%d/%m/%Y'),
                     'dias_aberto': dias_aberta,
