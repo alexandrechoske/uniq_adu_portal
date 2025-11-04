@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import os
 import pandas as pd
 import logging
+import json
 from datetime import datetime, timedelta
 from extensions import supabase, supabase_admin
 from decorators.perfil_decorators import perfil_required
@@ -43,6 +44,81 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Bypass API key para testes
 API_BYPASS_KEY = os.getenv('API_BYPASS_KEY', 'uniq_api_2025_dev_bypass_key')
 
+# Função auxiliar para validar contas do usuário analista
+def validar_e_obter_contas_usuario(user_id, contas_selecionadas):
+    """
+    Valida se usuário é analista e se as contas selecionadas são permitidas.
+    
+    Args:
+        user_id: ID do usuário
+        contas_selecionadas: Lista de contas que o usuário selecionou
+        
+    Returns:
+        tuple: (bool sucesso, list contas_validas, str mensagem_erro)
+    """
+    try:
+        # 1. Verificar se usuário é analista
+        user_data = session.get('user', {})
+        user_perfis = user_data.get('perfis', [])
+        
+        # Fallback para perfis_json se perfis estiver vazio
+        if not user_perfis:
+            raw_perfis = user_data.get('perfis_json')
+            if isinstance(raw_perfis, str):
+                user_perfis = json.loads(raw_perfis)
+            elif isinstance(raw_perfis, list):
+                user_perfis = raw_perfis
+        
+        # Verificar se é analista
+        is_analista = False
+        for perfil in user_perfis:
+            if isinstance(perfil, str):
+                if perfil == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    break
+            elif isinstance(perfil, dict):
+                if perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    break
+        
+        logger.info(f"[VALIDACAO-CONTAS] Usuário {user_id} - Analista: {is_analista}")
+        
+        # Se não é analista, não precisa validar contas (admin/interno)
+        if not is_analista:
+            logger.info(f"[VALIDACAO-CONTAS] Usuário não é analista - sem restrições")
+            return True, contas_selecionadas, None
+        
+        # 2. Analista DEVE ter selecionado contas
+        if not contas_selecionadas or len(contas_selecionadas) == 0:
+            logger.warning(f"[VALIDACAO-CONTAS] Analista {user_id} não selecionou contas")
+            return False, [], "Você precisa selecionar ao menos uma conta bancária para conciliar"
+        
+        # 3. Buscar contas permitidas para este usuário
+        response_contas = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas_permitidas = [c['numero_conta'] for c in response_contas.data]
+        
+        logger.info(f"[VALIDACAO-CONTAS] Usuário {user_id} tem {len(contas_permitidas)} conta(s) permitida(s): {contas_permitidas}")
+        logger.info(f"[VALIDACAO-CONTAS] Usuário selecionou {len(contas_selecionadas)} conta(s): {contas_selecionadas}")
+        
+        # 4. Validar se TODAS as contas selecionadas são permitidas
+        contas_invalidas = [c for c in contas_selecionadas if c not in contas_permitidas]
+        
+        if contas_invalidas:
+            logger.error(f"[VALIDACAO-CONTAS] Contas não autorizadas: {contas_invalidas}")
+            return False, [], f"Você não tem permissão para acessar as contas: {', '.join(contas_invalidas)}"
+        
+        # 5. Sucesso - contas válidas
+        logger.info(f"[VALIDACAO-CONTAS] ✅ Todas as contas são válidas")
+        return True, contas_selecionadas, None
+        
+    except Exception as e:
+        logger.error(f"[VALIDACAO-CONTAS] Erro ao validar: {e}")
+        return False, [], f"Erro ao validar permissões: {str(e)}"
+
 # Variável global para rastrear progresso da conciliação
 progresso_conciliacao = {
     'em_andamento': False,
@@ -81,25 +157,6 @@ def obter_perfis_usuario() -> List[str]:
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao obter perfis do usuário: {e}")
         return []
-
-def usuario_restrito_itau_bb() -> bool:
-    """
-    Verifica se o usuário possui perfil restrito a Itaú e Banco do Brasil
-    
-    Perfil: financeiroconciliacaoitaubb
-    Usuários: edicleia, juliano, rafael
-    
-    Returns:
-        True se o usuário deve ver apenas Itaú e BB, False caso contrário
-    """
-    try:
-        perfis = obter_perfis_usuario()
-        restrito = 'financeiroconciliacaoitaubb' in perfis
-        logger.info(f"[CONCILIACAO] Perfil restrito detectado: {restrito}")
-        return restrito
-    except Exception as e:
-        logger.error(f"[CONCILIACAO] Erro ao verificar perfil restrito: {e}")
-        return False
 
 def normalizar_nome_banco(nome_banco: str) -> str:
     """
@@ -890,16 +947,12 @@ class ProcessadorBancos:
 def index():
     """Página principal da conciliação de lançamentos."""
     try:
-        # Verificar se usuário tem perfil restrito (só Itaú e BB)
-        perfil_restrito = usuario_restrito_itau_bb()
-        
         # Verificar bypass da API primeiro
         if verificar_api_bypass():
             logger.info(f"[CONCILIACAO] Acesso via bypass da API")
             return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                                  module_name='Conciliação de Lançamentos',
-                                 page_title='Conciliação de Lançamentos',
-                                 perfil_restrito_itau_bb=perfil_restrito)
+                                 page_title='Conciliação de Lançamentos')
         
         # Log de acesso
         access_logger.log_page_access('Conciliação de Lançamentos', 'financeiro')
@@ -910,8 +963,7 @@ def index():
         
         return render_template('conciliacao_lancamentos/conciliacao_lancamentos.html',
                              module_name='Conciliação de Lançamentos',
-                             page_title='Conciliação de Lançamentos',
-                             perfil_restrito_itau_bb=perfil_restrito)
+                             page_title='Conciliação de Lançamentos')
         
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao carregar página: {str(e)}")
@@ -1113,10 +1165,28 @@ def carregar_dados_conciliacao():
                 
                 logger.info(f"[PROCESSAR] Buscando dados do sistema para período: {data_inicio} a {data_fim}")
                 
+                # VALIDAÇÃO: Obter e validar contas selecionadas
+                contas_selecionadas = request.form.getlist('contas_selecionadas')
+                user_id = session.get('user', {}).get('id')
+                
+                sucesso, contas_validas, erro = validar_e_obter_contas_usuario(user_id, contas_selecionadas)
+                
+                if not sucesso:
+                    logger.warning(f"[PROCESSAR] Validação de contas falhou: {erro}")
+                    return jsonify({'success': False, 'error': erro}), 400
+                
+                contas_selecionadas = contas_validas
+                logger.info(f"[PROCESSAR] ✅ Contas validadas: {contas_selecionadas}")
+                
                 # Buscar movimentos do sistema via view
                 query = supabase_admin.table('vw_fin_movimentos_caixa').select('*')
                 query = query.gte('data_lancamento', data_inicio)
                 query = query.lte('data_lancamento', data_fim)
+                
+                # FILTRAR POR CONTAS SELECIONADAS
+                if contas_selecionadas and len(contas_selecionadas) > 0:
+                    logger.info(f"[PROCESSAR] Aplicando filtro de contas: {contas_selecionadas}")
+                    query = query.in_('numero_conta', contas_selecionadas)
                 
                 response_sistema = query.execute()
                 
@@ -1471,8 +1541,7 @@ def movimentos_sistema():
         logger.info("[CONCILIACAO] Buscando movimentos da tabela fin_conciliacao_movimentos")
         
         # Parâmetros de filtro
-        banco_filtro = request.args.get('banco', 'todos')
-        empresa_filtro = request.args.get('empresa', 'todas')
+        contas_selecionadas = request.args.getlist('contas')  # Nova: lista de contas
         data_inicio = request.args.get('data_inicio')
         data_fim = request.args.get('data_fim')
         
@@ -1482,10 +1551,20 @@ def movimentos_sistema():
             data_inicio = hoje.replace(day=1).strftime('%Y-%m-%d')
             data_fim = hoje.strftime('%Y-%m-%d')
         
+        # VALIDAÇÃO: Verificar se analista selecionou contas
+        user_id = session.get('user', {}).get('id')
+        sucesso, contas_validas, erro = validar_e_obter_contas_usuario(user_id, contas_selecionadas)
+        
+        if not sucesso:
+            logger.warning(f"[CONCILIACAO] Validação falhou: {erro}")
+            return jsonify({'success': False, 'error': erro}), 400
+        
+        # Usar contas validadas
+        contas_selecionadas = contas_validas
+        
         logger.info(
-            "[CONCILIACAO] Filtros - Banco: %s, Empresa: %s, Data: %s a %s",
-            banco_filtro,
-            empresa_filtro,
+            "[CONCILIACAO] ✅ Contas validadas - Contas: %s, Data: %s a %s",
+            contas_selecionadas,
             data_inicio,
             data_fim
         )
@@ -1501,38 +1580,10 @@ def movimentos_sistema():
         # Aplicar filtro de data
         query = query.gte('data_lancamento', data_inicio).lte('data_lancamento', data_fim)
         
-        # URGENTE: Verificar se usuário tem perfil restrito (financeiroconciliacaoitaubb)
-        # Usuários edicleia, juliano, rafael devem ver apenas Itaú e Banco do Brasil
-        if usuario_restrito_itau_bb():
-            logger.info("[CONCILIACAO] Usuário com perfil restrito - aplicando filtro Itaú + BB")
-            # Lista completa de variações conforme nomes REAIS no banco de dados:
-            # - 'ITAU' (3567 registros)
-            # - 'Banco do Brasil' (1132 registros) 
-            # - 'BANCO DO BRASIL' (287 registros)
-            bancos_permitidos = ['ITAU', 'Banco do Brasil', 'BANCO DO BRASIL']
-            query = query.in_('nome_banco', bancos_permitidos)
-        else:
-            # Aplicar filtro de banco manual se especificado e usuário não restrito
-            if banco_filtro and banco_filtro != 'todos':
-                # Mapear valores do dropdown para nomes REAIS no banco de dados
-                banco_mapeamento = {
-                    'itau': ['ITAU'],  # Todas as variações de Itaú no banco
-                    'banco_brasil': ['BANCO DO BRASIL', 'Banco do Brasil'],  # Todas as variações de BB
-                    'santander': ['SANTANDER', 'SANTANDER - COMPROMISSADA', 'Santander', 'Santander - Compromissada '],
-                    'bradesco': ['BRADESCO', 'Bradesco']
-                }
-                
-                bancos_para_filtrar = banco_mapeamento.get(banco_filtro.lower())
-                
-                if bancos_para_filtrar:
-                    logger.info(f"[CONCILIACAO] Aplicando filtro para bancos: {bancos_para_filtrar}")
-                    query = query.in_('nome_banco', bancos_para_filtrar)
-                else:
-                    # Fallback: usar ilike se não estiver no mapeamento
-                    query = query.ilike('nome_banco', f'%{banco_filtro}%')
-        
-        if empresa_filtro and empresa_filtro.lower() != 'todas':
-            query = query.ilike('empresa', f'%{empresa_filtro}%')
+        # Aplicar filtro de contas se selecionadas
+        if contas_selecionadas:
+            logger.info(f"[CONCILIACAO] Aplicando filtro para contas: {contas_selecionadas}")
+            query = query.in_('numero_conta', contas_selecionadas)
         
         # Executar query (sem limite para pegar todos os registros do período)
         response = query.order('data_lancamento', desc=True).execute()
@@ -1572,8 +1623,7 @@ def movimentos_sistema():
 
             session['registros_sistema'] = len(movimentos)
             session['ultimo_carregamento_sistema'] = {
-                'banco': banco_filtro,
-                'empresa': empresa_filtro,
+                'contas': contas_selecionadas,
                 'data_inicio': data_inicio,
                 'data_fim': data_fim,
                 'total_registros': len(movimentos)
@@ -1586,8 +1636,7 @@ def movimentos_sistema():
                 'data': movimentos,
                 'total': len(movimentos),
                 'filtros': {
-                    'banco': banco_filtro,
-                    'empresa': empresa_filtro,
+                    'contas': contas_selecionadas,
                     'data_inicio': data_inicio,
                     'data_fim': data_fim
                 }
@@ -1600,8 +1649,7 @@ def movimentos_sistema():
                 'total': 0,
                 'message': 'Nenhum movimento encontrado para o período',
                 'filtros': {
-                    'banco': banco_filtro,
-                    'empresa': empresa_filtro,
+                    'contas': contas_selecionadas,
                     'data_inicio': data_inicio,
                     'data_fim': data_fim
                 }
@@ -1718,6 +1766,50 @@ def limpar_sessao():
     except Exception as e:
         logger.error(f"[CONCILIACAO] Erro ao limpar sessão: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+@conciliacao_lancamentos_bp.route('/api/contas-disponiveis', methods=['GET'])
+@login_required
+def api_contas_disponiveis():
+    """
+    API para buscar contas bancárias disponíveis para filtro
+    
+    Returns:
+        JSON com lista de contas únicas padronizadas
+    """
+    try:
+        logger.info("[CONCILIACAO] Buscando contas disponíveis")
+        
+        # Buscar contas únicas da tabela fin_conciliacao_movimentos
+        response = supabase_admin.table('fin_conciliacao_movimentos')\
+            .select('numero_conta')\
+            .not_.is_('numero_conta', 'null')\
+            .execute()
+        
+        # Extrair contas únicas e padronizar
+        contas_set = set()
+        for row in response.data:
+            conta = row.get('numero_conta', '').strip()
+            if conta and conta.lower() not in ['aplicacao', 'brasil']:  # Filtrar contas inválidas
+                contas_set.add(conta)
+        
+        # Ordenar alfabeticamente
+        contas_list = sorted(list(contas_set))
+        
+        logger.info(f"[CONCILIACAO] {len(contas_list)} contas encontradas")
+        
+        return jsonify({
+            'success': True,
+            'contas': contas_list,
+            'total': len(contas_list)
+        })
+        
+    except Exception as e:
+        logger.error(f"[CONCILIACAO] Erro ao buscar contas: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'contas': []
+        }), 500
 
 @conciliacao_lancamentos_bp.route('/api/progresso-conciliacao', methods=['GET'])
 def progresso_conciliacao_endpoint():
@@ -2538,3 +2630,375 @@ def gerar_dados_teste():
     
     logger.info(f"[CONCILIACAO] Dados de teste gerados: {len(movimentos)} movimentos")
     return movimentos
+
+
+@conciliacao_lancamentos_bp.route('/api/exportar-conciliacao', methods=['POST'])
+@login_required
+def exportar_conciliacao():
+    """Exporta dados de conciliação para Excel com 2 abas (Sistema e Banco)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'Nenhum dado fornecido'}), 400
+        
+        dados_sistema = data.get('sistema', [])
+        dados_banco = data.get('banco', [])
+        
+        logger.info(f"[EXPORTAR] Recebidos {len(dados_sistema)} itens do sistema e {len(dados_banco)} itens do banco")
+        
+        # Criar workbook
+        wb = Workbook()
+        
+        # ===== ABA 1: SISTEMA =====
+        ws_sistema = wb.active
+        ws_sistema.title = "Sistema"
+        
+        # Cabeçalhos
+        headers_sistema = ['Data', 'Descrição', 'Valor', 'Tipo', 'Categoria', 'Origem', 'Status']
+        ws_sistema.append(headers_sistema)
+        
+        # Estilizar cabeçalho
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        for cell in ws_sistema[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Adicionar dados do sistema
+        for item in dados_sistema:
+            ws_sistema.append([
+                item.get('data_movimento', ''),
+                item.get('descricao', ''),
+                item.get('valor', 0),
+                item.get('tipo_movimento', ''),
+                item.get('categoria', ''),
+                item.get('origem', ''),
+                'Conciliado' if item.get('conciliado') else 'Pendente'
+            ])
+        
+        # Ajustar largura das colunas
+        ws_sistema.column_dimensions['A'].width = 12
+        ws_sistema.column_dimensions['B'].width = 40
+        ws_sistema.column_dimensions['C'].width = 15
+        ws_sistema.column_dimensions['D'].width = 12
+        ws_sistema.column_dimensions['E'].width = 15
+        ws_sistema.column_dimensions['F'].width = 15
+        ws_sistema.column_dimensions['G'].width = 12
+        
+        # ===== ABA 2: BANCO =====
+        ws_banco = wb.create_sheet(title="Banco")
+        
+        # Cabeçalhos
+        headers_banco = ['Data', 'Banco', 'Conta', 'Descrição', 'Valor', 'Status']
+        ws_banco.append(headers_banco)
+        
+        # Estilizar cabeçalho
+        for cell in ws_banco[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        # Adicionar dados do banco
+        for item in dados_banco:
+            ws_banco.append([
+                item.get('data_lancamento', ''),
+                item.get('nome_banco', ''),
+                item.get('numero_conta', ''),
+                item.get('descricao', ''),
+                item.get('valor', 0),
+                'Conciliado' if item.get('conciliado') else 'Pendente'
+            ])
+        
+        # Ajustar largura das colunas
+        ws_banco.column_dimensions['A'].width = 12
+        ws_banco.column_dimensions['B'].width = 20
+        ws_banco.column_dimensions['C'].width = 15
+        ws_banco.column_dimensions['D'].width = 40
+        ws_banco.column_dimensions['E'].width = 15
+        ws_banco.column_dimensions['F'].width = 12
+        
+        # Salvar em memória
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Nome do arquivo com timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'conciliacao_bancaria_{timestamp}.xlsx'
+        
+        logger.info(f"[EXPORTAR] Arquivo gerado com sucesso: {filename}")
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"[EXPORTAR] Erro ao exportar: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/usuarios-perfil-analista', methods=['GET'])
+def usuarios_perfil_analista():
+    """Lista usuários com perfil 'financeiro_conciliacao_analista'"""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not verificar_api_bypass():
+            # Se não tem bypass, verificar permissões
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        logger.info("[CONTAS-USERS] Buscando usuários com perfil financeiro_conciliacao_analista")
+        
+        try:
+            # Buscar usuários onde perfil_principal = 'financeiro_conciliacao_analista'
+            # OU onde perfis_json contenha o perfil
+            usuarios_response = supabase_admin.table('users')\
+                .select('id, name, email, perfil_principal, perfis_json')\
+                .eq('is_active', True)\
+                .order('name')\
+                .execute()
+            
+            if not usuarios_response.data:
+                logger.info("[CONTAS-USERS] Nenhum usuário encontrado")
+                return jsonify({'success': True, 'usuarios': []})
+            
+            # Filtrar usuários que têm o perfil analista
+            usuarios_filtrados = []
+            for user in usuarios_response.data:
+                perfil_principal = user.get('perfil_principal', '')
+                perfis_json = user.get('perfis_json', [])
+                
+                # Verificar se tem o perfil
+                tem_perfil = False
+                
+                # Caso 1: perfil_principal
+                if perfil_principal == 'financeiro_conciliacao_analista':
+                    tem_perfil = True
+                
+                # Caso 2: perfis_json como lista
+                elif isinstance(perfis_json, list):
+                    for perfil in perfis_json:
+                        # Formato 1: String simples "financeiro_conciliacao_analista"
+                        if isinstance(perfil, str) and perfil == 'financeiro_conciliacao_analista':
+                            tem_perfil = True
+                            break
+                        # Formato 2: Objeto {"perfil_nome": "financeiro_conciliacao_analista"}
+                        elif isinstance(perfil, dict) and perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                            tem_perfil = True
+                            break
+                
+                if tem_perfil:
+                    usuarios_filtrados.append({
+                        'id': user['id'],
+                        'username': user['name'],  # Usando 'name' como 'username'
+                        'email': user['email'],
+                        'nome_completo': user.get('name')  # Também usando 'name'
+                    })
+            
+            logger.info(f"[CONTAS-USERS] Encontrados {len(usuarios_filtrados)} usuários com perfil analista")
+            return jsonify({'success': True, 'usuarios': usuarios_filtrados})
+            
+        except Exception as query_error:
+            logger.error(f"[CONTAS-USERS] Erro nas queries: {str(query_error)}", exc_info=True)
+            return jsonify({'success': False, 'error': f'Erro ao consultar banco: {str(query_error)}'}), 500
+            
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro geral: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/contas-usuario/<user_id>', methods=['GET'])
+def get_contas_usuario(user_id):
+    """Busca contas atribuídas a um usuário específico"""
+    try:
+        # Verificar bypass da API ou autenticação
+        if not verificar_api_bypass():
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        logger.info(f"[CONTAS-USERS] Buscando contas do usuário {user_id}")
+        
+        response = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas = [item['numero_conta'] for item in response.data] if response.data else []
+        
+        logger.info(f"[CONTAS-USERS] Usuário {user_id} tem {len(contas)} contas")
+        return jsonify({'success': True, 'contas': contas})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao buscar contas: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/contas-usuario/<user_id>', methods=['POST'])
+def salvar_contas_usuario(user_id):
+    """Salva contas atribuídas a um usuário (substitui todas)"""
+    try:
+        # Verificar bypass da API ou autenticação
+        current_user_id = None
+        if not verificar_api_bypass():
+            user_role = session.get('user', {}).get('role')
+            user_perfis = session.get('user', {}).get('perfis', [])
+            current_user_id = session.get('user', {}).get('id')
+            
+            is_admin = user_role == 'admin'
+            is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            
+            if not (is_admin or is_admin_financeiro):
+                return jsonify({'success': False, 'error': 'Acesso negado'}), 403
+        
+        data = request.get_json()
+        contas = data.get('contas', [])
+        
+        logger.info(f"[CONTAS-USERS] Salvando {len(contas)} contas para usuário {user_id}")
+        
+        # 1. Remover todas as contas existentes do usuário
+        supabase_admin.table('fin_contas_users_conciliacao')\
+            .delete()\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        # 2. Inserir novas contas
+        if contas:
+            registros = [
+                {
+                    'user_id': user_id,
+                    'numero_conta': conta,
+                    'created_by': current_user_id,
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                for conta in contas
+            ]
+            
+            supabase_admin.table('fin_contas_users_conciliacao')\
+                .insert(registros)\
+                .execute()
+        
+        logger.info(f"[CONTAS-USERS] Contas salvas com sucesso para usuário {user_id}")
+        return jsonify({'success': True, 'message': f'{len(contas)} conta(s) salva(s) com sucesso'})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao salvar contas: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@conciliacao_lancamentos_bp.route('/api/minhas-contas', methods=['GET'])
+def minhas_contas():
+    """Retorna as contas que o usuário logado tem acesso (para analistas)"""
+    try:
+        # Verificar bypass ou sessão
+        if verificar_api_bypass():
+            logger.info("[CONTAS-USERS] Acesso via API bypass - retornando vazio")
+            return jsonify({'success': True, 'contas': [], 'restrito': False})
+        
+        user = session.get('user', {})
+        user_id = user.get('id')
+        user_email = user.get('email', 'N/A')
+        user_perfis = user.get('perfis')
+        perfis_source = 'session.perfis'
+        
+        logger.info(f"[CONTAS-USERS] Verificando contas para: {user_email} (ID: {user_id})")
+        logger.info(f"[CONTAS-USERS] Perfis (session.perfis): {user_perfis}")
+        
+        if not user_id:
+            logger.warning("[CONTAS-USERS] Usuário não encontrado na sessão")
+            return jsonify({'success': False, 'error': 'Usuário não autenticado'}), 401
+        
+        # Fallback: tentar session.perfis_json
+        if not user_perfis:
+            raw_perfis_session = user.get('perfis_json')
+            perfis_source = 'session.perfis_json'
+            logger.info(f"[CONTAS-USERS] Perfis (session.perfis_json): {raw_perfis_session}")
+            if isinstance(raw_perfis_session, list):
+                user_perfis = raw_perfis_session
+            elif isinstance(raw_perfis_session, str):
+                try:
+                    user_perfis = json.loads(raw_perfis_session)
+                except json.JSONDecodeError:
+                    logger.warning("[CONTAS-USERS] Não foi possível decodificar perfis_json da sessão")
+                    user_perfis = None
+        
+        # Fallback final: buscar no banco
+        if not user_perfis:
+            logger.info("[CONTAS-USERS] Buscando perfis no banco para garantir consistência")
+            response_user = supabase_admin.table('users')\
+                .select('perfis_json')\
+                .eq('id', user_id)\
+                .single()\
+                .execute()
+            raw_perfis_db = None
+            if response_user:
+                data_obj = None
+                if isinstance(response_user, dict):
+                    data_obj = response_user.get('data')
+                else:
+                    data_obj = getattr(response_user, 'data', None)
+                if isinstance(data_obj, list):
+                    if data_obj:
+                        raw_perfis_db = data_obj[0].get('perfis_json')
+                elif isinstance(data_obj, dict):
+                    raw_perfis_db = data_obj.get('perfis_json')
+            perfis_source = 'database.perfis_json'
+            logger.info(f"[CONTAS-USERS] Perfis (database): {raw_perfis_db}")
+            if isinstance(raw_perfis_db, list):
+                user_perfis = raw_perfis_db
+            elif isinstance(raw_perfis_db, str):
+                try:
+                    user_perfis = json.loads(raw_perfis_db)
+                except json.JSONDecodeError:
+                    logger.warning("[CONTAS-USERS] Não foi possível decodificar perfis_json do banco")
+                    user_perfis = None
+        
+        logger.info(f"[CONTAS-USERS] Perfis finais ({perfis_source}): {user_perfis}")
+        
+        # Verificar se é analista (formato string ou objeto)
+        is_analista = False
+        if isinstance(user_perfis, list):
+            for perfil in user_perfis:
+                if isinstance(perfil, str) and perfil == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    logger.info("[CONTAS-USERS] ✓ Perfil analista encontrado (string)")
+                    break
+                elif isinstance(perfil, dict) and perfil.get('perfil_nome') == 'financeiro_conciliacao_analista':
+                    is_analista = True
+                    logger.info("[CONTAS-USERS] ✓ Perfil analista encontrado (dict)")
+                    break
+        
+        if not is_analista:
+            logger.info(f"[CONTAS-USERS] {user_email} NÃO é analista - sem restrições")
+            return jsonify({'success': True, 'contas': [], 'restrito': False})
+        
+        logger.info(f"[CONTAS-USERS] Buscando contas atribuídas para {user_email}...")
+        
+        response = supabase_admin.table('fin_contas_users_conciliacao')\
+            .select('numero_conta')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        contas = [item['numero_conta'] for item in response.data] if response.data else []
+        
+        logger.info(f"[CONTAS-USERS] ✅ {user_email} tem acesso a {len(contas)} contas: {contas}")
+        return jsonify({'success': True, 'contas': contas, 'restrito': True})
+        
+    except Exception as e:
+        logger.error(f"[CONTAS-USERS] Erro ao buscar minhas contas: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500

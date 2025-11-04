@@ -28,6 +28,12 @@
                 <i class="mdi mdi-information-variant"></i>
                 Como conciliamos?
             </button>
+            {% if session.user.role == 'admin' or 'admin_financeiro' in (session.user.perfis | map(attribute='perfil_nome') | list) %}
+            <button id="btnGestaoUsuarios" class="btn btn-outline-primary">
+                <i class="mdi mdi-account-cog"></i>
+                Gestão de Contas
+            </button>
+            {% endif %}
             <button id="btnLimparSessao" class="btn btn-secondary" style="display: none;">
                 <i class="mdi mdi-refresh"></i>
                 Nova Sessão
@@ -52,16 +58,29 @@
 
     <!-- Navegação por Abas -->
     <div class="tabs-navigation">
-        <button class="tab-btn active" data-tab="conciliar">
-            <i class="mdi mdi-file-compare"></i>
-            Conciliar
-            <span class="tab-badge" id="badge-pendentes">0</span>
-        </button>
-        <button class="tab-btn" data-tab="conciliados">
-            <i class="mdi mdi-check-circle"></i>
-            Conciliados
-            <span class="tab-badge" id="badge-conciliados">0</span>
-        </button>
+        <div class="tabs-buttons">
+            <button class="tab-btn active" data-tab="conciliar">
+                <i class="mdi mdi-file-compare"></i>
+                Conciliar
+                <span class="tab-badge" id="badge-pendentes">0</span>
+            </button>
+            <button class="tab-btn" data-tab="conciliados">
+                <i class="mdi mdi-check-circle"></i>
+                Conciliados
+                <span class="tab-badge" id="badge-conciliados">0</span>
+            </button>
+        </div>
+        
+        <!-- Info de Contas Atribuídas -->
+        <div id="contasAtribuidasInfo" class="contas-info" style="display: none;">
+            <div class="contas-info-header">
+                <i class="mdi mdi-bank-check"></i>
+                <span>Minhas Contas:</span>
+            </div>
+            <div id="contasAtribuidasLista" class="contas-info-lista">
+                <span class="spinner-border spinner-border-sm"></span>
+            </div>
+        </div>
     </div>
 
     <!-- ABA 1: CONCILIAR (Ação) -->
@@ -89,36 +108,11 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label class="form-label">Banco (opcional, auto-detectado)</label>
-                                <select id="banco_origem" class="form-select">
-                                    <option value="auto">🔍 Identificar Automaticamente</option>
-                                    <option value="itau">🏦 Itaú</option>
-                                    {% if not perfil_restrito_itau_bb %}
-                                    <option value="santander">🏦 Santander</option>
-                                    {% endif %}
-                                    <option value="banco_brasil">🏦 Banco do Brasil</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="form-group">
-                                <label class="form-label">Empresa dos Lançamentos</label>
-                                <div class="empresa-radio-group">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroTodas" value="todas" checked>
-                                        <label class="form-check-label" for="empresaFiltroTodas">Todas</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Consultoria">
-                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Consultoria</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="empresa_filtro" id="empresaFiltroUnique" value="Unique Soluções">
-                                        <label class="form-check-label" for="empresaFiltroUnique">Unique Soluções</label>
-                                    </div>
-                                </div>
+                                <label class="form-label">Contas Bancárias</label>
+                                <button type="button" id="btnSelecionarContas" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalSelecionarContas">
+                                    <i class="mdi mdi-bank"></i> Selecionar Contas (0)
+                                </button>
+                                <small class="form-text text-muted">Selecione uma ou mais contas para filtrar</small>
                             </div>
                         </div>
                     </div>
@@ -251,9 +245,7 @@
                                 <select id="filtroBanco" class="form-select form-select-sm ms-2">
                                     <option value="">Todos os bancos</option>
                                     <option value="itau">Itaú</option>
-                                    {% if not perfil_restrito_itau_bb %}
                                     <option value="santander">Santander</option>
-                                    {% endif %}
                                     <option value="banco_brasil">Banco do Brasil</option>
                                 </select>
                             </div>
@@ -298,15 +290,19 @@
             <div class="conciliar-action">
                 <div class="totals-display">
                     <div class="total-item">
-                        <span class="total-label">Total Selecionado Sistema:</span>
+                        <span class="total-label">Sistema</span>
                         <span class="total-value" id="totalSelSistema">R$ 0,00</span>
                     </div>
-                    <button id="btnConciliarManual" class="btn btn-primary btn-lg" disabled>
-                        <i class="mdi mdi-link-variant"></i>
-                        Conciliar Selecionados
-                    </button>
+                    <div class="action-buttons">
+                        <button id="btnConciliarManual" class="btn btn-primary btn-icon" disabled title="Conciliar Selecionados">
+                            <i class="mdi mdi-link-variant"></i>
+                        </button>
+                        <button id="btnOcultarTransacoes" class="btn btn-warning btn-icon" disabled title="Ocultar Transações">
+                            <i class="mdi mdi-eye-off"></i>
+                        </button>
+                    </div>
                     <div class="total-item">
-                        <span class="total-label">Total Selecionado Banco:</span>
+                        <span class="total-label">Banco</span>
                         <span class="total-value" id="totalSelBanco">R$ 0,00</span>
                     </div>
                 </div>
@@ -338,9 +334,7 @@
                         <select id="filtroBancoConciliados" class="form-select">
                             <option value="">Todos</option>
                             <option value="itau">Itaú</option>
-                            {% if not perfil_restrito_itau_bb %}
                             <option value="santander">Santander</option>
-                            {% endif %}
                             <option value="banco_brasil">Banco do Brasil</option>
                         </select>
                     </div>
@@ -515,6 +509,81 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Gestão de Usuários e Contas -->
+<div class="modal fade" id="modalGestaoUsuarios" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title w-100 text-center">
+                    <i class="mdi mdi-bank-transfer"></i> Gestão de Acessos por Conta Bancária
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="mdi mdi-information"></i>
+                    <strong>Como funciona:</strong> Selecione os usuários que podem acessar cada conta bancária.
+                    <br>
+                    <small class="text-muted">Apenas usuários com perfil <strong>financeiro_conciliacao_analista</strong> estão listados.</small>
+                </div>
+
+                <!-- Lista de Contas -->
+                <div id="listaContasUsuarios" class="contas-usuarios-list">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando contas...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close"></i> Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Seleção de Contas -->
+<div class="modal fade" id="modalSelecionarContas" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="mdi mdi-bank"></i> Selecionar Contas Bancárias</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="buscarConta" class="form-control" placeholder="🔍 Buscar conta...">
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="selecionarTodasContas">
+                    <label class="form-check-label fw-bold" for="selecionarTodasContas">
+                        Selecionar Todas
+                    </label>
+                </div>
+                <hr>
+                <div id="listaContas" class="conta-list">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Carregando contas...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnAplicarContas">
+                    <i class="mdi mdi-check"></i> Aplicar (<span id="contadorContasSelecionadas">0</span>)
+                </button>
             </div>
         </div>
     </div>
