@@ -28,7 +28,7 @@
                 <i class="mdi mdi-information-variant"></i>
                 Como conciliamos?
             </button>
-            {% if session.user.role == 'admin' or 'admin_financeiro' in (session.user.perfis | map(attribute='perfil_nome') | list) %}
+            {% if session.user.role == 'admin' or ('admin_financeiro' in (session.user.perfis | map(attribute='perfil_nome') | list)) %}
             <button id="btnGestaoUsuarios" class="btn btn-outline-primary">
                 <i class="mdi mdi-account-cog"></i>
                 Gestão de Contas
