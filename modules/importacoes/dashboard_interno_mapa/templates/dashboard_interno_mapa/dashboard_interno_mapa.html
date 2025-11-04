@@ -609,7 +609,7 @@
         let currentScreen = 0; // 0 = dashboard, 1 = indicadores
         let autoSlideEnabled = true;
         let autoSlideInterval = null;
-        const SLIDE_DURATION = 20000; // 20 segundos por tela
+        const SLIDE_DURATION = 40000; // 40 segundos por tela
         const PROGRESS_INTERVAL = 100; // Atualizar barra a cada 100ms
         
         const screens = [
@@ -779,6 +779,20 @@
                 const tempoMedio = parseFloat(dados.tempo_medio_analise_dias || 0).toFixed(1);
                 document.getElementById('ind-tempo-medio').textContent = `${tempoMedio} dias`;
                 
+                // NOVOS INDICADORES
+                document.getElementById('ind-chegando-mes').textContent = (dados.processos_chegando_mes_atual || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-a-faturar').textContent = (dados.processos_a_faturar || 0).toLocaleString('pt-BR');
+                
+                // FUNIL DE STATUS TIMELINE
+                const funil = dados.funil_por_status_timeline || {};
+                document.getElementById('funil-processos-abertos').textContent = (funil['1_processos_abertos'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-agd-embarque').textContent = (funil['2_agd_embarque'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-agd-chegada').textContent = (funil['3_agd_chegada'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-agd-registro').textContent = (funil['4_agd_registro'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-agd-desembaraco').textContent = (funil['5_agd_desembaraco'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-agd-fechamento').textContent = (funil['6_agd_fechamento'] || 0).toLocaleString('pt-BR');
+                document.getElementById('funil-na').textContent = (funil['na'] || 0).toLocaleString('pt-BR');
+                
                 // Detalhes dos processos em análise - Layout em GALERIA
                 const detalhesContainer = document.getElementById('ind-detalhes-analise');
                 if (dados.detalhe_processos_analise && dados.detalhe_processos_analise.trim()) {
@@ -847,7 +861,7 @@
             }
         }
 
-        // Auto-refresh a cada 30 segundos quando a tela estiver visível
+        // Auto-refresh a cada 10 minutos quando a tela estiver visível
         let indicadoresRefreshInterval = null;
 
         function startIndicadoresRefresh() {
@@ -857,7 +871,7 @@
                 if (screen && screen.style.display !== 'none') {
                     loadIndicadoresOperacionais();
                 }
-            }, 30000); // 30 segundos
+            }, 600000); // 10 minutos (600.000ms)
         }
 
         function stopIndicadoresRefresh() {
@@ -1004,7 +1018,7 @@
                 lastUpdateEl.textContent = `Atualizado em ${formattedDate} ${formattedTime}`;
             }
 
-            const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
+            const AUTO_REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutos
             setInterval(() => window.location.reload(), AUTO_REFRESH_INTERVAL);
 
             const processosMes = processos.filter(p => p.data_abertura && p.data_abertura.getMonth() === currentMonth && p.data_abertura.getFullYear() === currentYear);

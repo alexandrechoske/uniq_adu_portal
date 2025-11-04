@@ -21,7 +21,7 @@
     </header>
 
     <!-- Grid Principal de Indicadores -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 md:gap-8">
         
         <!-- Card: Total Processos Abertos -->
         <div class="glass-card">
@@ -89,6 +89,120 @@
             <div class="mt-3 pt-3 border-t border-slate-700/50">
                 <p class="text-xs text-slate-400">Tempo médio</p>
                 <p class="text-lg font-semibold text-amber-400" id="ind-tempo-medio">- dias</p>
+            </div>
+        </div>
+
+        <!-- Card: Chegando Este Mês -->
+        <div class="glass-card">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Chegando Este Mês</p>
+                    <p class="text-4xl font-bold text-white" id="ind-chegando-mes">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-400">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card: A Faturar -->
+        <div class="glass-card">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">A Faturar</p>
+                    <p class="text-4xl font-bold text-white" id="ind-a-faturar">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-400">
+                        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Grid: Funil de Status Timeline (Segunda Linha) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 md:gap-6 mt-4">
+        
+        <!-- 1. Processos Abertos -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-slate-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-slate-300">1</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Processos Abertos</p>
+                <p class="text-2xl font-bold text-white" id="funil-processos-abertos">-</p>
+            </div>
+        </div>
+
+        <!-- 2. Aguardando Embarque -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-blue-400">2</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Embarque</p>
+                <p class="text-2xl font-bold text-white" id="funil-agd-embarque">-</p>
+            </div>
+        </div>
+
+        <!-- 3. Aguardando Chegada -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-cyan-400">3</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Chegada</p>
+                <p class="text-2xl font-bold text-white" id="funil-agd-chegada">-</p>
+            </div>
+        </div>
+
+        <!-- 4. Aguardando Registro -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-purple-400">4</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Registro</p>
+                <p class="text-2xl font-bold text-white" id="funil-agd-registro">-</p>
+            </div>
+        </div>
+
+        <!-- 5. Aguardando Desembaraço -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-amber-400">5</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Desembaraço</p>
+                <p class="text-2xl font-bold text-white" id="funil-agd-desembaraco">-</p>
+            </div>
+        </div>
+
+        <!-- 6. Aguardando Fechamento -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
+                    <span class="text-2xl font-bold text-green-400">6</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Fechamento</p>
+                <p class="text-2xl font-bold text-white" id="funil-agd-fechamento">-</p>
+            </div>
+        </div>
+
+        <!-- N/A (Não Aplicável) -->
+        <div class="glass-card p-4">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center mb-3">
+                    <span class="text-xl font-bold text-red-400">N/A</span>
+                </div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Não Aplicável</p>
+                <p class="text-2xl font-bold text-white" id="funil-na">-</p>
             </div>
         </div>
 
