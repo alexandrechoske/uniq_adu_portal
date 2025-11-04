@@ -116,6 +116,12 @@ async function loadAnalyticsStats() {
         ]);
         
         console.log('[ANALYTICS] Data parsed successfully');
+        console.log('[ANALYTICS] Charts data received:', {
+            daily_access_count: charts.daily_access?.length,
+            first_date: charts.daily_access?.[0]?.date,
+            last_date: charts.daily_access?.[charts.daily_access?.length - 1]?.date,
+            last_count: charts.daily_access?.[charts.daily_access?.length - 1]?.count
+        });
         
         analyticsData = { stats, charts, users, activity, inactiveUsers: inactiveUsersData.inactive_users || [] };
         
@@ -198,6 +204,13 @@ function createDailyAccessChart(data) {
     const accessData = data.daily_access || [];
     const usersData = data.daily_users || [];
 
+    console.log('[ANALYTICS] createDailyAccessChart - Dados recebidos:', {
+        totalDias: accessData.length,
+        primeiroDia: accessData[0]?.date,
+        ultimoDia: accessData[accessData.length - 1]?.date,
+        ultimoCount: accessData[accessData.length - 1]?.count
+    });
+
     // Garantir que as datas estejam alinhadas
     const labels = accessData.map(item => {
         try {
@@ -214,6 +227,9 @@ function createDailyAccessChart(data) {
     const accessValues = accessData.map(item => item.count || 0);
     const usersValues = usersData.map(item => item.count || 0);
 
+    console.log('[ANALYTICS] Daily Chart - Total de labels:', labels.length);
+    console.log('[ANALYTICS] Daily Chart - Últimos 5 labels:', labels.slice(-5));
+    console.log('[ANALYTICS] Daily Chart - Últimos 5 valores:', accessValues.slice(-5));
     logDebug('[ANALYTICS] Daily Chart - Access Values:', accessValues);
     logDebug('[ANALYTICS] Daily Chart - Users Values:', usersValues);
     logDebug('[ANALYTICS] Daily Chart - Labels:', labels);

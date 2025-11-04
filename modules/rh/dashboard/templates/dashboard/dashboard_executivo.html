@@ -249,6 +249,34 @@
                     </div>
                 </div>
             </div>
+
+            <!-- KPI 11: Total de Admissões no Período -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(40, 167, 69, 0.15);">
+                    <i class="mdi mdi-account-plus" style="color: #28a745; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Admissões</div>
+                    <div class="kpi-value" id="kpi-admissoes-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-admissoes-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI 12: Total de Demissões no Período -->
+            <div class="kpi-card-compact">
+                <div class="kpi-icon-container" style="background: rgba(220, 53, 69, 0.15);">
+                    <i class="mdi mdi-account-minus" style="color: #dc3545; font-size: 24px;"></i>
+                </div>
+                <div class="kpi-metrics-container">
+                    <div class="kpi-title">Demissões</div>
+                    <div class="kpi-value" id="kpi-demissoes-valor">-</div>
+                    <div class="kpi-comparison neutral" id="kpi-demissoes-variacao" style="display: none;">
+                        → 0%
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -340,5 +368,5 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=3.5"></script>
+<script src="{{ url_for('dashboard_rh.static', filename='dashboard/dashboard_executivo.js') }}?v=3.7"></script>
 {% endblock %}

@@ -4,6 +4,7 @@ try:
     from zoneinfo import ZoneInfo  # Python 3.9+
 except Exception:
     ZoneInfo = None
+import pytz  # Adicionar import do pytz
 from extensions import supabase_admin
 from modules.auth.routes import login_required
 from services.perfil_access_service import PerfilAccessService
@@ -153,6 +154,7 @@ def analytics_agente_test():
 def get_stats():
     """
     API para estatísticas básicas do Analytics
+    CORREÇÃO: Usa user_sessions para logins e created_at_br para filtros de data
     """
     try:
         # Obter parâmetros de filtro
@@ -160,8 +162,15 @@ def get_stats():
         user_role = request.args.get('userRole', 'all')
         action_type = request.args.get('actionType', 'all')
         
-        # Calcular datas
-        end_date = datetime.now()
+        # Calcular datas com timezone do Brasil (UTC-3)
+        try:
+            from zoneinfo import ZoneInfo
+            br_tz = ZoneInfo('America/Sao_Paulo')
+        except:
+            import pytz
+            br_tz = pytz.timezone('America/Sao_Paulo')
+        
+        end_date = datetime.now(br_tz)
         if date_range == '1d':
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
         elif date_range == '7d':
@@ -171,20 +180,14 @@ def get_stats():
         else:
             start_date = end_date - timedelta(days=30)
         
-        # Query base
+        # Query base - usar created_at_br para filtros
         query = supabase_admin.table('access_logs').select('*')
         
-        # Aplicar filtros de data
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
+        # Converter datas do Brasil para formato string DD/MM/YYYY para comparação com created_at_br
+        start_date_str = start_date.strftime('%d/%m/%Y 00:00:00')
+        end_date_str = end_date.strftime('%d/%m/%Y 23:59:59')
         
-        if user_role != 'all':
-            query = query.eq('user_role', user_role)
-            
-        if action_type != 'all':
-            query = query.eq('action_type', action_type)
-        
-        # Executar query
+        # Buscar todos os registros e filtrar no Python devido ao formato de data BR
         def _exec():
             return query.execute()
         response = run_with_retries(
@@ -194,49 +197,130 @@ def get_stats():
             base_delay_seconds=0.8,
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
-        logs = response.data if response.data else []
-        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
-        logs = [log for log in logs if not (
-            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
-            (log.get('ip_address') == '127.0.0.1')
-        )]
+        all_logs = response.data if response.data else []
+        
+        # Filtrar logs por data usando created_at_br
+        logs = []
+        for log in all_logs:
+            # Filtrar localhost
+            if (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or log.get('ip_address') == '127.0.0.1':
+                continue
+            
+            # Filtrar por data usando created_at_br
+            created_at_br = log.get('created_at_br')
+            if created_at_br:
+                try:
+                    # Parsear data no formato DD/MM/YYYY HH:MM:SS
+                    log_date = datetime.strptime(created_at_br, '%Y-%m-%dT%H:%M:%S.%f')
+                    if start_date.replace(tzinfo=None) <= log_date <= end_date.replace(tzinfo=None):
+                        logs.append(log)
+                except:
+                    # Se falhar, tentar usar created_at
+                    try:
+                        created_at = log.get('created_at')
+                        if created_at:
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            dt_br = dt.astimezone(br_tz)
+                            if start_date <= dt_br <= end_date:
+                                logs.append(log)
+                    except:
+                        pass
+        
+        # Aplicar filtros adicionais
+        if user_role != 'all':
+            logs = [log for log in logs if log.get('user_role') == user_role]
+        
+        if action_type != 'all':
+            logs = [log for log in logs if log.get('action_type') == action_type]
 
         # Calcular estatísticas
         total_access = len([log for log in logs if log.get('action_type') == 'page_access'])
         unique_users = len(set(log.get('user_id') for log in logs if log.get('user_id')))
 
-        # Logins hoje
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        logins_today = len([
-            log for log in logs 
-            if log.get('action_type') == 'login' and 
-            log.get('created_at') and
-            datetime.fromisoformat(log.get('created_at').replace('Z', '+00:00')) >= today_start
-        ])
+        # CORREÇÃO: Logins hoje - contar USUÁRIOS ÚNICOS que fizeram login hoje
+        today_start = datetime.now(br_tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Converter para UTC corretamente
+        import pytz as tz_lib
+        today_start_utc = today_start.astimezone(tz_lib.UTC)
+        
+        try:
+            def _exec_today():
+                return supabase_admin.table('user_sessions').select('*').gte('connected_at', today_start_utc.isoformat()).execute()
+            sessions_today_response = run_with_retries(
+                'analytics.get_stats.logins_today',
+                _exec_today,
+                max_attempts=3,
+                base_delay_seconds=0.8,
+                should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+            )
+            # Contar USUÁRIOS ÚNICOS que conectaram hoje (não total de sessões)
+            sessions_today = sessions_today_response.data if sessions_today_response.data else []
+            # Filtrar localhost
+            sessions_today = [s for s in sessions_today if s.get('ip_address') not in ['127.0.0.1', 'localhost', None]]
+            # Usar set() para garantir contagem de usuários únicos
+            unique_users_today = set(s.get('user_id') for s in sessions_today if s.get('user_id'))
+            logins_today = len(unique_users_today)
+            logger.info(f"[ANALYTICS] Logins hoje: {logins_today} usuários únicos de {len(sessions_today)} sessões")
+        except Exception as e:
+            logger.warning(f"Erro ao contar logins de hoje: {e}")
+            logins_today = 0
 
-        # Total de logins (todos os tempos)
+        # CORREÇÃO: Total de logins (todos os tempos) - usar user_sessions
         try:
             def _exec_total():
-                return supabase_admin.table('access_logs').select('*').eq('action_type', 'login').execute()
-            total_logins_response = run_with_retries(
+                return supabase_admin.table('user_sessions').select('user_id', count='exact').execute()
+            total_sessions_response = run_with_retries(
                 'analytics.get_stats.total_logins',
                 _exec_total,
                 max_attempts=3,
                 base_delay_seconds=0.8,
                 should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
             )
-            total_logins = len([
-                log for log in total_logins_response.data
-                if not (
-                    (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
-                    (log.get('ip_address') == '127.0.0.1')
-                )
-            ]) if total_logins_response.data else 0
-        except:
+            all_sessions = total_sessions_response.data if total_sessions_response.data else []
+            # Filtrar localhost
+            all_sessions = [s for s in all_sessions if s.get('ip_address') != '127.0.0.1' and s.get('ip_address') != 'localhost']
+            total_logins = len(all_sessions)
+        except Exception as e:
+            logger.warning(f"Erro ao contar total de logins: {e}")
             total_logins = 0
 
-        # Sessão média (simulado - pode ser calculado com base nos dados de logout)
-        avg_session_minutes = 45  # Placeholder
+        # CORREÇÃO: Sessão média - calcular com base em sessões que têm disconnected_at
+        try:
+            def _exec_sessions():
+                return supabase_admin.table('user_sessions').select('*').not_.is_('disconnected_at', 'null').limit(500).execute()
+            sessions_response = run_with_retries(
+                'analytics.get_stats.avg_session',
+                _exec_sessions,
+                max_attempts=3,
+                base_delay_seconds=0.8,
+                should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+            )
+            sessions_with_duration = sessions_response.data if sessions_response.data else []
+            
+            durations = []
+            for session in sessions_with_duration:
+                connected_at = session.get('connected_at')
+                disconnected_at = session.get('disconnected_at')
+                
+                if connected_at and disconnected_at:
+                    try:
+                        dt_connected = datetime.fromisoformat(connected_at.replace('Z', '+00:00'))
+                        dt_disconnected = datetime.fromisoformat(disconnected_at.replace('Z', '+00:00'))
+                        duration_minutes = (dt_disconnected - dt_connected).total_seconds() / 60
+                        
+                        # Filtrar sessões muito longas (> 12 horas) ou muito curtas (< 1 minuto)
+                        if 1 <= duration_minutes <= 720:
+                            durations.append(duration_minutes)
+                    except:
+                        pass
+            
+            if durations:
+                avg_session_minutes = int(sum(durations) / len(durations))
+            else:
+                avg_session_minutes = 0
+        except Exception as e:
+            logger.warning(f"Erro ao calcular sessão média: {e}")
+            avg_session_minutes = 0
 
         return jsonify({
             'success': True,
@@ -264,6 +348,7 @@ def get_stats():
 def get_charts():
     """
     API para dados dos gráficos
+    CORREÇÃO: Usa timezone do Brasil e created_at_br para processamento correto de datas
     """
     try:
         # Obter parâmetros de filtro
@@ -271,8 +356,15 @@ def get_charts():
         user_role = request.args.get('userRole', 'all')
         action_type = request.args.get('actionType', 'all')
         
-        # Calcular datas
-        end_date = datetime.now()
+        # Calcular datas com timezone do Brasil (UTC-3)
+        try:
+            from zoneinfo import ZoneInfo
+            br_tz = ZoneInfo('America/Sao_Paulo')
+        except:
+            import pytz
+            br_tz = pytz.timezone('America/Sao_Paulo')
+        
+        end_date = datetime.now(br_tz)
         if date_range == '1d':
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
             days_back = 1
@@ -286,10 +378,8 @@ def get_charts():
             start_date = end_date - timedelta(days=30)
             days_back = 30
         
-        # Query base
+        # Query base - buscar todos os registros e filtrar no Python
         query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -306,12 +396,45 @@ def get_charts():
             base_delay_seconds=0.8,
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
-        logs = response.data if response.data else []
-        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
-        logs = [log for log in logs if not (
-            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
-            (log.get('ip_address') == '127.0.0.1')
-        )]
+        all_logs = response.data if response.data else []
+        
+        # Filtrar logs por data e remover localhost
+        logs = []
+        for log in all_logs:
+            # Filtrar localhost
+            if (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or log.get('ip_address') == '127.0.0.1':
+                continue
+            
+            # Filtrar por data usando created_at_br ou created_at
+            created_at_br = log.get('created_at_br')
+            if created_at_br:
+                try:
+                    log_date = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
+                    log_date_br = log_date if log_date.tzinfo else br_tz.localize(log_date)
+                    if start_date.replace(tzinfo=None) <= log_date_br.replace(tzinfo=None) <= end_date.replace(tzinfo=None):
+                        logs.append(log)
+                except:
+                    # Fallback para created_at
+                    try:
+                        created_at = log.get('created_at')
+                        if created_at:
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            dt_br = dt.astimezone(br_tz)
+                            if start_date <= dt_br <= end_date:
+                                logs.append(log)
+                    except:
+                        pass
+            else:
+                # Usar created_at se created_at_br não existir
+                try:
+                    created_at = log.get('created_at')
+                    if created_at:
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        dt_br = dt.astimezone(br_tz)
+                        if start_date <= dt_br <= end_date:
+                            logs.append(log)
+                except:
+                    pass
         
         # Acessos diários (duas métricas: total de acessos e total de usuários únicos)
         daily_access = []  # total de acessos por dia
@@ -320,21 +443,27 @@ def get_charts():
         logger.info(f"[ANALYTICS] Intervalo: {start_date} até {end_date} ({days_back} dias)")
         
         # Melhorar processamento: agrupar logs por data primeiro
-        from datetime import timezone
         logs_by_date = {}
         logs_ids_in_days = set()
         
-        # Agrupar logs por data para processamento mais eficiente
+        # Agrupar logs por data para processamento mais eficiente - usando created_at_br
         for log in logs:
             if log.get('action_type') != 'page_access':
                 continue
                 
             try:
-                created_at_raw = log.get('created_at', '')
-                if not created_at_raw:
-                    continue
-                    
-                log_time = datetime.fromisoformat(created_at_raw.replace('Z', '+00:00'))
+                # Tentar usar created_at_br primeiro
+                created_at_br = log.get('created_at_br')
+                if created_at_br:
+                    log_time = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
+                else:
+                    # Fallback para created_at convertido para BR
+                    created_at_raw = log.get('created_at', '')
+                    if not created_at_raw:
+                        continue
+                    log_time = datetime.fromisoformat(created_at_raw.replace('Z', '+00:00'))
+                    log_time = log_time.astimezone(br_tz)
+                
                 log_date = log_time.date()
                 
                 if log_date not in logs_by_date:
@@ -349,11 +478,17 @@ def get_charts():
                 logger.warning(f"[ANALYTICS] Erro ao processar log: {e}")
                 continue
         
-        # Processar apenas dias que tenham dados (evitar dias com 0 desnecessários)
+        # Processar TODOS os dias do período, incluindo hoje
         days_with_data = []
-        for i in range(days_back):
+        today_br = datetime.now(br_tz).date()
+        
+        for i in range(days_back + 1):  # +1 para incluir o dia de hoje
             day = start_date + timedelta(days=i)
             day_date = day.date()
+            
+            # Parar se passar de hoje
+            if day_date > today_br:
+                break
             
             logs_day = logs_by_date.get(day_date, [])
             unique_users_day = set()
@@ -364,26 +499,28 @@ def get_charts():
                 if user_id:
                     unique_users_day.add(user_id)
             
-            # Só incluir o dia se tiver dados OU se for um dos últimos 7 dias
-            recent_threshold = (datetime.now() - timedelta(days=7)).date()
-            should_include = logs_count_day > 0 or day_date >= recent_threshold
+            # CORREÇÃO: Incluir TODOS os dias do período, mesmo com 0 acessos
+            # Isso garante que o gráfico mostre corretamente todos os dias incluindo hoje
+            daily_access.append({
+                'date': day.strftime('%Y-%m-%d'),
+                'count': logs_count_day
+            })
+            daily_users.append({
+                'date': day.strftime('%Y-%m-%d'),
+                'count': len(unique_users_day)
+            })
             
-            if should_include:
-                daily_access.append({
-                    'date': day.strftime('%Y-%m-%d'),
-                    'count': logs_count_day
-                })
-                daily_users.append({
-                    'date': day.strftime('%Y-%m-%d'),
-                    'count': len(unique_users_day)
-                })
-                
-                if logs_count_day > 0:
-                    days_with_data.append(day.strftime('%Y-%m-%d'))
+            if logs_count_day > 0:
+                days_with_data.append(day.strftime('%Y-%m-%d'))
             
             logger.info(f"[ANALYTICS] Dia {day.strftime('%Y-%m-%d')}: {logs_count_day} acessos, {len(unique_users_day)} usuários únicos")
         
         logger.info(f"[ANALYTICS] Dias com dados incluídos: {len(days_with_data)}")
+        logger.info(f"[ANALYTICS] Total de dias no array daily_access: {len(daily_access)}")
+        logger.info(f"[ANALYTICS] Primeira data: {daily_access[0]['date'] if daily_access else 'N/A'}")
+        logger.info(f"[ANALYTICS] Última data: {daily_access[-1]['date'] if daily_access else 'N/A'}")
+        logger.info(f"[ANALYTICS] Data de hoje esperada: {today_br.strftime('%Y-%m-%d')}")
+        
         # LOG EXTRA: Soma dos acessos diários
         soma_diaria = sum(d['count'] for d in daily_access)
         total_acessos = len([log for log in logs if log.get('action_type') == 'page_access'])
@@ -419,13 +556,25 @@ def get_charts():
             for user, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)
         ]
         
-        # Mapa de calor por horário (com usuários únicos)
+        # Mapa de calor por horário (com usuários únicos) - usar timezone do Brasil
         hourly_counts = {}
         hourly_users = {}
         for log in logs:
             try:
                 if log.get('action_type') == 'page_access' and log.get('user_name'):
-                    hour = datetime.fromisoformat(log.get('created_at', '').replace('Z', '+00:00')).hour
+                    # Tentar usar created_at_br primeiro
+                    created_at_br = log.get('created_at_br')
+                    if created_at_br:
+                        log_time = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
+                    else:
+                        # Fallback para created_at convertido para BR
+                        created_at = log.get('created_at', '')
+                        if not created_at:
+                            continue
+                        log_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        log_time = log_time.astimezone(br_tz)
+                    
+                    hour = log_time.hour
                     hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
                     
                     # Contar usuários únicos por hora
@@ -434,7 +583,8 @@ def get_charts():
                     user_id = log.get('user_id')
                     if user_id:
                         hourly_users[hour].add(user_id)
-            except:
+            except Exception as e:
+                logger.warning(f"[ANALYTICS] Erro ao processar horário do log: {e}")
                 continue
         
         hourly_heatmap = [
