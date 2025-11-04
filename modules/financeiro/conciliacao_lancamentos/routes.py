@@ -2775,11 +2775,13 @@ def usuarios_perfil_analista():
             # Se não tem bypass, verificar permissões
             user_role = session.get('user', {}).get('role')
             user_perfis = session.get('user', {}).get('perfis', [])
+            user_perfil_principal = session.get('user', {}).get('perfil_principal', '')
             
             is_admin = user_role == 'admin'
             is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            is_admin_financeiro_principal = user_perfil_principal in ['admin_financeiro', 'master_admin']
             
-            if not (is_admin or is_admin_financeiro):
+            if not (is_admin or is_admin_financeiro or is_admin_financeiro_principal):
                 return jsonify({'success': False, 'error': 'Acesso negado'}), 403
         
         logger.info("[CONTAS-USERS] Buscando usuários com perfil financeiro_conciliacao_analista")
@@ -2850,11 +2852,13 @@ def get_contas_usuario(user_id):
         if not verificar_api_bypass():
             user_role = session.get('user', {}).get('role')
             user_perfis = session.get('user', {}).get('perfis', [])
+            user_perfil_principal = session.get('user', {}).get('perfil_principal', '')
             
             is_admin = user_role == 'admin'
             is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            is_admin_financeiro_principal = user_perfil_principal in ['admin_financeiro', 'master_admin']
             
-            if not (is_admin or is_admin_financeiro):
+            if not (is_admin or is_admin_financeiro or is_admin_financeiro_principal):
                 return jsonify({'success': False, 'error': 'Acesso negado'}), 403
         
         logger.info(f"[CONTAS-USERS] Buscando contas do usuário {user_id}")
@@ -2883,12 +2887,14 @@ def salvar_contas_usuario(user_id):
         if not verificar_api_bypass():
             user_role = session.get('user', {}).get('role')
             user_perfis = session.get('user', {}).get('perfis', [])
+            user_perfil_principal = session.get('user', {}).get('perfil_principal', '')
             current_user_id = session.get('user', {}).get('id')
             
             is_admin = user_role == 'admin'
             is_admin_financeiro = any(p.get('perfil_nome') == 'admin_financeiro' for p in user_perfis)
+            is_admin_financeiro_principal = user_perfil_principal in ['admin_financeiro', 'master_admin']
             
-            if not (is_admin or is_admin_financeiro):
+            if not (is_admin or is_admin_financeiro or is_admin_financeiro_principal):
                 return jsonify({'success': False, 'error': 'Acesso negado'}), 403
         
         data = request.get_json()
