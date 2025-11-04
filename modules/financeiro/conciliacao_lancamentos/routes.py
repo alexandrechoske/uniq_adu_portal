@@ -2637,6 +2637,30 @@ def gerar_dados_teste():
 def exportar_conciliacao():
     """Exporta dados de conciliação para Excel com 2 abas (Sistema e Banco)"""
     try:
+        def formatar_data(data_str):
+            """Formata data para padrão pt-BR (dd/mm/yyyy)"""
+            if not data_str:
+                return ''
+            try:
+                # Se é string em formato ISO (2025-11-03)
+                if isinstance(data_str, str) and 'T' not in data_str and '-' in data_str:
+                    partes = data_str.split('-')
+                    if len(partes) == 3:
+                        return f"{partes[2]}/{partes[1]}/{partes[0]}"
+                # Se é string ISO com hora (2025-11-03T10:30:00)
+                elif isinstance(data_str, str) and 'T' in data_str:
+                    data_parte = data_str.split('T')[0]
+                    partes = data_parte.split('-')
+                    if len(partes) == 3:
+                        return f"{partes[2]}/{partes[1]}/{partes[0]}"
+                # Se já está em formato dd/mm/yyyy
+                elif isinstance(data_str, str) and '/' in data_str:
+                    return data_str
+                return str(data_str) if data_str else ''
+            except Exception as e:
+                logger.warning(f"[EXPORTAR] Erro ao formatar data '{data_str}': {e}")
+                return str(data_str) if data_str else ''
+        
         data = request.get_json()
         
         if not data:
@@ -2665,10 +2689,11 @@ def exportar_conciliacao():
             cell.fill = header_fill
             cell.font = header_font
         
-        # Adicionar dados do sistema
+        # Adicionar dados do sistema (com formatação de datas)
         for item in dados_sistema:
+            data_formatada = formatar_data(item.get('data_movimento', ''))
             ws_sistema.append([
-                item.get('data_movimento', ''),
+                data_formatada,
                 item.get('descricao', ''),
                 item.get('valor', 0),
                 item.get('tipo_movimento', ''),
@@ -2698,10 +2723,11 @@ def exportar_conciliacao():
             cell.fill = header_fill
             cell.font = header_font
         
-        # Adicionar dados do banco
+        # Adicionar dados do banco (com formatação de datas)
         for item in dados_banco:
+            data_formatada = formatar_data(item.get('data_lancamento', ''))
             ws_banco.append([
-                item.get('data_lancamento', ''),
+                data_formatada,
                 item.get('nome_banco', ''),
                 item.get('numero_conta', ''),
                 item.get('descricao', ''),
