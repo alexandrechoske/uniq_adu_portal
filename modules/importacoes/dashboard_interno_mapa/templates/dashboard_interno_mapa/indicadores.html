@@ -1,27 +1,27 @@
 <!-- Template de Indicadores Operacionais Analíticos -->
-<div id="indicadores-screen" class="w-full h-full min-h-screen p-4 md:p-8 flex flex-col gap-8" style="display: none;">
+<div id="indicadores-screen" class="w-full h-full overflow-y-auto p-3 md:p-4 flex flex-col gap-4" style="display: none;">
     
     <!-- Header dos Indicadores -->
-    <header class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400">
+    <header class="flex items-center justify-between mb-1 flex-shrink-0">
+        <div class="flex items-center gap-2 md:gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400">
                 <path d="M3 3v18h18"></path>
                 <path d="M18 17V9"></path>
                 <path d="M13 17V5"></path>
                 <path d="M8 17v-3"></path>
             </svg>
             <div>
-                <h1 class="text-3xl font-bold text-white">Indicadores Operacionais</h1>
-                <p class="text-sm text-slate-400 mt-1">Análise em tempo real das operações</p>
+                <h1 class="text-lg md:text-2xl font-bold text-white">Indicadores Operacionais</h1>
+                <p class="text-xs text-slate-400 mt-0.5">Análise em tempo real</p>
             </div>
         </div>
-        <div class="text-sm text-slate-400">
+        <div class="text-xs text-slate-400">
             <span id="indicadores-last-update">Carregando...</span>
         </div>
     </header>
 
     <!-- Grid Principal de Indicadores -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 md:gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 md:gap-4 flex-shrink-0">
         
         <!-- Card: Total Processos Abertos -->
         <div class="glass-card">
@@ -127,142 +127,170 @@
     </div>
 
     <!-- Grid: Funil de Status Timeline (Segunda Linha) -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 md:gap-6 mt-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3 flex-shrink-0">
         
         <!-- 1. Processos Abertos -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-slate-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-slate-300">1</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-slate-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-slate-300">1</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Processos Abertos</p>
-                <p class="text-2xl font-bold text-white" id="funil-processos-abertos">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-processos-abertos">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Processos<br>Abertos</p>
+                </div>
             </div>
         </div>
 
         <!-- 2. Aguardando Embarque -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-blue-400">2</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-blue-400">2</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Embarque</p>
-                <p class="text-2xl font-bold text-white" id="funil-agd-embarque">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-agd-embarque">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Agd.<br>Embarque</p>
+                </div>
             </div>
         </div>
 
         <!-- 3. Aguardando Chegada -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-cyan-400">3</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-cyan-400">3</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Chegada</p>
-                <p class="text-2xl font-bold text-white" id="funil-agd-chegada">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-agd-chegada">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Agd.<br>Chegada</p>
+                </div>
             </div>
         </div>
 
         <!-- 4. Aguardando Registro -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-purple-400">4</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-purple-400">4</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Registro</p>
-                <p class="text-2xl font-bold text-white" id="funil-agd-registro">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-agd-registro">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Agd.<br>Registro</p>
+                </div>
             </div>
         </div>
 
         <!-- 5. Aguardando Desembaraço -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-amber-400">5</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-amber-400">5</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Desembaraço</p>
-                <p class="text-2xl font-bold text-white" id="funil-agd-desembaraco">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-agd-desembaraco">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Agd.<br>Desembaraço</p>
+                </div>
             </div>
         </div>
 
         <!-- 6. Aguardando Fechamento -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center mb-3">
-                    <span class="text-2xl font-bold text-green-400">6</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg font-bold text-green-400">6</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Agd. Fechamento</p>
-                <p class="text-2xl font-bold text-white" id="funil-agd-fechamento">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-agd-fechamento">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Agd.<br>Fechamento</p>
+                </div>
             </div>
         </div>
 
         <!-- N/A (Não Aplicável) -->
-        <div class="glass-card p-4">
-            <div class="flex flex-col items-center text-center">
-                <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center mb-3">
-                    <span class="text-xl font-bold text-red-400">N/A</span>
+        <div class="glass-card p-2">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-sm font-bold text-red-400">N/A</span>
                 </div>
-                <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Não Aplicável</p>
-                <p class="text-2xl font-bold text-white" id="funil-na">-</p>
+                <div class="flex-1 text-center">
+                    <p class="text-xl font-bold text-white leading-none" id="funil-na">-</p>
+                </div>
+                <div class="flex-1 text-right">
+                    <p class="text-[10px] uppercase tracking-tight text-slate-400 leading-tight">Não<br>Aplicável</p>
+                </div>
             </div>
         </div>
 
     </div>
 
     <!-- Seção: Detalhes dos Processos em Análise -->
-    <div class="glass-card mt-2">
-        <div class="flex items-center gap-3 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
+    <div class="glass-card mt-0">
+        <div class="flex items-center gap-2 md:gap-3 mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="3" y1="9" x2="21" y2="9"></line>
                 <line x1="9" y1="21" x2="9" y2="9"></line>
             </svg>
-            <h2 class="text-xl font-bold text-white">Processos em Análise Fiscal</h2>
+            <h2 class="text-lg md:text-base font-bold text-white">Análise Fiscal</h2>
         </div>
         <!-- Grid de cards em galeria (responsivo) -->
-        <div id="ind-detalhes-analise" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <p class="text-sm text-slate-400 col-span-full">Nenhum processo em análise</p>
+        <div id="ind-detalhes-analise" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+            <p class="text-xs text-slate-400 col-span-full">Nenhum processo em análise</p>
         </div>
     </div>
 
     <!-- Grid: Metas e Performance Anual -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mt-2">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mt-0">
         
         <!-- Card: Registros e Meta Anual -->
         <div class="glass-card">
-            <div class="flex items-center gap-3 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
+            <div class="flex items-center gap-2 md:gap-3 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                 </svg>
-                <h2 class="text-xl font-bold text-white">Meta Anual</h2>
+                <h2 class="text-lg md:text-base font-bold text-white">Meta Anual</h2>
             </div>
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-2 md:gap-3">
                 <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Registrados no Ano</p>
-                    <p class="text-3xl font-bold text-white" id="ind-registrados-ano">-</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Registrados</p>
+                    <p class="text-2xl md:text-3xl font-bold text-white" id="ind-registrados-ano">-</p>
                 </div>
                 <div>
-                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Meta Anual</p>
-                    <p class="text-3xl font-bold text-white" id="ind-meta-anual">-</p>
+                    <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Meta</p>
+                    <p class="text-2xl md:text-3xl font-bold text-white" id="ind-meta-anual">-</p>
                 </div>
             </div>
 
-            <div class="mt-4 pt-4 border-t border-slate-700/50">
+            <div class="mt-3 pt-3 border-t border-slate-700/50">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-slate-400">Progresso</span>
-                    <span class="text-sm font-semibold text-white" id="ind-percentual-meta">0%</span>
+                    <span class="text-xs text-slate-400">Progresso</span>
+                    <span class="text-xs font-semibold text-white" id="ind-percentual-meta">0%</span>
                 </div>
-                <div class="w-full bg-slate-700/30 rounded-full h-3 overflow-hidden">
+                <div class="w-full bg-slate-700/30 rounded-full h-2 overflow-hidden">
                     <div id="ind-progress-bar" class="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-sky-500 to-blue-600" style="width: 0%"></div>
                 </div>
-                <div class="flex justify-between items-center mt-3">
+                <div class="flex justify-between items-center mt-2">
                     <div>
-                        <p class="text-xs text-slate-400">Faltam para Meta</p>
-                        <p class="text-lg font-semibold text-red-400" id="ind-faltam-meta">-</p>
+                        <p class="text-xs text-slate-400">Faltam</p>
+                        <p class="text-sm md:text-base font-semibold text-red-400" id="ind-faltam-meta">-</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs text-slate-400">Média Mensal</p>
-                        <p class="text-lg font-semibold text-sky-400" id="ind-media-mensal">-</p>
+                        <p class="text-xs text-slate-400">Média</p>
+                        <p class="text-sm md:text-base font-semibold text-sky-400" id="ind-media-mensal">-</p>
                     </div>
                 </div>
             </div>
@@ -270,21 +298,19 @@
 
         <!-- Card: Projeção -->
         <div class="glass-card">
-            <div class="flex items-center gap-3 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
+            <div class="flex items-center gap-2 md:gap-3 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-400">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                 </svg>
-                <h2 class="text-xl font-bold text-white">Projeção para Fim do Ano</h2>
+                <h2 class="text-lg md:text-base font-bold text-white">Projeção Fim do Ano</h2>
             </div>
             
-            <div class="flex items-center justify-center h-full min-h-[200px]">
-                <div class="text-center">
-                    <p class="text-6xl font-bold text-sky-400" id="ind-projecao-fim-ano">-</p>
-                    <p class="text-sm text-slate-400 mt-2">Processos projetados</p>
-                    <div class="mt-6 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-                        <p class="text-xs text-slate-400 mb-1">Status da Meta</p>
-                        <p class="text-lg font-semibold" id="ind-status-meta-text">-</p>
-                    </div>
+            <div class="flex flex-col items-center justify-center min-h-[140px] md:min-h-[160px]">
+                <p class="text-4xl md:text-5xl font-bold text-sky-400" id="ind-projecao-fim-ano">-</p>
+                <p class="text-xs text-slate-400 mt-1">Processos projetados</p>
+                <div class="mt-3 p-2 md:p-3 rounded-lg bg-slate-800/50 border border-slate-700/50 w-full text-center">
+                    <p class="text-xs text-slate-400 mb-0.5">Status</p>
+                    <p class="text-xs md:text-sm font-semibold" id="ind-status-meta-text">-</p>
                 </div>
             </div>
         </div>
@@ -299,25 +325,25 @@
         backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 1rem;
-        padding: 2rem;
+        padding: 1rem;
         box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
     }
     
     @media (max-width: 768px) {
         .glass-card {
-            padding: 1.5rem;
+            padding: 0.875rem;
         }
     }
     
     /* Cards de processos em análise - Layout em galeria */
     .processo-analise-item {
-        padding: 1.5rem;
-        border-radius: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
         background: rgba(15, 23, 42, 0.6);
         border: 2px solid;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0.5rem;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
@@ -360,13 +386,13 @@
     .processo-analise-item.vermelho::before {
         content: '⚠️ CRÍTICO';
         position: absolute;
-        top: 0.75rem;
-        right: 0.75rem;
+        top: 0.5rem;
+        right: 0.5rem;
         background: rgba(239, 68, 68, 0.9);
         color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.3rem;
+        font-size: 0.6rem;
         font-weight: 700;
         letter-spacing: 0.05em;
         animation: blink-alert 1.5s ease-in-out infinite;
@@ -381,13 +407,13 @@
     .processo-analise-item.amarelo::before {
         content: '⚡ ATENÇÃO';
         position: absolute;
-        top: 0.75rem;
-        right: 0.75rem;
+        top: 0.5rem;
+        right: 0.5rem;
         background: rgba(250, 204, 21, 0.9);
         color: #1e293b;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-size: 0.65rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.3rem;
+        font-size: 0.6rem;
         font-weight: 700;
         letter-spacing: 0.05em;
     }
@@ -395,39 +421,39 @@
     .processo-analise-item .nome {
         font-weight: 700;
         color: #ffffff;
-        font-size: 1.05rem;
-        line-height: 1.3;
-        margin-top: 0.5rem;
-        padding-right: 5rem; /* Espaço para o badge */
+        font-size: 0.9rem;
+        line-height: 1.2;
+        margin-top: 0.25rem;
+        padding-right: 4rem; /* Espaço para o badge */
     }
     
     .processo-analise-item .codigo {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         color: #94a3b8;
         font-weight: 500;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
     }
     
     .processo-analise-item .codigo::before {
         content: '📋';
-        font-size: 1rem;
+        font-size: 0.85rem;
     }
     
     .processo-analise-item .dias {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
         color: #cbd5e1;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
         margin-top: 0.25rem;
     }
     
     .processo-analise-item .dias::before {
         content: '⏱️';
-        font-size: 1rem;
+        font-size: 0.85rem;
     }
     
     .processo-analise-item.vermelho .dias {
@@ -444,13 +470,13 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.4rem 0.75rem;
+        padding: 0.25rem 0.5rem;
         border-radius: 9999px;
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-top: 0.5rem;
+        margin-top: 0.25rem;
         width: fit-content;
     }
     
