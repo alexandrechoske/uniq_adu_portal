@@ -68,7 +68,26 @@ const AVAILABLE_COLUMNS = [
     { id: 'limite_primeiro_periodo', label: 'Limite 1º Período', visible: false, fixed: false, sortable: false, sortField: 'limite_primeiro_periodo', category: 'Armazenagem', order: 23 },
     { id: 'limite_segundo_periodo', label: 'Limite 2º Período', visible: false, fixed: false, sortable: false, sortField: 'limite_segundo_periodo', category: 'Armazenagem', order: 24 },
     { id: 'dias_extras_armazenagem', label: 'Dias Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'dias_extras_armazenagem', category: 'Armazenagem', order: 25 },
-    { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'valor_despesas_extras', category: 'Armazenagem', order: 26 }
+    { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'valor_despesas_extras', category: 'Armazenagem', order: 26 },
+    
+    // Grupo: Kingspan - Pedido
+    { id: 'po_cliente', label: 'PO Cliente', visible: false, fixed: false, sortable: true, sortField: 'po_cliente', category: 'Kingspan - Pedido', order: 27 },
+    { id: 'referencia_exportador', label: 'Referência Exportador', visible: false, fixed: false, sortable: true, sortField: 'referencia_exportador', category: 'Kingspan - Pedido', order: 28 },
+    { id: 'codigo_produto', label: 'Código Produto', visible: false, fixed: false, sortable: true, sortField: 'codigo_produto', category: 'Kingspan - Pedido', order: 29 },
+    { id: 'filial_codigo', label: 'Filial', visible: false, fixed: false, sortable: true, sortField: 'filial_codigo', category: 'Kingspan - Pedido', order: 30 },
+    { id: 'licenca_importacao', label: 'Licença Importação', visible: false, fixed: false, sortable: true, sortField: 'licenca_importacao', category: 'Kingspan - Pedido', order: 31 },
+    
+    // Grupo: Kingspan - Logística
+    { id: 'freetime', label: 'Freetime', visible: false, fixed: false, sortable: true, sortField: 'freetime', category: 'Kingspan - Logística', order: 32 },
+    { id: 'etb', label: 'ETB', visible: false, fixed: false, sortable: true, sortField: 'etb', category: 'Kingspan - Logística', order: 33 },
+    { id: 'navio', label: 'Navio', visible: false, fixed: false, sortable: true, sortField: 'navio', category: 'Kingspan - Logística', order: 34 },
+    { id: 'armador_agente_trade', label: 'Armador/Agente Trade', visible: false, fixed: false, sortable: true, sortField: 'armador_agente_trade', category: 'Kingspan - Logística', order: 35 },
+    
+    // Grupo: Kingspan - Financeiro
+    { id: 'moeda', label: 'Moeda', visible: false, fixed: false, sortable: true, sortField: 'moeda', category: 'Kingspan - Financeiro', order: 36 },
+    { id: 'total_pedido_moeda_origem', label: 'Total Pedido (Moeda Origem)', visible: false, fixed: false, sortable: true, sortField: 'total_pedido_moeda_origem', category: 'Kingspan - Financeiro', order: 37 },
+    { id: 'ptax', label: 'PTAX', visible: false, fixed: false, sortable: true, sortField: 'ptax', category: 'Kingspan - Financeiro', order: 38 },
+    { id: 'incoterm', label: 'Incoterm', visible: false, fixed: false, sortable: true, sortField: 'incoterm', category: 'Kingspan - Financeiro', order: 39 }
 ];
 
 let cachedColumnsConfig = null;
@@ -1159,7 +1178,15 @@ function initializeEnhancedTable() {
         containerId: 'recent-operations-container',
         searchInputId: 'recent-operations-search',
         itemsPerPage: 15,
-        searchFields: ['ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 'status_timeline', 'status_processo', 'status_macro_sistema', 'mercadoria', 'urf_despacho_normalizado', 'urf_despacho'],
+        searchFields: [
+            'ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 
+            'status_timeline', 'status_processo', 'status_macro_sistema', 'mercadoria', 
+            'urf_despacho_normalizado', 'urf_despacho',
+            // Kingspan fields
+            'po_cliente', 'referencia_exportador', 'codigo_produto', 'filial_codigo', 
+            'licenca_importacao', 'freetime', 'etb', 'navio', 'armador_agente_trade',
+            'moeda', 'total_pedido_moeda_origem', 'ptax', 'incoterm'
+        ],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
@@ -1337,6 +1364,39 @@ function initializeEnhancedTable() {
                     return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'dias_extras_armazenagem'))}</td>`;
                 case 'valor_despesas_extras':
                     return `<td>${escapeHtml(getArmazenagemDisplay(operation, 'valor_despesas_extras'))}</td>`;
+                // Kingspan - Pedido
+                case 'po_cliente':
+                    return `<td>${escapeHtml(operation.po_cliente || '-')}</td>`;
+                case 'referencia_exportador':
+                    return `<td>${escapeHtml(operation.referencia_exportador || '-')}</td>`;
+                case 'codigo_produto':
+                    return `<td>${escapeHtml(operation.codigo_produto || '-')}</td>`;
+                case 'filial_codigo':
+                    return `<td>${escapeHtml(operation.filial_codigo || '-')}</td>`;
+                case 'licenca_importacao':
+                    return `<td>${escapeHtml(operation.licenca_importacao || '-')}</td>`;
+                // Kingspan - Logística
+                case 'freetime':
+                    return `<td>${escapeHtml(operation.freetime || '-')}</td>`;
+                case 'etb':
+                    return `<td>${formatDate(operation.etb)}</td>`;
+                case 'navio':
+                    return `<td>${escapeHtml(operation.navio || '-')}</td>`;
+                case 'armador_agente_trade':
+                    return `<td>${escapeHtml(operation.armador_agente_trade || '-')}</td>`;
+                // Kingspan - Financeiro
+                case 'moeda':
+                    return `<td>${escapeHtml(operation.moeda || '-')}</td>`;
+                case 'total_pedido_moeda_origem': {
+                    const total = operation.total_pedido_moeda_origem;
+                    return `<td>${total ? formatCurrency(total) : '-'}</td>`;
+                }
+                case 'ptax': {
+                    const ptax = operation.ptax;
+                    return `<td>${ptax ? Number(ptax).toFixed(4) : '-'}</td>`;
+                }
+                case 'incoterm':
+                    return `<td>${escapeHtml(operation.incoterm || '-')}</td>`;
                 default:
                     return '<td>-</td>';
             }
@@ -2529,7 +2589,7 @@ function formatNumber(value, decimals = 0) {
 }
 
 // Global safe value display helper
-function safeValue(v, placeholder = 'n/a') {
+function safeValue(v, placeholder = '') {
     if (v === null || v === undefined) return placeholder;
     if (typeof v === 'string') {
         const trimmed = v.trim();
@@ -2750,8 +2810,14 @@ function openProcessModal(operationIndex) {
     // Update financial summary using new category-based system
     updateFinancialSummary(operation);
     
+    // Update Kingspan specific data (only visible if user has access)
+    updateKingspanData(operation);
+    
     // Update documents (placeholder for now)
     updateDocumentsList(operation);
+    
+    // Initialize tabs navigation
+    initializeModalTabs();
     
     // Show modal
     const modal = document.getElementById('process-modal');
@@ -2759,6 +2825,64 @@ function openProcessModal(operationIndex) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
+}
+
+/**
+ * Initialize modal tabs navigation
+ * BUGFIX: Reset to first tab (geral) every time modal opens to avoid cache issue
+ */
+function initializeModalTabs() {
+    const tabs = document.querySelectorAll('.modal-tab');
+    const tabContents = document.querySelectorAll('.info-card[data-tab-content]');
+    
+    console.log('[TAB_RESET] Resetando abas para primeira aba (Informações Gerais)');
+    
+    // BUGFIX: Remove ALL active classes first (cleanup)
+    tabs.forEach(t => t.classList.remove('active'));
+    tabContents.forEach(c => c.classList.remove('active'));
+    
+    // BUGFIX: ALWAYS activate first tab (Informações Gerais) when opening modal
+    if (tabs.length > 0) {
+        tabs[0].classList.add('active');
+        console.log('[TAB_RESET] Aba "Informações Gerais" ativada');
+    }
+    if (tabContents.length > 0) {
+        tabContents[0].classList.add('active');
+        console.log('[TAB_RESET] Conteúdo "Informações Gerais" ativado');
+    }
+    
+    // Tab click handlers
+    // Check if listeners already attached to avoid duplicates
+    tabs.forEach(tab => {
+        // Remove old listener if exists (cleanup)
+        const newTab = tab.cloneNode(true);
+        tab.parentNode.replaceChild(newTab, tab);
+    });
+    
+    // Re-query after clone
+    const freshTabs = document.querySelectorAll('.modal-tab');
+    
+    // Add fresh click handlers
+    freshTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            console.log('[TAB_CLICK] Usuário clicou na aba:', targetTab);
+            
+            // Remove active class from all tabs and contents
+            freshTabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Show corresponding content
+            const targetContent = document.querySelector(`.info-card[data-tab-content="${targetTab}"]`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+                console.log('[TAB_CLICK] Conteúdo ativado:', targetTab);
+            }
+        });
+    });
 }
 
 /**
@@ -3225,6 +3349,145 @@ function calculateOtherExpenses(operation) {
     });
     
     return total;
+}
+
+/**
+ * Update Kingspan specific data in modal
+ * Only shows the section if user has Kingspan access
+ */
+function updateKingspanData(operation) {
+    console.log('[KINGSPAN_DATA] ========================================');
+    console.log('[KINGSPAN_DATA] INICIANDO updateKingspanData');
+    console.log('[KINGSPAN_DATA] Processo:', operation.ref_unique);
+    console.log('[KINGSPAN_DATA] Importador:', operation.importador);
+    console.log('[KINGSPAN_DATA] CNPJ:', operation.cnpj_importador);
+    
+    // Debug: Verificar todos os campos relacionados a Kingspan
+    console.log('[KINGSPAN_DATA] === CAMPOS KINGSPAN NO OBJETO ===');
+    console.log('[KINGSPAN_DATA] has_kingspan_access:', operation.has_kingspan_access);
+    console.log('[KINGSPAN_DATA] can_edit_armazenagem:', operation.can_edit_armazenagem);
+    console.log('[KINGSPAN_DATA] has_armazenagem_data:', operation.has_armazenagem_data);
+    console.log('[KINGSPAN_DATA] armazenagem_data:', operation.armazenagem_data);
+    
+    // Verificar se é processo Kingspan pelo nome
+    const isKingspanProcess = (operation.importador || '').toUpperCase().includes('KINGSPAN');
+    console.log('[KINGSPAN_DATA] É processo Kingspan (pelo nome)?', isKingspanProcess);
+    
+    // LÓGICA DE ACESSO: Se é processo Kingspan, mostrar campos
+    const hasKingspanAccess = operation.has_kingspan_access === true || isKingspanProcess;
+    console.log('[KINGSPAN_DATA] Decisão final - Mostrar campos?', hasKingspanAccess);
+    
+    // Mostrar ou ocultar todos os campos com classe .kingspan-field
+    const kingspanFields = document.querySelectorAll('.kingspan-field');
+    console.log('[KINGSPAN_DATA] Total de campos encontrados com .kingspan-field:', kingspanFields.length);
+    
+    kingspanFields.forEach(field => {
+        if (hasKingspanAccess) {
+            field.style.display = '';  // Mostrar (usar display padrão)
+        } else {
+            field.style.display = 'none';  // Ocultar
+        }
+    });
+    
+    if (!hasKingspanAccess) {
+        console.log('[KINGSPAN_DATA] ❌ Campos Kingspan OCULTOS - Usuário não tem acesso');
+        return;
+    }
+    
+    console.log('[KINGSPAN_DATA] ✅ Campos Kingspan EXIBIDOS - Populando dados...');
+    
+    // ==== CAMPOS DE ARMAZENAGEM ====
+    console.log('[KINGSPAN_DATA] Populando campos de Armazenagem...');
+    console.log('[KINGSPAN_DATA] - data_desova:', operation.data_desova);
+    console.log('[KINGSPAN_DATA] - limite_primeiro_periodo:', operation.limite_primeiro_periodo);
+    console.log('[KINGSPAN_DATA] - limite_segundo_periodo:', operation.limite_segundo_periodo);
+    console.log('[KINGSPAN_DATA] - dias_extras_armazenagem:', operation.dias_extras_armazenagem);
+    console.log('[KINGSPAN_DATA] - valor_despesas_extras:', operation.valor_despesas_extras);
+    updateElementValue('detail-data-desova', operation.data_desova);
+    updateElementValue('detail-limite-primeiro', operation.limite_primeiro_periodo);
+    updateElementValue('detail-limite-segundo', operation.limite_segundo_periodo);
+    
+    // Dias extras com formatação especial
+    if (operation.dias_extras_armazenagem !== null && operation.dias_extras_armazenagem !== undefined) {
+        const dias = parseInt(operation.dias_extras_armazenagem);
+        if (!isNaN(dias) && dias > 0) {
+            updateElementValue('detail-dias-extras', `${dias} ${dias === 1 ? 'dia' : 'dias'}`);
+        } else {
+            updateElementValue('detail-dias-extras', null);
+        }
+    } else {
+        updateElementValue('detail-dias-extras', null);
+    }
+    
+    // Valor despesas extras com formatação de moeda
+    if (operation.valor_despesas_extras !== null && operation.valor_despesas_extras !== undefined) {
+        const valor = parseFloat(operation.valor_despesas_extras);
+        if (!isNaN(valor) && valor > 0) {
+            updateElementValue('detail-valor-extras', formatCurrency(valor));
+        } else {
+            updateElementValue('detail-valor-extras', null);
+        }
+    } else {
+        updateElementValue('detail-valor-extras', null);
+    }
+    
+    // ==== CAMPOS DE INFORMAÇÕES DO PEDIDO ====
+    console.log('[KINGSPAN_DATA] Populando campos de Pedido...');
+    console.log('[KINGSPAN_DATA] - po_cliente:', operation.po_cliente);
+    console.log('[KINGSPAN_DATA] - referencia_exportador:', operation.referencia_exportador);
+    console.log('[KINGSPAN_DATA] - codigo_produto:', operation.codigo_produto);
+    console.log('[KINGSPAN_DATA] - filial_codigo:', operation.filial_codigo);
+    console.log('[KINGSPAN_DATA] - licenca_importacao:', operation.licenca_importacao);
+    updateElementValue('detail-po-cliente', operation.po_cliente);
+    updateElementValue('detail-ref-exportador', operation.referencia_exportador);
+    updateElementValue('detail-codigo-produto', operation.codigo_produto);
+    updateElementValue('detail-filial-codigo', operation.filial_codigo);
+    updateElementValue('detail-licenca-importacao', operation.licenca_importacao);
+    
+    // ==== CAMPOS FINANCEIROS E LOGÍSTICOS ====
+    console.log('[KINGSPAN_DATA] Populando campos Financeiros e Logísticos...');
+    console.log('[KINGSPAN_DATA] - moeda:', operation.moeda);
+    console.log('[KINGSPAN_DATA] - total_pedido_moeda_origem:', operation.total_pedido_moeda_origem);
+    console.log('[KINGSPAN_DATA] - ptax:', operation.ptax);
+    console.log('[KINGSPAN_DATA] - incoterm:', operation.incoterm);
+    console.log('[KINGSPAN_DATA] - freetime:', operation.freetime);
+    console.log('[KINGSPAN_DATA] - etb:', operation.etb);
+    console.log('[KINGSPAN_DATA] - armador_agente_trade:', operation.armador_agente_trade);
+    console.log('[KINGSPAN_DATA] - navio:', operation.navio);
+    updateElementValue('detail-moeda', operation.moeda);
+    
+    // Total pedido com formatação de moeda
+    if (operation.total_pedido_moeda_origem !== null && operation.total_pedido_moeda_origem !== undefined) {
+        const total = parseFloat(operation.total_pedido_moeda_origem);
+        if (!isNaN(total) && total > 0) {
+            updateElementValue('detail-total-pedido', formatCurrency(total));
+        } else {
+            updateElementValue('detail-total-pedido', null);
+        }
+    } else {
+        updateElementValue('detail-total-pedido', null);
+    }
+    
+    // PTAX com formatação
+    if (operation.ptax !== null && operation.ptax !== undefined) {
+        const ptax = parseFloat(operation.ptax);
+        if (!isNaN(ptax) && ptax > 0) {
+            updateElementValue('detail-ptax', ptax.toFixed(4));
+        } else {
+            updateElementValue('detail-ptax', null);
+        }
+    } else {
+        updateElementValue('detail-ptax', null);
+    }
+    
+    updateElementValue('detail-incoterm', operation.incoterm);
+    updateElementValue('detail-freetime', operation.freetime);
+    updateElementValue('detail-etb', operation.etb);
+    updateElementValue('detail-armador', operation.armador_agente_trade);
+    updateElementValue('detail-navio', operation.navio);
+    
+    console.log('[KINGSPAN_DATA] ✅ Todos os campos Kingspan atualizados com sucesso!');
+    console.log('[KINGSPAN_DATA] ========================================');
 }
 
 /**

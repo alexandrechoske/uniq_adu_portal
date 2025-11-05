@@ -359,3 +359,70 @@
         min-width: 60px !important;
     }
 }
+
+/* ====================================================
+   ESTILOS ESPECÍFICOS PARA SEÇÃO KINGSPAN
+   ==================================================== */
+
+/* Card Kingspan */
+#process-modal #kingspan-data-card {
+    border-left: 4px solid #4a90e2 !important;
+    background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%) !important;
+}
+
+#process-modal #kingspan-data-card .card-title {
+    color: #2e6bb8 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+#process-modal #kingspan-data-card .card-title i {
+    font-size: 1.5rem !important;
+}
+
+/* Subseções Kingspan */
+#process-modal .kingspan-section {
+    margin-top: 24px !important;
+    padding-top: 20px !important;
+    border-top: 1px solid #e0e6ed !important;
+}
+
+#process-modal .kingspan-section:first-child {
+    margin-top: 16px !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+}
+
+#process-modal .kingspan-section-title {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+    margin-bottom: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+#process-modal .kingspan-section-title i {
+    color: #4a90e2 !important;
+    font-size: 1.2rem !important;
+}
+
+/* Valores destacados na seção Kingspan */
+#process-modal #kingspan-data-card .highlight-value {
+    color: #2e6bb8 !important;
+    font-weight: 600 !important;
+}
+
+/* Responsivo para seção Kingspan */
+@media (max-width: 768px) {
+    #process-modal .kingspan-section {
+        margin-top: 16px !important;
+        padding-top: 16px !important;
+    }
+    
+    #process-modal .kingspan-section-title {
+        font-size: 0.95rem !important;
+    }
+}
