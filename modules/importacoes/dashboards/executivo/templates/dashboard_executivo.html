@@ -414,10 +414,34 @@
                     </div>
                 </div>
 
+                <!-- Modal Tabs Navigation -->
+                <div class="modal-tabs">
+                    <button class="modal-tab active" data-tab="geral">
+                        <i class="mdi mdi-information-outline"></i>
+                        Informações Gerais
+                    </button>
+                    <button class="modal-tab" data-tab="carga">
+                        <i class="mdi mdi-truck-cargo-container"></i>
+                        Carga e Transporte
+                    </button>
+                    <button class="modal-tab" data-tab="aduaneira">
+                        <i class="mdi mdi-file-document-check"></i>
+                        Aduaneiras
+                    </button>
+                    <button class="modal-tab" data-tab="financeiro">
+                        <i class="mdi mdi-cash-multiple"></i>
+                        Financeiro
+                    </button>
+                    <button class="modal-tab" data-tab="documentos">
+                        <i class="mdi mdi-file-document-multiple"></i>
+                        Documentos
+                    </button>
+                </div>
+
                 <!-- Cards de Informações -->
                 <div class="modal-cards">
                     <!-- Card 1: Informações Gerais -->
-                    <div class="info-card">
+                    <div class="info-card" data-tab-content="geral">
                         <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_gerais') }}</h3>
                         <div class="card-grid-3">
                             <div class="info-item">
@@ -455,11 +479,36 @@
                                     <span id="detail-country-name">-</span>
                                 </span>
                             </div>
+                            <!-- Kingspan Fields -->
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>PO Cliente:</label>
+                                <span id="detail-po-cliente">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Referência Exportador:</label>
+                                <span id="detail-ref-exportador">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Código Produto:</label>
+                                <span id="detail-codigo-produto">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Filial (Código):</label>
+                                <span id="detail-filial-codigo">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Licença Importação:</label>
+                                <span id="detail-licenca-importacao">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Total Pedido (Moeda Origem):</label>
+                                <span id="detail-total-pedido" class="highlight-value">-</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Card 2: Detalhes da Carga e Transporte -->
-                    <div class="info-card">
+                    <div class="info-card" data-tab-content="carga">
                         <h3 class="card-title">{{ t('importacoes.dashboard_executivo.detalhes_carga_transporte') }}</h3>
                         <div class="card-grid-2">
                             <!-- Linha 1: Modal - Peso -->
@@ -492,6 +541,40 @@
                                 <span id="detail-transit-time">-</span>
                             </div>
                             
+                            <!-- Kingspan Fields - Logística -->
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Freetime:</label>
+                                <span id="detail-freetime">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>ETB:</label>
+                                <span id="detail-etb">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Navio:</label>
+                                <span id="detail-navio">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Armador/Agente Trade:</label>
+                                <span id="detail-armador">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Data Desova (ETB):</label>
+                                <span id="detail-data-desova">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Limite 1º Período:</label>
+                                <span id="detail-limite-primeiro">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Limite 2º Período:</label>
+                                <span id="detail-limite-segundo">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Dias Extras Armazenagem:</label>
+                                <span id="detail-dias-extras">-</span>
+                            </div>
+                            
                             <!-- Linha 4: Containers (ocupa toda a linha) -->
                             <div class="info-item container-item" style="grid-column: 1 / -1;">
                                 <label>{{ t('importacoes.dashboard_executivo.containers') }}:</label>
@@ -502,7 +585,7 @@
 
 
                     <!-- Card 3: Informações Aduaneiras -->
-                    <div class="info-card">
+                    <div class="info-card" data-tab-content="aduaneira">
                         <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_aduaneiras') }}</h3>
                         <div class="card-grid-2">
                             <div class="info-item">
@@ -529,7 +612,7 @@
                     </div>
 
                     <!-- Card 4: Resumo Financeiro -->
-                    <div class="info-card">
+                    <div class="info-card" data-tab-content="financeiro">
                         <h3 class="card-title">{{ t('importacoes.dashboard_executivo.resumo_financeiro') }}</h3>
                         <div class="card-grid-2">
                             <div class="info-item">
@@ -552,6 +635,23 @@
                                 <label>{{ t('importacoes.dashboard_executivo.outras_despesas') }}:</label>
                                 <span id="detail-outras-despesas">-</span>
                             </div>
+                            <!-- Kingspan Fields - Financeiro -->
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Moeda:</label>
+                                <span id="detail-moeda">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>PTAX:</label>
+                                <span id="detail-ptax">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Incoterm:</label>
+                                <span id="detail-incoterm">-</span>
+                            </div>
+                            <div class="info-item kingspan-field" style="display: none;">
+                                <label>Valor Despesas Extras:</label>
+                                <span id="detail-valor-extras" class="highlight-value">-</span>
+                            </div>
                             <div class="info-item total-item">
                                 <label>{{ t('importacoes.dashboard_executivo.custo_total') }}:</label>
                                 <span id="detail-custo-total" class="total-value">-</span>
@@ -559,12 +659,18 @@
                         </div>
                     </div>
 
-                    <!-- Card 5: Documentos Anexados -->
-                    <div class="info-card">
-                        <h3 class="card-title">
-                            <i class="mdi mdi-file-document-multiple"></i>
-                            {{ t('importacoes.dashboard_executivo.documentos_anexados') }}
-                        </h3>
+                    <!-- Card 6: Documentos Anexados -->
+                    <div class="info-card" data-tab-content="documentos">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 class="card-title" style="margin: 0;">
+                                <i class="mdi mdi-file-document-multiple"></i>
+                                {{ t('importacoes.dashboard_executivo.documentos_anexados') }}
+                            </h3>
+                            <button type="button" class="btn-download-all" id="download-all-docs-btn" style="display: none;" title="Baixar todos os documentos">
+                                <i class="mdi mdi-download-multiple"></i>
+                                Baixar Todos
+                            </button>
+                        </div>
                         
                         <!-- Lista de documentos -->
                         <div class="documents-section">
@@ -836,6 +942,7 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
 <script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
 <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
@@ -846,6 +953,9 @@
 const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
 window.dashboardUserId = rawDashboardUserId || null;
 window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
+// Definir acesso Kingspan para filtrar colunas disponíveis
+window.hasKingspanAccess = {{ 'true' if has_kingspan_access else 'false' }};
+console.log('[DASHBOARD_EXECUTIVO] Acesso Kingspan:', window.hasKingspanAccess);
 </script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>

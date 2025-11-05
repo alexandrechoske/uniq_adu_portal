@@ -189,13 +189,51 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
         
         tem_acesso, kingspan_cnpjs, can_edit = is_kingspan_user(user_data)
         
+        print(f"[ARMAZENAGEM] ===== DEBUG ENRIQUECIMENTO =====")
+        print(f"[ARMAZENAGEM] Usuário: {user_data.get('email')}")
+        print(f"[ARMAZENAGEM] Tem acesso Kingspan: {tem_acesso}")
+        print(f"[ARMAZENAGEM] CNPJs Kingspan: {kingspan_cnpjs}")
+        print(f"[ARMAZENAGEM] Pode editar: {can_edit}")
+        
         if not tem_acesso:
-            # Usuário não tem acesso - retornar dados sem enriquecimento
+            # Usuário não tem acesso - mas ainda precisa adicionar campos da view
             print(f"[ARMAZENAGEM] Usuário não tem acesso aos dados Kingspan")
-            # Adicionar flag indicando que não tem acesso
+            print(f"[ARMAZENAGEM] MAS: Adicionando campos que já vêm da view...")
+            
+            # IMPORTANTE: Mesmo sem acesso, os campos da view precisam ser copiados
             for item in data:
                 item['has_kingspan_access'] = False
                 item['can_edit_armazenagem'] = False
+                
+                # CAMPOS QUE JÁ VÊM DA VIEW - copiar para garantir disponibilidade
+                # Verificar se é Kingspan pelo CNPJ
+                cnpj = item.get('cnpj_importador', '')
+                is_kingspan_process = cnpj.startswith('00289348')  # CNPJ Kingspan
+                
+                if is_kingspan_process:
+                    print(f"[ARMAZENAGEM] Processo {item.get('ref_unique')} é Kingspan - copiando campos da view")
+                    # Campos de produto que já vêm da view
+                    item['po_cliente'] = item.get('po_cliente')
+                    item['referencia_exportador'] = item.get('referencia_exportador')
+                    item['codigo_produto'] = item.get('codigo_produto')
+                    item['freetime'] = item.get('freetime')
+                    item['etb'] = item.get('etb')
+                    item['licenca_importacao'] = item.get('licenca_importacao')
+                    item['ptax'] = item.get('ptax')
+                    item['filial_codigo'] = item.get('filial_codigo')
+                    item['moeda'] = item.get('moeda')
+                    item['incoterm'] = item.get('incoterm')
+                    item['total_pedido_moeda_origem'] = item.get('total_pedido_moeda_origem')
+                    item['armador_agente_trade'] = item.get('armador_agente_trade')
+                    item['navio'] = item.get('navio')
+                    
+                    # Campos de armazenagem da view
+                    item['data_desova'] = item.get('data_desova')
+                    item['limite_primeiro_periodo'] = item.get('limite_primeiro_periodo')
+                    item['limite_segundo_periodo'] = item.get('limite_segundo_periodo')
+                    item['dias_extras_armazenagem'] = item.get('dias_extras_armazenagem')
+                    item['valor_despesas_extras'] = item.get('valor_despesas_extras')
+            
             return data
         
         print(f"[ARMAZENAGEM] Enriquecendo {len(data)} processos com dados de armazenagem Kingspan...")
@@ -284,8 +322,36 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
             if cnpj_importador in kingspan_cnpjs:
                 enriched_item['is_kingspan'] = True
                 
+                # DEBUG CRÍTICO: Log do processo US25/0136
+                if ref_unique == 'US25/0136':
+                    print(f"[ARMAZENAGEM] ===== DEBUG PROCESSO US25/0136 =====")
+                    print(f"[ARMAZENAGEM] Campos originais da view:")
+                    print(f"[ARMAZENAGEM] - po_cliente: {item.get('po_cliente')}")
+                    print(f"[ARMAZENAGEM] - moeda: {item.get('moeda')}")
+                    print(f"[ARMAZENAGEM] - ptax: {item.get('ptax')}")
+                    print(f"[ARMAZENAGEM] - licenca_importacao: {item.get('licenca_importacao')}")
+                    print(f"[ARMAZENAGEM] =====================================")
+                
+                # CAMPOS DE PRODUTO - SEMPRE copiar da view (independente de ter armazenagem)
+                # Esses campos já vêm de vw_importacoes_6_meses_abertos_dash
+                enriched_item['po_cliente'] = item.get('po_cliente')
+                enriched_item['referencia_exportador'] = item.get('referencia_exportador')
+                enriched_item['codigo_produto'] = item.get('codigo_produto')
+                enriched_item['freetime'] = item.get('freetime')
+                enriched_item['etb'] = item.get('etb')
+                enriched_item['licenca_importacao'] = item.get('licenca_importacao')
+                enriched_item['ptax'] = item.get('ptax')
+                enriched_item['filial_codigo'] = item.get('filial_codigo')
+                enriched_item['moeda'] = item.get('moeda')
+                enriched_item['incoterm'] = item.get('incoterm')
+                enriched_item['total_pedido_moeda_origem'] = item.get('total_pedido_moeda_origem')
+                enriched_item['armador_agente_trade'] = item.get('armador_agente_trade')
+                enriched_item['navio'] = item.get('navio')
+                
                 if ref_unique in armazenagem_map:
                     armazenagem = armazenagem_map[ref_unique]
+                    
+                    # DADOS DE ARMAZENAGEM (nested object para compatibilidade)
                     enriched_item['armazenagem_data'] = {
                         'data_desova': armazenagem.get('data_desova'),
                         'limite_primeiro_periodo': armazenagem.get('limite_primeiro_periodo'),
@@ -293,9 +359,25 @@ def enrich_data_with_armazenagem_kingspan(data, user_data):
                         'dias_extras_armazenagem': armazenagem.get('dias_extras_armazenagem'),
                         'valor_despesas_extras': armazenagem.get('valor_despesas_extras')
                     }
+                    
+                    # CAMPOS DE ARMAZENAGEM - nível raiz para acesso direto no frontend
+                    enriched_item['data_desova'] = armazenagem.get('data_desova')
+                    enriched_item['limite_primeiro_periodo'] = armazenagem.get('limite_primeiro_periodo')
+                    enriched_item['limite_segundo_periodo'] = armazenagem.get('limite_segundo_periodo')
+                    enriched_item['dias_extras_armazenagem'] = armazenagem.get('dias_extras_armazenagem')
+                    enriched_item['valor_despesas_extras'] = armazenagem.get('valor_despesas_extras')
+                    
                     enriched_item['has_armazenagem_data'] = True
                     total_enriquecidos += 1
                 else:
+                    # Processo Kingspan SEM dados na tabela de armazenagem
+                    # Copiar campos de armazenagem da view (podem ser null)
+                    enriched_item['data_desova'] = item.get('data_desova')
+                    enriched_item['limite_primeiro_periodo'] = item.get('limite_primeiro_periodo')
+                    enriched_item['limite_segundo_periodo'] = item.get('limite_segundo_periodo')
+                    enriched_item['dias_extras_armazenagem'] = item.get('dias_extras_armazenagem')
+                    enriched_item['valor_despesas_extras'] = item.get('valor_despesas_extras')
+                    
                     enriched_item['armazenagem_data'] = None
                     enriched_item['has_armazenagem_data'] = False
             else:
@@ -851,7 +933,7 @@ def index():
         if not user_cnpjs:
             logger.info(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
-            return render_template('dashboard_executivo.html', show_company_warning=True)
+            return render_template('dashboard_executivo.html', show_company_warning=True, has_kingspan_access=False)
     
     # Verificar se é interno_unique sem empresas associadas (exceto admin_operacao e master_admin)
     # CORREÇÃO: admin_operacao deve ver TODOS os dados quando sem empresas específicas
@@ -860,9 +942,18 @@ def index():
         if not user_cnpjs:
             logger.info(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
-            return render_template('dashboard_executivo.html', show_company_warning=True)
+            return render_template('dashboard_executivo.html', show_company_warning=True, has_kingspan_access=False)
     
-    return render_template('dashboard_executivo.html')
+    # Verificar se usuário tem acesso a dados Kingspan
+    from modules.importacoes.dashboards.executivo.api_armazenagem import is_kingspan_user
+    try:
+        tem_acesso_kingspan, _, _ = is_kingspan_user(user_data)
+        logger.info(f"[DASHBOARD_EXECUTIVO] Usuário {user_data.get('email')} - Acesso Kingspan: {tem_acesso_kingspan}")
+    except Exception as e:
+        logger.warning(f"[DASHBOARD_EXECUTIVO] Erro ao verificar acesso Kingspan: {e}")
+        tem_acesso_kingspan = False
+    
+    return render_template('dashboard_executivo.html', has_kingspan_access=tem_acesso_kingspan)
 
 @bp.route('/api/load-data')
 @login_required
@@ -1581,7 +1672,20 @@ def recent_operations():
             'pais_procedencia', 'pais_procedencia_normalizado', 'url_bandeira',
             
             # Produtos e informações complementares para modal com tabs
-            'produtos_processo'
+            'produtos_processo',
+            
+            # CAMPOS KINGSPAN - Armazenagem
+            'data_desova', 'limite_primeiro_periodo', 'limite_segundo_periodo',
+            'dias_extras_armazenagem', 'valor_despesas_extras',
+            
+            # CAMPOS KINGSPAN - Produto
+            'po_cliente', 'referencia_exportador', 'codigo_produto',
+            'freetime', 'etb', 'licenca_importacao', 'ptax',
+            'filial_codigo', 'moeda', 'incoterm', 'total_pedido_moeda_origem',
+            'armador_agente_trade', 'navio',
+            
+            # CAMPOS KINGSPAN - Flags de acesso
+            'has_kingspan_access', 'can_edit_armazenagem', 'is_kingspan'
         ]
         
         # Colunas normalizadas disponíveis

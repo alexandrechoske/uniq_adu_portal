@@ -1240,6 +1240,68 @@ canvas {
     font-weight: 600;
 }
 
+/* ====================================================
+   ESTILOS ESPECÍFICOS PARA SEÇÃO KINGSPAN NO MODAL
+   ==================================================== */
+
+/* Card Kingspan */
+#kingspan-data-card {
+    border-left: 4px solid #4a90e2;
+    background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+}
+
+#kingspan-data-card .card-title {
+    color: #2e6bb8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#kingspan-data-card .card-title i {
+    font-size: 1.5rem;
+}
+
+/* Subseções Kingspan */
+.kingspan-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e6ed;
+}
+
+.kingspan-section:first-child {
+    margin-top: 16px;
+    padding-top: 0;
+    border-top: none;
+}
+
+.kingspan-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kingspan-section-title i {
+    color: #4a90e2;
+    font-size: 1.2rem;
+}
+
+/* Valores destacados na seção Kingspan */
+#kingspan-data-card .highlight-value {
+    color: #2e6bb8;
+    font-weight: 600;
+}
+
+/* Grid de 3 colunas para campos Kingspan */
+.kingspan-section .card-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
 /* Responsive Filter Modal */
 @media (max-width: 768px) {
     .filter-modal-content {
@@ -1266,4 +1328,166 @@ canvas {
         height: 28px;
         font-size: 14px;
     }
+    
+    /* Kingspan Section Responsive */
+    .kingspan-section {
+        margin-top: 16px;
+        padding-top: 16px;
+    }
+    
+    .kingspan-section-title {
+        font-size: 0.95rem;
+    }
+    
+    .kingspan-section .card-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* === MODAL TABS NAVIGATION === */
+.modal-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 20px 0;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.modal-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.modal-tabs::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.modal-tabs::-webkit-scrollbar-thumb {
+    background: var(--unique-primary);
+    border-radius: 4px;
+}
+
+.modal-tab {
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-tab i {
+    font-size: 18px;
+}
+
+.modal-tab:hover {
+    color: var(--unique-primary);
+    background: rgba(var(--unique-primary-rgb), 0.05);
+}
+
+.modal-tab.active {
+    color: var(--unique-primary);
+    border-bottom-color: var(--unique-primary);
+    background: rgba(var(--unique-primary-rgb), 0.08);
+}
+
+/* Hide all cards by default */
+.info-card {
+    display: none;
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Show only active tab content */
+.info-card[data-tab-content].active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive tabs */
+@media (max-width: 768px) {
+    .modal-tab {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .modal-tab i {
+        font-size: 16px;
+    }
+}
+
+/* ===== BOTÃO BAIXAR TODOS OS DOCUMENTOS ===== */
+.btn-download-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-download-all:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    background: linear-gradient(135deg, #0056b3 0%, #007bff 100%);
+}
+
+.btn-download-all:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-download-all:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-download-all i {
+    font-size: 18px;
+}
+
+/* Loading state for download button */
+.btn-download-all.downloading {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    cursor: wait;
+}
+
+.btn-download-all.downloading::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
