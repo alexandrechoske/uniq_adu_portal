@@ -3558,7 +3558,7 @@ function setupDownloadAllButton() {
 }
 
 /**
- * Download all documents from current process
+ * Download all documents from current process as ZIP file
  */
 async function downloadAllDocuments() {
     const btn = document.getElementById('download-all-docs-btn');
@@ -3575,9 +3575,150 @@ async function downloadAllDocuments() {
         return;
     }
     
-    console.log('[DOWNLOAD_ALL] Iniciando download de', documents.length, 'documentos');
+    // Verificar se JSZip está disponível
+    if (typeof JSZip === 'undefined') {
+        console.error('[DOWNLOAD_ALL] JSZip não está carregado. Usando método antigo.');
+        await downloadAllDocumentsLegacy();
+        return;
+    }
+    
+    console.log('[DOWNLOAD_ALL] Criando arquivo ZIP com', documents.length, 'documentos');
     
     // Desabilitar botão e adicionar classe loading
+    btn.disabled = true;
+    btn.classList.add('downloading');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Preparando ZIP...';
+    
+    try {
+        const zip = new JSZip();
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Baixar todos os documentos e adicionar ao ZIP
+        for (let i = 0; i < documents.length; i++) {
+            const doc = documents[i];
+            
+            try {
+                btn.innerHTML = `<i class="mdi mdi-loading mdi-spin"></i> Processando ${i + 1}/${documents.length}...`;
+                console.log(`[DOWNLOAD_ALL] Processando ${i + 1}/${documents.length}: ${doc.nome_arquivo}`);
+                
+                // Fazer requisição para obter a URL de download (rota correta: /api/documents/)
+                const response = await fetch(`/api/documents/${doc.id}/download`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                // API retorna JSON com download_url
+                const data = await response.json();
+                
+                if (!data.success || !data.download_url) {
+                    throw new Error('URL de download não disponível');
+                }
+                
+                // Baixar o arquivo da URL do Supabase
+                const fileResponse = await fetch(data.download_url);
+                
+                if (!fileResponse.ok) {
+                    throw new Error(`Erro ao baixar arquivo: HTTP ${fileResponse.status}`);
+                }
+                
+                const blob = await fileResponse.blob();
+                
+                // Usar o nome do arquivo retornado pela API ou o original
+                const fileName = data.filename || doc.nome_arquivo;
+                
+                // Garantir nome único no ZIP (evitar duplicatas)
+                let uniqueFileName = fileName;
+                let counter = 1;
+                while (zip.file(uniqueFileName)) {
+                    const nameParts = fileName.split('.');
+                    const ext = nameParts.pop();
+                    const baseName = nameParts.join('.');
+                    uniqueFileName = `${baseName}_${counter}.${ext}`;
+                    counter++;
+                }
+                
+                // Adicionar arquivo ao ZIP
+                zip.file(uniqueFileName, blob);
+                successCount++;
+                
+            } catch (error) {
+                console.error(`[DOWNLOAD_ALL] Erro ao processar ${doc.nome_arquivo}:`, error);
+                errorCount++;
+            }
+        }
+        
+        if (successCount === 0) {
+            alert('❌ Nenhum documento pôde ser adicionado ao arquivo ZIP.');
+            return;
+        }
+        
+        // Gerar o arquivo ZIP
+        btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Gerando arquivo ZIP...';
+        console.log('[DOWNLOAD_ALL] Gerando arquivo ZIP...');
+        
+        const zipBlob = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6
+            }
+        }, function updateCallback(metadata) {
+            // Atualizar progresso da compressão
+            const percent = metadata.percent.toFixed(0);
+            btn.innerHTML = `<i class="mdi mdi-loading mdi-spin"></i> Compactando ${percent}%...`;
+        });
+        
+        // Criar nome do arquivo ZIP baseado no processo
+        const processNumber = window.currentProcesso?.numero_processo || 'documentos';
+        const timestamp = new Date().toISOString().split('T')[0];
+        const zipFileName = `${processNumber}_documentos_${timestamp}.zip`;
+        
+        // Download do arquivo ZIP
+        const url = window.URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = zipFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Mensagem de sucesso
+        console.log('[DOWNLOAD_ALL] ZIP criado com sucesso:', zipFileName);
+        
+        if (errorCount === 0) {
+            alert(`✅ Arquivo ZIP criado com sucesso!\n\n📦 ${successCount} documento(s) compactado(s)\n📁 Arquivo: ${zipFileName}`);
+        } else {
+            alert(`⚠️ Arquivo ZIP criado com avisos:\n\n✅ ${successCount} documento(s) incluído(s)\n❌ ${errorCount} documento(s) com erro\n📁 Arquivo: ${zipFileName}`);
+        }
+        
+    } catch (error) {
+        console.error('[DOWNLOAD_ALL] Erro ao criar ZIP:', error);
+        alert('❌ Erro ao criar arquivo ZIP. Verifique o console para detalhes.');
+    } finally {
+        // Restaurar botão
+        btn.disabled = false;
+        btn.classList.remove('downloading');
+        btn.innerHTML = originalText;
+        console.log('[DOWNLOAD_ALL] Processo concluído.');
+    }
+}
+
+/**
+ * Legacy method: Download documents individually (fallback)
+ */
+async function downloadAllDocumentsLegacy() {
+    const btn = document.getElementById('download-all-docs-btn');
+    const documents = window.documentManager.documents;
+    
     btn.disabled = true;
     btn.classList.add('downloading');
     const originalText = btn.innerHTML;
@@ -3587,48 +3728,30 @@ async function downloadAllDocuments() {
     let errorCount = 0;
     
     try {
-        // Download sequencial para evitar sobrecarga
         for (let i = 0; i < documents.length; i++) {
             const doc = documents[i];
             
             try {
                 console.log(`[DOWNLOAD_ALL] Baixando ${i + 1}/${documents.length}: ${doc.nome_arquivo}`);
-                
-                // Usar a função de download do DocumentManager se disponível
-                if (typeof window.documentManager.downloadDocument === 'function') {
-                    await window.documentManager.downloadDocument(doc.id, doc.nome_arquivo);
-                } else {
-                    // Fallback: download direto
-                    await downloadDocumentDirect(doc);
-                }
-                
+                await downloadDocumentDirect(doc);
                 successCount++;
-                
-                // Pequeno delay entre downloads para não sobrecarregar
                 await new Promise(resolve => setTimeout(resolve, 300));
-                
             } catch (error) {
                 console.error(`[DOWNLOAD_ALL] Erro ao baixar ${doc.nome_arquivo}:`, error);
                 errorCount++;
             }
         }
         
-        // Mensagem de resultado
         if (errorCount === 0) {
             alert(`✅ Todos os ${successCount} documentos foram baixados com sucesso!`);
         } else {
             alert(`⚠️ Download concluído:\n✅ ${successCount} com sucesso\n❌ ${errorCount} com erro`);
         }
         
-    } catch (error) {
-        console.error('[DOWNLOAD_ALL] Erro geral:', error);
-        alert('❌ Erro ao baixar documentos. Verifique o console para detalhes.');
     } finally {
-        // Restaurar botão
         btn.disabled = false;
         btn.classList.remove('downloading');
         btn.innerHTML = originalText;
-        console.log('[DOWNLOAD_ALL] Download concluído. Sucesso:', successCount, 'Erro:', errorCount);
     }
 }
 
@@ -3636,7 +3759,8 @@ async function downloadAllDocuments() {
  * Download document directly (fallback method)
  */
 async function downloadDocumentDirect(doc) {
-    const response = await fetch(`/api/documentos/${doc.id}/download`, {
+    // Usar rota correta: /api/documents/ (plural)
+    const response = await fetch(`/api/documents/${doc.id}/download`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json'
@@ -3647,11 +3771,27 @@ async function downloadDocumentDirect(doc) {
         throw new Error(`HTTP ${response.status}`);
     }
     
-    const blob = await response.blob();
+    // API retorna JSON com download_url
+    const data = await response.json();
+    
+    if (!data.success || !data.download_url) {
+        throw new Error('URL de download não disponível');
+    }
+    
+    // Baixar o arquivo da URL do Supabase
+    const fileResponse = await fetch(data.download_url);
+    
+    if (!fileResponse.ok) {
+        throw new Error(`Erro ao baixar arquivo: HTTP ${fileResponse.status}`);
+    }
+    
+    const blob = await fileResponse.blob();
+    const fileName = data.filename || doc.nome_arquivo;
+    
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = doc.nome_arquivo;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
