@@ -175,9 +175,25 @@ function getVisibleColumns() {
         .sort((a, b) => visibleIds.get(a.id) - visibleIds.get(b.id));
 }
 
+/**
+ * Filtrar colunas disponíveis baseado em permissões do usuário
+ * Remove colunas Kingspan se usuário não tiver acesso
+ */
+function getAvailableColumnsFiltered() {
+    // Se usuário NÃO tem acesso Kingspan, filtrar colunas Kingspan
+    if (window.hasKingspanAccess === false) {
+        return AVAILABLE_COLUMNS
+            .filter(col => !col.category || !col.category.startsWith('Kingspan'))
+            .map(col => ({ ...col }));
+    }
+    
+    // Se tem acesso ou não definido (admin), retornar todas
+    return AVAILABLE_COLUMNS.map(col => ({ ...col }));
+}
+
 // Expor helpers globais para o módulo de configuração
 window.dashboardColumns = {
-    getAvailableColumns: () => AVAILABLE_COLUMNS.map(col => ({ ...col })),
+    getAvailableColumns: getAvailableColumnsFiltered, // Usar versão filtrada
     getColumnConfig,
     setTempColumnConfig,
     clearTempColumnConfig,

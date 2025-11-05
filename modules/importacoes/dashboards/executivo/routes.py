@@ -933,7 +933,7 @@ def index():
         if not user_cnpjs:
             logger.info(f"[DASHBOARD_EXECUTIVO] Cliente {user_data.get('email')} sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
-            return render_template('dashboard_executivo.html', show_company_warning=True)
+            return render_template('dashboard_executivo.html', show_company_warning=True, has_kingspan_access=False)
     
     # Verificar se é interno_unique sem empresas associadas (exceto admin_operacao e master_admin)
     # CORREÇÃO: admin_operacao deve ver TODOS os dados quando sem empresas específicas
@@ -942,9 +942,18 @@ def index():
         if not user_cnpjs:
             logger.info(f"[DASHBOARD_EXECUTIVO] Usuário interno {user_data.get('email')} (perfil: {perfil_principal}) sem empresas vinculadas - exibindo aviso")
             # Passar flag para o template indicar que deve mostrar aviso
-            return render_template('dashboard_executivo.html', show_company_warning=True)
+            return render_template('dashboard_executivo.html', show_company_warning=True, has_kingspan_access=False)
     
-    return render_template('dashboard_executivo.html')
+    # Verificar se usuário tem acesso a dados Kingspan
+    from modules.importacoes.dashboards.executivo.api_armazenagem import is_kingspan_user
+    try:
+        tem_acesso_kingspan, _, _ = is_kingspan_user(user_data)
+        logger.info(f"[DASHBOARD_EXECUTIVO] Usuário {user_data.get('email')} - Acesso Kingspan: {tem_acesso_kingspan}")
+    except Exception as e:
+        logger.warning(f"[DASHBOARD_EXECUTIVO] Erro ao verificar acesso Kingspan: {e}")
+        tem_acesso_kingspan = False
+    
+    return render_template('dashboard_executivo.html', has_kingspan_access=tem_acesso_kingspan)
 
 @bp.route('/api/load-data')
 @login_required

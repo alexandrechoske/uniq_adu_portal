@@ -953,6 +953,9 @@
 const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
 window.dashboardUserId = rawDashboardUserId || null;
 window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
+// Definir acesso Kingspan para filtrar colunas disponíveis
+window.hasKingspanAccess = {{ 'true' if has_kingspan_access else 'false' }};
+console.log('[DASHBOARD_EXECUTIVO] Acesso Kingspan:', window.hasKingspanAccess);
 </script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
 <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
