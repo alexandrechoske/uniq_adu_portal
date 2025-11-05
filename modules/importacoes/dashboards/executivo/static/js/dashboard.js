@@ -3519,11 +3519,145 @@ function updateDocumentsList(operation) {
         window.documentManager = new DocumentManager(refUnique);
         console.log('[DASHBOARD_EXECUTIVO] DocumentManager inicializado e armazenado em window.documentManager');
         
+        // Configurar botão "Baixar Todos"
+        setupDownloadAllButton();
+        
     } catch (error) {
         console.error('Erro ao inicializar DocumentManager:', error);
         documentsList.innerHTML = '<p class="no-documents">Erro ao carregar sistema de documentos</p>';
     }
 }
+
+/**
+ * Setup "Download All" button functionality
+ */
+function setupDownloadAllButton() {
+    const downloadAllBtn = document.getElementById('download-all-docs-btn');
+    
+    if (!downloadAllBtn) {
+        console.warn('[DOWNLOAD_ALL] Botão download-all-docs-btn não encontrado');
+        return;
+    }
+    
+    // Remove event listeners antigos (se existirem)
+    const newBtn = downloadAllBtn.cloneNode(true);
+    downloadAllBtn.parentNode.replaceChild(newBtn, downloadAllBtn);
+    
+    // Adicionar event listener
+    newBtn.addEventListener('click', downloadAllDocuments);
+    
+    // Mostrar/ocultar botão baseado na existência de documentos
+    // Aguardar um momento para o DocumentManager carregar os documentos
+    setTimeout(() => {
+        if (window.documentManager && window.documentManager.documents) {
+            const hasDocuments = window.documentManager.documents.length > 0;
+            newBtn.style.display = hasDocuments ? 'flex' : 'none';
+            console.log('[DOWNLOAD_ALL] Botão configurado. Documentos:', window.documentManager.documents.length);
+        }
+    }, 500);
+}
+
+/**
+ * Download all documents from current process
+ */
+async function downloadAllDocuments() {
+    const btn = document.getElementById('download-all-docs-btn');
+    
+    if (!window.documentManager) {
+        alert('Sistema de documentos não disponível');
+        return;
+    }
+    
+    const documents = window.documentManager.documents;
+    
+    if (!documents || documents.length === 0) {
+        alert('Nenhum documento disponível para download');
+        return;
+    }
+    
+    console.log('[DOWNLOAD_ALL] Iniciando download de', documents.length, 'documentos');
+    
+    // Desabilitar botão e adicionar classe loading
+    btn.disabled = true;
+    btn.classList.add('downloading');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="mdi mdi-download-multiple"></i> Baixando...';
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+        // Download sequencial para evitar sobrecarga
+        for (let i = 0; i < documents.length; i++) {
+            const doc = documents[i];
+            
+            try {
+                console.log(`[DOWNLOAD_ALL] Baixando ${i + 1}/${documents.length}: ${doc.nome_arquivo}`);
+                
+                // Usar a função de download do DocumentManager se disponível
+                if (typeof window.documentManager.downloadDocument === 'function') {
+                    await window.documentManager.downloadDocument(doc.id, doc.nome_arquivo);
+                } else {
+                    // Fallback: download direto
+                    await downloadDocumentDirect(doc);
+                }
+                
+                successCount++;
+                
+                // Pequeno delay entre downloads para não sobrecarregar
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+            } catch (error) {
+                console.error(`[DOWNLOAD_ALL] Erro ao baixar ${doc.nome_arquivo}:`, error);
+                errorCount++;
+            }
+        }
+        
+        // Mensagem de resultado
+        if (errorCount === 0) {
+            alert(`✅ Todos os ${successCount} documentos foram baixados com sucesso!`);
+        } else {
+            alert(`⚠️ Download concluído:\n✅ ${successCount} com sucesso\n❌ ${errorCount} com erro`);
+        }
+        
+    } catch (error) {
+        console.error('[DOWNLOAD_ALL] Erro geral:', error);
+        alert('❌ Erro ao baixar documentos. Verifique o console para detalhes.');
+    } finally {
+        // Restaurar botão
+        btn.disabled = false;
+        btn.classList.remove('downloading');
+        btn.innerHTML = originalText;
+        console.log('[DOWNLOAD_ALL] Download concluído. Sucesso:', successCount, 'Erro:', errorCount);
+    }
+}
+
+/**
+ * Download document directly (fallback method)
+ */
+async function downloadDocumentDirect(doc) {
+    const response = await fetch(`/api/documentos/${doc.id}/download`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.nome_arquivo;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
 
 // Utility Functions for Enhanced Table
 function formatDate(dateString) {
