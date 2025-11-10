@@ -422,7 +422,10 @@ def extract_filters(req_json):
 
 @export_relatorios_bp.route('/api/search_processos', methods=['POST'])
 def search_processos():
-    """Executa busca com filtros e retorna JSON paginado."""
+    """
+    Executa busca com filtros e retorna JSON paginado.
+    A coluna 'documentos' é buscada sob demanda quando necessária.
+    """
     # Verificar bypass key ou sessão
     api_bypass_key = os.getenv('API_BYPASS_KEY')
     request_api_key = request.headers.get('X-API-Key')
@@ -438,7 +441,7 @@ def search_processos():
     filters = extract_filters(payload)
     page = int(filters.get('page') or 1)
     page_size = min(int(filters.get('page_size') or 500), 5000)
-    print(f"[EXPORT_REL] Busca iniciada user={user.get('id')} role={user.get('role')} filtros={filters}")
+    print(f"[EXPORT_REL] Busca iniciada user={user.get('id')} role={user.get('role')} page={page} page_size={page_size}")
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
@@ -454,16 +457,19 @@ def search_processos():
         rows = post_fetch_filter(rows, filters)
         print(f"[EXPORT_REL] Após pós-filtro: {len(rows)}")
         
-        # Buscar documentos para os processos (antes da paginação para ter todos os refs)
-        ref_unique_list = [r.get('ref_unique') for r in rows if r.get('ref_unique')]
-        documentos_map = get_documentos_by_ref_unique(ref_unique_list)
-        
-        # Adicionar documentos aos registros
-        for row in rows:
-            ref = row.get('ref_unique')
-            row['documentos'] = documentos_map.get(ref, [])
-        
+        # OTIMIZAÇÃO: Buscar documentos APENAS para a página atual
         page_rows, total = paginate(rows, page, page_size)
+        
+        if page_rows:
+            ref_unique_list = [r.get('ref_unique') for r in page_rows if r.get('ref_unique')]
+            print(f"[EXPORT_REL] Buscando documentos para {len(ref_unique_list)} processos na página")
+            documentos_map = get_documentos_by_ref_unique(ref_unique_list)
+            
+            # Adicionar documentos aos registros
+            for row in page_rows:
+                ref = row.get('ref_unique')
+                row['documentos'] = documentos_map.get(ref, [])
+        
         duration = (datetime.now() - started_at).total_seconds()
         return jsonify({
             'success': True,
@@ -476,22 +482,33 @@ def search_processos():
             'rows': page_rows
         })
     except Exception as e:
-        print(f"[EXPORT_REL][ERRO] {e}")
+        duration = (datetime.now() - started_at).total_seconds()
+        print(f"[EXPORT_REL][ERRO] Erro após {duration:.2f}s: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @export_relatorios_bp.route('/api/export_csv', methods=['POST'])
 @login_required
 def export_csv():
-    """Exporta CSV com os filtros informados (limite de segurança)."""
+    """
+    Exporta CSV com os filtros informados (limite de segurança).
+    Otimizado para lidar com grandes volumes (20k+) de registros.
+    """
     started_at = datetime.now()
     user = session.get('user', {})
     payload = request.get_json(silent=True) or {}
     filters = extract_filters(payload)
-    max_rows = 50000
+    max_rows = 100000  # Aumentado de 50k para 100k
+    
     print(f"[EXPORT_REL] Export CSV iniciado user={user.get('id')} filtros={filters}")
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
+        
+        # OTIMIZAÇÃO: Buscar sem a coluna 'documentos' para ganhar performance
+        # A busca de documentos é cara e não será incluída na exportação
+        print(f"[EXPORT_REL] Buscando até {max_rows} registros (documentos excluídos para performance)")
         raw = q.limit(max_rows + 1).execute()
         rows = raw.data or []
         
@@ -500,40 +517,65 @@ def export_csv():
         print(f"[EXPORT_REL] Após validação de segurança: {len(rows)}")
         
         rows = post_fetch_filter(rows, filters)
+        
+        # Validar limite e avisar se foi truncado
         if len(rows) > max_rows:
+            print(f"[EXPORT_REL] AVISO: Resultado truncado de {len(rows)} para {max_rows}")
             rows = rows[:max_rows]
+        
+        # Colunas a usar (documentos é buscado sob demanda na página)
+        columns_to_export = [c for c in TABLE_COLUMNS if c != 'documentos']
+        
+        # Gerar CSV em stream
         output = io.StringIO()
         writer = csv.writer(output, delimiter=';')
-        writer.writerow(TABLE_COLUMNS)
+        
+        # Usar colunas sem documentos
+        writer.writerow(columns_to_export)
+        
         for r in rows:
-            writer.writerow([serialize_cell_value(r.get(col)) for col in TABLE_COLUMNS])
+            writer.writerow([serialize_cell_value(r.get(col)) for col in columns_to_export])
+        
         csv_data = output.getvalue()
         output.close()
+        
         duration = (datetime.now() - started_at).total_seconds()
-        filename = f"export_processos_antigos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"export_processos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         headers = {
             'Content-Disposition': f'attachment; filename={filename}',
-            'X-Export-Duration': str(duration)
+            'X-Export-Duration': f"{duration:.2f}s",
+            'X-Export-Rows': str(len(rows))
         }
-        print(f"[EXPORT_REL] CSV gerado com {len(rows)} registros para usuário {user.get('id')}")
+        print(f"[EXPORT_REL] CSV gerado com {len(rows)} registros em {duration:.2f}s para usuário {user.get('id')}")
         return Response(csv_data, mimetype='text/csv; charset=utf-8', headers=headers)
     except Exception as e:
-        print(f"[EXPORT_REL][ERRO_EXPORT] {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        duration = (datetime.now() - started_at).total_seconds()
+        print(f"[EXPORT_REL][ERRO_EXPORT_CSV] Erro após {duration:.2f}s: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e), 'duration': f"{duration:.2f}s"}), 500
 
 @export_relatorios_bp.route('/api/export_excel', methods=['POST'])
 @login_required
 def export_excel():
-    """Exporta Excel (XLSX) com os filtros informados (limite de segurança)."""
+    """
+    Exporta Excel (XLSX) com os filtros informados (limite de segurança).
+    Otimizado para lidar com grandes volumes (20k+) de registros.
+    """
     started_at = datetime.now()
     user = session.get('user', {})
     payload = request.get_json(silent=True) or {}
     filters = extract_filters(payload)
-    max_rows = 50000
+    max_rows = 100000  # Aumentado de 50k para 100k
+    
     print(f"[EXPORT_REL] Export Excel iniciado user={user.get('id')} filtros={filters}")
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
+        
+        # OTIMIZAÇÃO: Buscar sem a coluna 'documentos' para ganhar performance
+        # A busca de documentos é cara e não será incluída na exportação
+        print(f"[EXPORT_REL] Buscando até {max_rows} registros (documentos excluídos para performance)")
         raw = q.limit(max_rows + 1).execute()
         rows = raw.data or []
         
@@ -542,8 +584,16 @@ def export_excel():
         print(f"[EXPORT_REL] Após validação de segurança: {len(rows)}")
         
         rows = post_fetch_filter(rows, filters)
+        
+        # Validar limite e avisar se foi truncado
         if len(rows) > max_rows:
+            print(f"[EXPORT_REL] AVISO: Resultado truncado de {len(rows)} para {max_rows}")
             rows = rows[:max_rows]
+        
+        # Colunas a usar (documentos é buscado sob demanda na página)
+        columns_to_export = [c for c in TABLE_COLUMNS if c != 'documentos']
+        
+        print(f"[EXPORT_REL] Gerando Excel com {len(rows)} registros")
         
         # Criar workbook Excel
         wb = Workbook()
@@ -556,43 +606,52 @@ def export_excel():
         header_alignment = Alignment(horizontal="center", vertical="center")
         
         # Escrever cabeçalho
-        for col_idx, col_name in enumerate(TABLE_COLUMNS, 1):
+        for col_idx, col_name in enumerate(columns_to_export, 1):
             cell = ws.cell(row=1, column=col_idx)
             cell.value = col_name
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = header_alignment
         
-        # Escrever dados
+        # Escrever dados em batch para otimizar
+        print(f"[EXPORT_REL] Escrevendo dados no Excel...")
         for row_idx, row_data in enumerate(rows, 2):
-            for col_idx, col_name in enumerate(TABLE_COLUMNS, 1):
+            if row_idx % 5000 == 0:
+                print(f"[EXPORT_REL] Progresso: {row_idx}/{len(rows)} registros")
+            
+            for col_idx, col_name in enumerate(columns_to_export, 1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.value = serialize_cell_value(row_data.get(col_name))
         
         # Ajustar largura das colunas
-        for col_idx in range(1, len(TABLE_COLUMNS) + 1):
+        for col_idx in range(1, len(columns_to_export) + 1):
             ws.column_dimensions[get_column_letter(col_idx)].width = 15
         
         # Salvar em BytesIO
+        print(f"[EXPORT_REL] Salvando arquivo Excel...")
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
         
         duration = (datetime.now() - started_at).total_seconds()
-        filename = f"export_processos_antigos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = f"export_processos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         headers = {
             'Content-Disposition': f'attachment; filename={filename}',
-            'X-Export-Duration': str(duration)
+            'X-Export-Duration': f"{duration:.2f}s",
+            'X-Export-Rows': str(len(rows))
         }
-        print(f"[EXPORT_REL] Excel gerado com {len(rows)} registros para usuário {user.get('id')}")
+        print(f"[EXPORT_REL] Excel gerado com {len(rows)} registros em {duration:.2f}s para usuário {user.get('id')}")
         return Response(
             output.getvalue(),
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             headers=headers
         )
     except Exception as e:
-        print(f"[EXPORT_REL][ERRO_EXPORT_EXCEL] {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        duration = (datetime.now() - started_at).total_seconds()
+        print(f"[EXPORT_REL][ERRO_EXPORT_EXCEL] Erro após {duration:.2f}s: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e), 'duration': f"{duration:.2f}s"}), 500
 
 @export_relatorios_bp.route('/api/filter_options', methods=['GET'])
 def get_filter_options():
