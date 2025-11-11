@@ -769,29 +769,24 @@
                 const dados = result.data;
                 console.log('[INDICADORES] Dados recebidos:', dados);
                 
-                // Atualizar cards principais
-                document.getElementById('ind-processos-abertos').textContent = (dados.total_processos_abertos || 0).toLocaleString('pt-BR');
-                document.getElementById('ind-embarcados').textContent = (dados.total_embarcados || 0).toLocaleString('pt-BR');
-                document.getElementById('ind-chegaram').textContent = (dados.total_chegaram || 0).toLocaleString('pt-BR');
+                // Usar funil_por_status_timeline para TODOS os cards
+                const funil = dados.funil_por_status_timeline || {};
+                
+                // Atualizar cards principais - PRIMEIRA LINHA
+                document.getElementById('ind-abertos').textContent = (dados.total_processos_abertos || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-agd-embarque').textContent = (funil['2_agd_embarque'] || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-agd-chegada').textContent = (funil['3_agd_chegada'] || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-agd-registro').textContent = (funil['4_agd_registro'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-em-analise').textContent = (dados.total_em_analise_fiscal || 0).toLocaleString('pt-BR');
                 
                 // Tempo médio de análise
                 const tempoMedio = parseFloat(dados.tempo_medio_analise_dias || 0).toFixed(1);
                 document.getElementById('ind-tempo-medio').textContent = `${tempoMedio} dias`;
                 
-                // NOVOS INDICADORES
-                document.getElementById('ind-chegando-mes').textContent = (dados.processos_chegando_mes_atual || 0).toLocaleString('pt-BR');
-                document.getElementById('ind-a-faturar').textContent = (dados.processos_a_faturar || 0).toLocaleString('pt-BR');
-                
-                // FUNIL DE STATUS TIMELINE
-                const funil = dados.funil_por_status_timeline || {};
-                document.getElementById('funil-processos-abertos').textContent = (funil['1_processos_abertos'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-agd-embarque').textContent = (funil['2_agd_embarque'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-agd-chegada').textContent = (funil['3_agd_chegada'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-agd-registro').textContent = (funil['4_agd_registro'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-agd-desembaraco').textContent = (funil['5_agd_desembaraco'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-agd-fechamento').textContent = (funil['6_agd_fechamento'] || 0).toLocaleString('pt-BR');
-                document.getElementById('funil-na').textContent = (funil['na'] || 0).toLocaleString('pt-BR');
+                // SEGUNDA LINHA: Desembaraço, Fechamento, A Faturar
+                document.getElementById('ind-agd-desembaraco').textContent = (funil['5_agd_desembaraco'] || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-agd-fechamento').textContent = (funil['6_agd_fechamento'] || 0).toLocaleString('pt-BR');
+                document.getElementById('ind-a-faturar').textContent = (funil['7_a_faturar'] || 0).toLocaleString('pt-BR');
                 
                 // Detalhes dos processos em análise - Layout em GALERIA
                 const detalhesContainer = document.getElementById('ind-detalhes-analise');
