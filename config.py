@@ -22,6 +22,7 @@ class Config:
     QUERY_TIMEOUT = int(os.getenv('QUERY_TIMEOUT', '15'))  # 15 segundos de timeout para queries normais
     GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '120'))  # 120 segundos para processamento IA
     UPLOAD_TIMEOUT = int(os.getenv('UPLOAD_TIMEOUT', '300'))  # 300 segundos para upload/processamento
+    EXPORT_TIMEOUT = int(os.getenv('EXPORT_TIMEOUT', '180'))  # 180 segundos para exportação de grandes volumes
     MAX_ROWS_DASHBOARD = int(os.getenv('MAX_ROWS_DASHBOARD', '1000'))  # Máximo 1000 linhas no dashboard
     
     # Application Configuration
