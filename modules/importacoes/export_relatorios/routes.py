@@ -445,8 +445,14 @@ def search_processos():
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
-        # Limite temporário grande para pós-filtragem; evitar extrair tudo indiscriminadamente
-        raw = q.limit(20000).execute()
+        
+        # Determinar limite baseado em se há filtros aplicados
+        # Se não há filtros (exceto page/page_size), buscar tudo disponível
+        has_filters = any(k not in ['page', 'page_size', 'export'] and v for k, v in filters.items())
+        query_limit = 50000 if has_filters else 200000  # 200K para busca sem filtros
+        
+        print(f"[EXPORT_REL] has_filters={has_filters}, query_limit={query_limit}")
+        raw = q.limit(query_limit).execute()
         rows = raw.data or []
         print(f"[EXPORT_REL] Registros retornados antes pós-filtro: {len(rows)}")
         
@@ -499,9 +505,12 @@ def export_csv():
     user = session.get('user', {})
     payload = request.get_json(silent=True) or {}
     filters = extract_filters(payload)
-    max_rows = 100000  # Aumentado de 50k para 100k
     
-    print(f"[EXPORT_REL] Export CSV iniciado user={user.get('id')} filtros={filters}")
+    # Determinar limite baseado em se há filtros aplicados
+    has_filters = any(k not in ['page', 'page_size', 'export'] and v for k, v in filters.items())
+    max_rows = 100000 if has_filters else 500000  # 500K para export sem filtros
+    
+    print(f"[EXPORT_REL] Export CSV iniciado user={user.get('id')} has_filters={has_filters} max_rows={max_rows}")
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
@@ -511,12 +520,14 @@ def export_csv():
         print(f"[EXPORT_REL] Buscando até {max_rows} registros (documentos excluídos para performance)")
         raw = q.limit(max_rows + 1).execute()
         rows = raw.data or []
+        print(f"[EXPORT_REL] Query retornou {len(rows)} registros")
         
         # VALIDAÇÃO DE SEGURANÇA: Verificar se todos os registros pertencem ao usuário
         rows = validate_user_data_access(rows, user)
         print(f"[EXPORT_REL] Após validação de segurança: {len(rows)}")
         
         rows = post_fetch_filter(rows, filters)
+        print(f"[EXPORT_REL] Após pós-filtro: {len(rows)}")
         
         # Validar limite e avisar se foi truncado
         if len(rows) > max_rows:
@@ -566,9 +577,12 @@ def export_excel():
     user = session.get('user', {})
     payload = request.get_json(silent=True) or {}
     filters = extract_filters(payload)
-    max_rows = 100000  # Aumentado de 50k para 100k
     
-    print(f"[EXPORT_REL] Export Excel iniciado user={user.get('id')} filtros={filters}")
+    # Determinar limite baseado em se há filtros aplicados
+    has_filters = any(k not in ['page', 'page_size', 'export'] and v for k, v in filters.items())
+    max_rows = 100000 if has_filters else 500000  # 500K para export sem filtros
+    
+    print(f"[EXPORT_REL] Export Excel iniciado user={user.get('id')} has_filters={has_filters} max_rows={max_rows}")
     try:
         q = build_base_query(user)
         q = apply_query_filters(q, filters, user)
@@ -578,12 +592,14 @@ def export_excel():
         print(f"[EXPORT_REL] Buscando até {max_rows} registros (documentos excluídos para performance)")
         raw = q.limit(max_rows + 1).execute()
         rows = raw.data or []
+        print(f"[EXPORT_REL] Query retornou {len(rows)} registros")
         
         # VALIDAÇÃO DE SEGURANÇA: Verificar se todos os registros pertencem ao usuário
         rows = validate_user_data_access(rows, user)
         print(f"[EXPORT_REL] Após validação de segurança: {len(rows)}")
         
         rows = post_fetch_filter(rows, filters)
+        print(f"[EXPORT_REL] Após pós-filtro: {len(rows)}")
         
         # Validar limite e avisar se foi truncado
         if len(rows) > max_rows:
