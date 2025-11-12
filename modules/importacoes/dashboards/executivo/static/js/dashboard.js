@@ -1346,7 +1346,9 @@ function initializeEnhancedTable() {
                 }
                 case 'peso_bruto': {
                     const peso = operation.peso_bruto || operation.peso_bruto_kg || operation.peso_bruto_total;
-                    return `<td>${peso ? `${formatNumber(peso, 2)} kg` : '-'}</td>`;
+                    // FIX: Normalize peso if value seems incorrectly scaled
+                    const pesoNormalized = normalizePesoBruto(peso);
+                    return `<td>${pesoNormalized ? `${formatNumber(pesoNormalized, 2)} kg` : '-'}</td>`;
                 }
                 case 'despesas': {
                     const text = escapeHtml(despesasResumo.text || '-');
@@ -2594,6 +2596,29 @@ function createEmptyCharts() {
 }
 
 /**
+ * Normalize peso_bruto value if it seems to be incorrectly scaled
+ * FIX: Database stores peso_bruto with wrong scale (multiplied by 100)
+ * Example: User enters 17905 but DB stores 1790512
+ * @param {number} peso - The peso_bruto value from database
+ * @returns {number} - Normalized peso value
+ */
+function normalizePesoBruto(peso) {
+    if (!peso || isNaN(peso)) return 0;
+    
+    const pesoNum = Number(peso);
+    
+    // If peso is > 100,000 kg (100 tons), it's probably scaled wrong
+    // Divide by 100 to get the correct value
+    // Example: 1790512 -> 17905.12 kg
+    if (pesoNum > 100000) {
+        console.log(`[PESO_FIX] Detected wrong scale: ${pesoNum} -> ${pesoNum / 100}`);
+        return pesoNum / 100;
+    }
+    
+    return pesoNum;
+}
+
+/**
  * Format number
  */
 function formatNumber(value, decimals = 0) {
@@ -2809,7 +2834,10 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-chegada', operation.data_chegada);
     updateElementValue('detail-data-fechamento', operation.data_fechamento); // NOVA data
     updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : null);
-    updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : null);
+    
+    // FIX: Normalize peso_bruto if value seems incorrectly scaled
+    const pesoNormalized = normalizePesoBruto(operation.peso_bruto);
+    updateElementValue('detail-peso-bruto', pesoNormalized ? formatNumber(pesoNormalized) + ' Kg' : null);
     
     // Update customs information
     updateElementValue('detail-numero-di', operation.numero_di);
