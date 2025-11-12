@@ -91,7 +91,10 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-chegada', operation.data_chegada);
     updateElementValue('detail-data-fechamento', operation.data_fechamento);
     updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : '-');
-    updateElementValue('detail-peso-bruto', operation.peso_bruto ? formatNumber(operation.peso_bruto) + ' Kg' : '-');
+    
+    // FIX: Normalize peso_bruto if value seems incorrectly scaled
+    const pesoNormalized = normalizePesoBruto(operation.peso_bruto);
+    updateElementValue('detail-peso-bruto', pesoNormalized ? formatNumber(pesoNormalized) + ' Kg' : '-');
     
     // Update customs information
     updateElementValue('detail-numero-di', operation.numero_di);
@@ -303,6 +306,29 @@ function updateDocumentsList(operation) {
             `;
         }
     }
+}
+
+/**
+ * Normalize peso_bruto value if it seems to be incorrectly scaled
+ * FIX: Database stores peso_bruto with wrong scale (multiplied by 100)
+ * Example: User enters 17905 but DB stores 1790512
+ * @param {number} peso - The peso_bruto value from database
+ * @returns {number} - Normalized peso value
+ */
+function normalizePesoBruto(peso) {
+    if (!peso || isNaN(peso)) return 0;
+    
+    const pesoNum = Number(peso);
+    
+    // If peso is > 100,000 kg (100 tons), it's probably scaled wrong
+    // Divide by 100 to get the correct value
+    // Example: 1790512 -> 17905.12 kg
+    if (pesoNum > 100000) {
+        console.log(`[PESO_FIX] Detected wrong scale: ${pesoNum} -> ${pesoNum / 100}`);
+        return pesoNum / 100;
+    }
+    
+    return pesoNum;
 }
 
 /**
