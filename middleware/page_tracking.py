@@ -38,25 +38,33 @@ class PageTrackingMiddleware:
             return response
         
         try:
-            # Script de tracking
+            # Script de tracking via Heartbeat (Substitui WebSocket)
             tracking_script = """
 <script>
-// Page Tracking via WebSocket
+// Page Tracking via Heartbeat
 (function() {
-    if (typeof io !== 'undefined' && window.socket) {
-        // Envia evento de mudança de página ao carregar
-        window.socket.emit('page_change', {
-            page: window.location.pathname,
-            title: document.title
-        });
-        
-        // Envia heartbeat a cada 30 segundos
-        setInterval(function() {
-            window.socket.emit('heartbeat');
-        }, 30000);
-        
-        console.log('📊 Page tracking ativo:', window.location.pathname);
+    const HEARTBEAT_INTERVAL = 30000; // 30 segundos
+
+    function sendHeartbeat() {
+        fetch('/usuarios-online/api/heartbeat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                page: window.location.pathname,
+                title: document.title
+            })
+        }).catch(err => console.error('Heartbeat error:', err));
     }
+
+    // Envia heartbeat inicial
+    sendHeartbeat();
+
+    // Configura intervalo
+    setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    
+    console.log('📊 Page tracking ativo (Heartbeat):', window.location.pathname);
 })();
 </script>
 </body>

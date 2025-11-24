@@ -19,6 +19,9 @@
             ], 'default') }}
         </div>
         <div class="actions-right">
+            <div class="update-info text-muted me-3" style="font-size: 0.85rem;">
+                <i class="mdi mdi-clock-outline"></i> Atualização automática: <span id="countdown">30</span>s
+            </div>
             <button type="button" class="btn btn-light btn-cleanup" onclick="cleanupSessions()">
                 <i class="mdi mdi-broom"></i>
                 Limpar Sessões Inativas
@@ -26,75 +29,45 @@
         </div>
     </div>
 
-    <div class="page-header">
-        <div class="page-header-content">
-            <h1 class="page-title">
-                <i class="mdi mdi-account-multiple-check"></i>
-                Usuários Online
-            </h1>
-            <p class="page-description">Monitore em tempo real quem está ativo no portal e em quais páginas estão navegando.</p>
-        </div>
-        <div class="page-header-status">
-            <div class="connection-status pending" id="connection-status">
-                <span class="status-indicator pending"></span>
-                <span id="status-text">Conectando...</span>
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-check"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Usuários Online</p>
+                <p class="kpi-value" id="online-count">0</p>
             </div>
         </div>
-    </div>
-
-    <div class="stats-wrapper">
-        <div class="kpi-grid kpi-grid-online">
-            <div class="kpi-card kpi-primary kpi-bordered">
-                <div class="kpi-icon">
-                    <i class="mdi mdi-account-check"></i>
-                </div>
-                <div class="kpi-content">
-                    <p class="kpi-label">Usuários Online</p>
-                    <p class="kpi-value" id="online-count">0</p>
-                    <p class="kpi-sub-value">Atualização em tempo real</p>
-                </div>
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">
+                <i class="mdi mdi-account-tie"></i>
             </div>
-            <div class="kpi-card kpi-info kpi-bordered">
-                <div class="kpi-icon">
-                    <i class="mdi mdi-account-tie"></i>
-                </div>
-                <div class="kpi-content">
-                    <p class="kpi-label">Time Interno Ativo</p>
-                    <p class="kpi-value" id="admin-count">0</p>
-                    <p class="kpi-sub-value">Colaboradores conectados agora</p>
-                </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Time Interno</p>
+                <p class="kpi-value" id="admin-count">0</p>
             </div>
-            <div class="kpi-card kpi-success kpi-bordered">
-                <div class="kpi-icon">
-                    <i class="mdi mdi-file-multiple"></i>
-                </div>
-                <div class="kpi-content">
-                    <p class="kpi-label">Páginas Monitoradas</p>
-                    <p class="kpi-value" id="page-count">0</p>
-                    <p class="kpi-sub-value">Rotas distintas ativas neste momento</p>
-                </div>
+        </div>
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">
+                <i class="mdi mdi-file-multiple"></i>
+            </div>
+            <div class="kpi-content">
+                <p class="kpi-label">Páginas Ativas</p>
+                <p class="kpi-value" id="page-count">0</p>
             </div>
         </div>
     </div>
 
-    <section class="users-section">
-        <div class="section-header">
-            <div>
-                <h2>
-                    <i class="mdi mdi-account-group"></i>
-                    Usuários ativos
-                </h2>
-                <p class="section-description">Detalhes das sessões em tempo real, com última atividade e página atual.</p>
-            </div>
-        </div>
+    <section class="users-section mt-4">
         <div class="users-table-wrapper">
             <table class="users-table" id="online-users-table">
                 <thead>
                     <tr>
-                        <th>Cliente</th>
+                        <th>Usuário</th>
                         <th>Página Atual</th>
                         <th>IP</th>
-                        <th>Status</th>
+                        <th>Visto por último</th>
                     </tr>
                 </thead>
                 <tbody id="users-table-body">
@@ -115,133 +88,41 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
 <script>
-const socket = io();
+// Removido Socket.IO, usando Polling + Heartbeat
 const onlineUsers = new Map();
 
 const usersTableBody = document.getElementById('users-table-body');
 const onlineCount = document.getElementById('online-count');
 const adminCount = document.getElementById('admin-count');
 const pageCount = document.getElementById('page-count');
-const connectionStatus = document.getElementById('connection-status');
-const statusText = document.getElementById('status-text');
-const statusIndicator = connectionStatus ? connectionStatus.querySelector('.status-indicator') : null;
 
-function setConnectionState(state, message) {
-    if (!connectionStatus) {
-        return;
-    }
-
-    connectionStatus.classList.remove('connected', 'disconnected', 'pending');
-    connectionStatus.classList.add(state);
-
-    if (statusText) {
-        statusText.textContent = message;
-    }
-
-    if (statusIndicator) {
-        statusIndicator.classList.remove('connected', 'disconnected', 'pending');
-        statusIndicator.classList.add(state);
+async function fetchOnlineUsers() {
+    try {
+        const response = await fetch('/usuarios-online/api/online-users');
+        if (!response.ok) throw new Error('Erro na API');
+        
+        const data = await response.json();
+        
+        onlineUsers.clear();
+        if (data.users) {
+            data.users.forEach(user => {
+                onlineUsers.set(user.user_id, user);
+            });
+        }
+        
+        renderUsers();
+        
+    } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
     }
 }
-
-socket.on('connect', () => {
-    console.log('✅ Conectado ao WebSocket');
-    setConnectionState('connected', 'Conectado');
-    socket.emit('join_admin_room');
-    socket.emit('get_online_users');
-});
-
-socket.on('disconnect', () => {
-    console.log('❌ Desconectado do WebSocket');
-    setConnectionState('disconnected', 'Desconectado');
-});
-
-socket.on('connect_error', () => {
-    setConnectionState('disconnected', 'Tentando reconectar...');
-});
-
-socket.on('reconnect_attempt', () => {
-    setConnectionState('pending', 'Reconectando...');
-});
-
-socket.on('initial_online_users', (data) => {
-    console.log('📋 Lista inicial recebida:', data);
-    onlineUsers.clear();
-    data.users.forEach(user => {
-        onlineUsers.set(user.user_id, user);
-    });
-    renderUsers();
-});
-
-socket.on('online_users_list', (data) => {
-    console.log('📊 Lista completa recebida:', data);
-    onlineUsers.clear();
-    data.users.forEach(user => {
-        onlineUsers.set(user.user_id, user);
-    });
-    renderUsers();
-});
-
-socket.on('user_connected', (data) => {
-    console.log('🟢 Usuário conectou:', data);
-    setTimeout(() => {
-        fetch('/usuarios-online/api/online-users')
-            .then(res => res.json())
-            .then(result => {
-                if (result.users) {
-                    const user = result.users.find(u => u.user_id === data.user_id);
-                    if (user) {
-                        onlineUsers.set(data.user_id, user);
-                        renderUsers();
-                    }
-                }
-            })
-            .catch(err => console.error('Erro ao buscar dados do usuário:', err));
-    }, 300);
-});
-
-socket.on('user_disconnected', (data) => {
-    console.log('🔴 Usuário desconectou:', data);
-    setTimeout(() => {
-        fetch('/usuarios-online/api/online-users')
-            .then(res => res.json())
-            .then(result => {
-                if (result.users) {
-                    const stillOnline = result.users.find(u => u.user_id === data.user_id);
-                    if (!stillOnline) {
-                        onlineUsers.delete(data.user_id);
-                        renderUsers();
-                    }
-                }
-            })
-            .catch(() => {
-                onlineUsers.delete(data.user_id);
-                renderUsers();
-            });
-    }, 1000);
-});
-
-socket.on('user_page_changed', (data) => {
-    console.log('📄 Usuário mudou de página:', data);
-    const user = onlineUsers.get(data.user_id);
-    if (user) {
-        user.current_page = data.page;
-        user.page_title = data.title;
-        user.last_activity = data.timestamp;
-        onlineUsers.set(data.user_id, user);
-        renderUsers();
-    } else {
-        socket.emit('get_online_users');
-    }
-});
 
 function renderUsers() {
     const count = onlineUsers.size;
     onlineCount.textContent = count;
 
-    const internos = Array.from(onlineUsers.values()).filter(u => u.user_role === 'interno_unique').length;
+    const internos = Array.from(onlineUsers.values()).filter(u => u.user_role === 'interno_unique' || u.user_role === 'admin').length;
     adminCount.textContent = internos;
 
     const pages = new Set(Array.from(onlineUsers.values()).map(u => u.current_page));
@@ -263,7 +144,7 @@ function renderUsers() {
     }
 
     const sortedUsers = Array.from(onlineUsers.values()).sort((a, b) => {
-        return new Date(b.last_activity) - new Date(a.last_activity);
+        return new Date(b.last_seen) - new Date(a.last_seen);
     });
 
     const rowsHtml = sortedUsers.map(createUserRow).join('');
@@ -273,7 +154,7 @@ function renderUsers() {
 function createUserRow(user) {
     const initials = getInitials(user.user_name);
     const roleLabel = getRoleLabel(user.user_role);
-    const timeAgo = formatTimeAgo(user.last_activity);
+    const timeAgo = formatTimeAgo(user.last_seen);
 
     let pageDisplay = 'Portal Unique';
     if (user.page_title && user.page_title !== 'Portal Unique') {
@@ -308,7 +189,7 @@ function createUserRow(user) {
             <td>
                 <div class="status-cell">
                     <span class="status-badge status-online">Online</span>
-                    <span class="status-time">Atualizado ${timeAgo}</span>
+                    <span class="status-time">Visto ${timeAgo}</span>
                 </div>
             </td>
         </tr>
@@ -365,7 +246,7 @@ function formatTimeAgo(timestamp) {
 }
 
 async function cleanupSessions() {
-    if (!confirm('Deseja limpar todas as sessões inativas (30+ minutos)?')) {
+    if (!confirm('Deseja limpar todas as sessões inativas?')) {
         return;
     }
 
@@ -375,7 +256,7 @@ async function cleanupSessions() {
 
         if (data.success) {
             alert('✅ Sessões inativas limpas com sucesso!');
-            socket.emit('get_online_users');
+            fetchOnlineUsers();
         } else {
             alert('❌ Erro ao limpar sessões: ' + data.error);
         }
@@ -384,12 +265,21 @@ async function cleanupSessions() {
     }
 }
 
-setInterval(() => {
-    renderUsers();
-}, 10000);
+// Inicialização
+fetchOnlineUsers();
+
+// Polling a cada 30 segundos com countdown
+let timeLeft = 30;
+const countdownEl = document.getElementById('countdown');
 
 setInterval(() => {
-    socket.emit('get_online_users');
-}, 30000);
+    timeLeft--;
+    if (countdownEl) countdownEl.textContent = timeLeft;
+    
+    if (timeLeft <= 0) {
+        fetchOnlineUsers();
+        timeLeft = 30;
+    }
+}, 1000);
 </script>
 {% endblock %}

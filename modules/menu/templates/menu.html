@@ -244,6 +244,15 @@
                         </div>
                         <p class="module-desc">Gerencie perfis e permissões de acesso ao sistema</p>
                     </a>
+
+                    <a href="{{ url_for('usuarios_online.index') }}" class="module-card" data-module="usuarios_online">
+                        <span class="role-badge admin">MASTER ADMIN</span>
+                        <div class="module-card-header">
+                            <div class="module-icon"><i class="mdi mdi-account-multiple-check"></i></div>
+                            <h4 class="module-title">Usuários Online</h4>
+                        </div>
+                        <p class="module-desc">Monitore usuários ativos em tempo real</p>
+                    </a>
                     {% endif %}
                     {% endif %}
                     
