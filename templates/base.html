@@ -937,14 +937,12 @@
                         <span class="sidebar-text">Perfis</span>
                     </a>
                     
-                    {# DESATIVADO TEMPORARIAMENTE - Usuários Online será reativado futuramente
                     <a href="{{ url_for('usuarios_online.index') }}"
                        class="sidebar-item sidebar-page-item {% if request.endpoint and request.endpoint.startswith('usuarios_online.') %}active{% endif %}"
                        title="Usuários Online">
                         <i class="mdi mdi-account-multiple-check"></i>
                         <span class="sidebar-text">Usuários Online</span>
                     </a>
-                    #}
                     {% endif %}
                     {% endif %}
                     

@@ -411,6 +411,7 @@ if __name__ == '__main__':
     flask_env = os.getenv('FLASK_ENV', app.config.get('ENV', 'production'))
     if flask_env == 'development':
         # Use socketio.run() ao invés de app.run() para suportar WebSocket
-        socketio.run(app, debug=True, host='192.168.0.75', port=5000)
+        # Alterado para 0.0.0.0 para evitar erro de bind se o IP mudar
+        socketio.run(app, debug=True, host='0.0.0.0', port=5000)
     else:
         socketio.run(app, debug=app.config.get('DEBUG', False))
