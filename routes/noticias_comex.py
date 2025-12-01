@@ -38,8 +38,9 @@ def _serialize_news(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _fetch_news(limit: int, fonte: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Busca notícias no Supabase ordenadas por ID decrescente (mais recentes primeiro)."""
-    query = supabase_admin.table('comex_news').select('*').eq('empresa', 'Unique').order('id', desc=True)
+    """Busca notícias no Supabase ordenadas por data de publicação (mais recentes primeiro)."""
+    # Alterado de ID para publishedAt para garantir ordem cronológica correta
+    query = supabase_admin.table('comex_news').select('*').eq('empresa', 'Unique').order('publishedAt', desc=True)
 
     if fonte:
         query = query.eq('source', fonte)
