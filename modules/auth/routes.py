@@ -13,6 +13,7 @@ import json
 import os
 import re
 from services.data_cache import data_cache
+from services.access_logger import access_logger
 
 def perfil_required(modulo_codigo, pagina_codigo=None):
     """
@@ -447,6 +448,9 @@ def login():
                     print(f"[AUTH] Dados precarregados para usuário {user['id']}")
                 except Exception as cache_error:
                     print(f"[AUTH] Erro ao precarregar dados: {str(cache_error)}")
+                
+                # Registrar login no access_logs
+                access_logger.log_login(success=True)
                 
                 flash(f'Bem-vindo, {user["name"]}!', 'success')
                 return redirect(url_for('menu.menu_home'))

@@ -245,22 +245,34 @@ def get_stats():
         
         try:
             def _exec_today():
-                return supabase_admin.table('user_sessions').select('*').gte('connected_at', today_start_utc.isoformat()).execute()
-            sessions_today_response = run_with_retries(
+                # Contar usuários ativos hoje (qualquer ação no log conta como "login/acesso" para o dia)
+                # Isso garante que mostre dados mesmo se o evento explícito de login não foi capturado
+                return supabase_admin.table('access_logs')\
+                    .select('user_id, ip_address')\
+                    .gte('created_at', today_start_utc.isoformat())\
+                    .execute()
+            
+            logins_today_response = run_with_retries(
                 'analytics.get_stats.logins_today',
                 _exec_today,
                 max_attempts=3,
                 base_delay_seconds=0.8,
                 should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
             )
-            # Contar USUÁRIOS ÚNICOS que conectaram hoje (não total de sessões)
-            sessions_today = sessions_today_response.data if sessions_today_response.data else []
-            # Filtrar localhost
-            sessions_today = [s for s in sessions_today if s.get('ip_address') not in ['127.0.0.1', 'localhost', None]]
-            # Usar set() para garantir contagem de usuários únicos
-            unique_users_today = set(s.get('user_id') for s in sessions_today if s.get('user_id'))
+            
+            logins_data = logins_today_response.data if logins_today_response.data else []
+            
+            # Contar USUÁRIOS ÚNICOS que fizeram login hoje
+            unique_users_today = set()
+            for log in logins_data:
+                # Filtrar localhost apenas se IP for explicitamente 127.0.0.1
+                # (Assumindo que o bug do IP foi corrigido e usuários reais terão IPs reais)
+                if log.get('ip_address') not in ['127.0.0.1', 'localhost', None]:
+                    if log.get('user_id'):
+                        unique_users_today.add(log.get('user_id'))
+            
             logins_today = len(unique_users_today)
-            logger.info(f"[ANALYTICS] Logins hoje: {logins_today} usuários únicos de {len(sessions_today)} sessões")
+            logger.info(f"[ANALYTICS] Logins hoje: {logins_today} usuários únicos de {len(logins_data)} registros de login")
         except Exception as e:
             logger.warning(f"Erro ao contar logins de hoje: {e}")
             logins_today = 0
