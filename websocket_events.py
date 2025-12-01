@@ -49,7 +49,10 @@ def register_events(socketio, supabase_admin):
                 return False
             
             # IP do cliente
-            ip_address = request.remote_addr
+            if request.headers.get('X-Forwarded-For'):
+                ip_address = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+            else:
+                ip_address = request.remote_addr
             user_agent = request.headers.get('User-Agent', '')
             current_timestamp = datetime.now(timezone.utc).isoformat()
             

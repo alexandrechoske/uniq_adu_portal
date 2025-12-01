@@ -171,6 +171,12 @@ def track_news_click(noticia_id):
                 print(f"⚠️ Erro ao verificar user_id: {str(e)}")
                 user_id = None
         
+        # Get real IP address (handling proxy headers)
+        if request.headers.get('X-Forwarded-For'):
+            ip_address = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+        else:
+            ip_address = request.remote_addr
+
         # Preparar dados para access_logs
         log_entry = {
             'user_id': user_id,  # Pode ser NULL
@@ -181,7 +187,7 @@ def track_news_click(noticia_id):
             'page_url': f'/menu?news_id={noticia_id}',
             'page_name': f'Notícia COMEX: {data.get("news_title", "")[:100]}',
             'module_name': 'menu',
-            'ip_address': request.remote_addr,
+            'ip_address': ip_address,
             'user_agent': request.headers.get('User-Agent'),
             'session_id': data.get('session_id'),
             'success': True,

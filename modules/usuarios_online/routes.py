@@ -51,13 +51,19 @@ def heartbeat():
 
         data = request.get_json() or {}
         
+        # Get real IP address (handling proxy headers)
+        if request.headers.get('X-Forwarded-For'):
+            ip_address = request.headers.get('X-Forwarded-For').split(',')[0].strip()
+        else:
+            ip_address = request.remote_addr
+
         user_data = {
             'user_name': session.get('user_name', 'Unknown'),
             'user_email': session.get('user_email', ''),
             'user_role': session.get('user_role', ''),
             'current_page': data.get('page', ''),
             'page_title': data.get('title', ''),
-            'ip_address': request.remote_addr
+            'ip_address': ip_address
         }
         
         online_user_service.update_heartbeat(session['user_id'], user_data)
