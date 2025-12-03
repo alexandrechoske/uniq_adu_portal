@@ -814,7 +814,15 @@ class FaturamentoControllerNovo {
 
     calcularKPIsComparativo(dados) {
         console.log('🧮 Calculando KPIs com dados comparativos:', dados);
-        const anoAtual = new Date().getFullYear();
+        
+        // Determinar ano de referência baseado nos filtros ou data atual
+        let anoAtual = new Date().getFullYear();
+        if (this.filtros.ano) {
+            anoAtual = parseInt(this.filtros.ano);
+        } else if (this.filtros.start_date) {
+            anoAtual = parseInt(this.filtros.start_date.substring(0, 4));
+        }
+        
         const mesAtual = new Date().getMonth() + 1;
         
         // Acessar dados dos anos específicos
@@ -828,18 +836,27 @@ class FaturamentoControllerNovo {
         const totalFaturadoAno = dadosAnoAtual.reduce((acc, item) => {
             return acc + (parseFloat(item.total_valor) || 0);
         }, 0);
+        
+        // Atualizar label do KPI para indicar o ano
+        const labelTotal = document.querySelector('#kpi-total-faturado .kpi-label');
+        if (labelTotal) labelTotal.textContent = `Total Faturado (${anoAtual})`;
+        
         this.atualizarElemento('kpi-total-faturamento', this.formatarMoeda(totalFaturadoAno));
         console.log('💰 Total faturado ano:', totalFaturadoAno);
         
-        // KPI 2: Comparação inteligente (até mês atual)
+        // KPI 2: Comparação inteligente (até mês atual ou último mês com dados)
+        // Se estamos vendo um ano passado, comparar o ano todo
+        const isAnoPassado = anoAtual < new Date().getFullYear();
+        const mesLimite = isAnoPassado ? 12 : mesAtual;
+        
         const dadosAtualAteMes = dadosAnoAtual.filter(item => {
             const mes = parseInt(item.mes);
-            return mes <= mesAtual;
+            return mes <= mesLimite;
         });
         
         const dadosAnteriorAteMes = dadosAnoAnterior.filter(item => {
             const mes = parseInt(item.mes);
-            return mes <= mesAtual;
+            return mes <= mesLimite;
         });
         
         const totalAtualAteMes = dadosAtualAteMes.reduce((acc, item) => {
@@ -858,7 +875,16 @@ class FaturamentoControllerNovo {
         }
         
         this.atualizarElemento('kpi-crescimento-anual', crescimentoTexto);
-        console.log('Crescimento ate mes ' + mesAtual + ': R$ ' + totalAtualAteMes.toLocaleString('pt-BR') + ' vs R$ ' + totalAnteriorAteMes.toLocaleString('pt-BR') + ' = ' + crescimentoTexto);
+        
+        // Atualizar contexto do crescimento
+        const contextoCrescimento = document.getElementById('kpi-crescimento-contexto');
+        if (contextoCrescimento) {
+            contextoCrescimento.textContent = isAnoPassado ? 
+                `Comparativo total ${anoAtual} vs ${anoAtual-1}` : 
+                `Acumulado até o mês atual`;
+        }
+        
+        console.log('Crescimento ate mes ' + mesLimite + ': R$ ' + totalAtualAteMes.toLocaleString('pt-BR') + ' vs R$ ' + totalAnteriorAteMes.toLocaleString('pt-BR') + ' = ' + crescimentoTexto);
         
         // KPI 3: Melhor mês do ano atual
         let melhorMes = { mes: 0, valor: -Infinity };
@@ -873,20 +899,26 @@ class FaturamentoControllerNovo {
         if (melhorMes.mes > 0) {
             const textoMelhor = `${nomesMeses[melhorMes.mes]} - ${this.formatarMoeda(melhorMes.valor)}`;
             this.atualizarElemento('kpi-melhor-mes', textoMelhor);
+        } else {
+             this.atualizarElemento('kpi-melhor-mes', '-');
         }
         
         // KPI 4: Pior mês do ano atual (com dados > 0)
         let piorMes = { mes: 0, valor: Infinity };
+        let encontrouPior = false;
         dadosAnoAtual.forEach(item => {
             const valor = parseFloat(item.total_valor) || 0;
             if (valor > 0 && valor < piorMes.valor) {
                 piorMes = { mes: parseInt(item.mes), valor: valor };
+                encontrouPior = true;
             }
         });
         
-        if (piorMes.mes > 0 && piorMes.valor < Infinity) {
+        if (encontrouPior && piorMes.mes > 0) {
             const textoPior = `${nomesMeses[piorMes.mes]} - ${this.formatarMoeda(piorMes.valor)}`;
             this.atualizarElemento('kpi-pior-mes', textoPior);
+        } else {
+            this.atualizarElemento('kpi-pior-mes', '-');
         }
         
         // KPI Aderência Meta (usar dadosAnoAtual para realizado)
@@ -898,10 +930,11 @@ class FaturamentoControllerNovo {
     async calcularAderenciaMeta(anoAtual, mesAtual, dadosAnoAtual) {
         try {
             // Obter empresa selecionada dos botões de filtro
-            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
-            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            const empresaSelecionada = this.filtros.empresa || 
+                                      (document.querySelector('.empresa-filter-btn.active')?.getAttribute('data-empresa')) || 
+                                      'ambos';
             
-            console.log(`🎯 Calculando aderência para empresa: ${empresaSelecionada}`);
+            console.log(`🎯 Calculando aderência para empresa: ${empresaSelecionada}, ano: ${anoAtual}`);
             
             // Chamar nova API dinâmica de aderência
             const resp = await fetch(`/financeiro/faturamento/api/geral/aderencia_meta?empresa=${encodeURIComponent(empresaSelecionada)}&ano=${anoAtual}&mes=${mesAtual}`);
@@ -1124,24 +1157,45 @@ class FaturamentoControllerNovo {
         try {
             console.log('🎯 Carregando gráfico Meta vs Realizado...');
             
-            const anoAtual = new Date().getFullYear();
+            // Determinar ano de referência baseado nos filtros ou data atual
+            let anoAtual = new Date().getFullYear();
+            if (this.filtros.ano) {
+                anoAtual = parseInt(this.filtros.ano);
+            } else if (this.filtros.start_date) {
+                anoAtual = parseInt(this.filtros.start_date.substring(0, 4));
+            }
+            
             const anoAnterior = anoAtual - 1;
             
             // Obter empresa selecionada dos botões de filtro
-            const empresaAtivaBotao = document.querySelector('.empresa-filter-btn.active');
-            const empresaSelecionada = empresaAtivaBotao ? empresaAtivaBotao.getAttribute('data-empresa') : 'ambos';
+            const empresaSelecionada = this.filtros.empresa || 
+                                      (document.querySelector('.empresa-filter-btn.active')?.getAttribute('data-empresa')) || 
+                                      'ambos';
             
-            console.log(`🎯 Carregando meta para empresa: ${empresaSelecionada}`);
+            const centroResultado = this.filtros.centro_resultado || '';
+            const cliente = this.filtros.cliente || '';
+            
+            console.log(`🎯 Carregando meta para empresa: ${empresaSelecionada}, ano: ${anoAtual}`);
+            
+            // Construir query params base
+            let queryParams = `ano=${anoAtual}&empresa=${encodeURIComponent(empresaSelecionada)}`;
+            if (centroResultado) queryParams += `&centro_resultado=${encodeURIComponent(centroResultado)}`;
+            if (cliente) queryParams += `&cliente=${encodeURIComponent(cliente)}`;
             
             // Buscar dados do ano atual (realizado)
-            const responseRealizadoAtual = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAtual}&empresa=${encodeURIComponent(empresaSelecionada)}`);
+            const responseRealizadoAtual = await fetch(`/financeiro/faturamento/api/geral/mensal?${queryParams}`);
             const dataRealizadoAtual = await responseRealizadoAtual.json();
             
+            // Para ano anterior
+            let queryParamsAnterior = `ano=${anoAnterior}&empresa=${encodeURIComponent(empresaSelecionada)}`;
+            if (centroResultado) queryParamsAnterior += `&centro_resultado=${encodeURIComponent(centroResultado)}`;
+            if (cliente) queryParamsAnterior += `&cliente=${encodeURIComponent(cliente)}`;
+            
             // Buscar dados do ano anterior (realizado)
-            const responseRealizadoAnterior = await fetch(`/financeiro/faturamento/api/geral/mensal?ano=${anoAnterior}&empresa=${encodeURIComponent(empresaSelecionada)}`);
+            const responseRealizadoAnterior = await fetch(`/financeiro/faturamento/api/geral/mensal?${queryParamsAnterior}`);
             const dataRealizadoAnterior = await responseRealizadoAnterior.json();
             
-            // Buscar dados da meta do ano atual
+            // Buscar dados da meta do ano atual (meta não tem filtro de CR/Cliente)
             const responseMeta = await fetch(`/financeiro/faturamento/api/geral/metas_mensais?ano=${anoAtual}&empresa=${encodeURIComponent(empresaSelecionada)}`);
             const dataMeta = await responseMeta.json();
             
@@ -1684,8 +1738,29 @@ class FaturamentoControllerNovo {
                 titleElement.textContent = `${centroResultado} - Categorias`;
             }
             
+            // Construir URL com filtros globais + centro de resultado específico
+            const params = new URLSearchParams();
+            
+            // Adicionar filtros de data
+            if (this.filtros.start_date) params.append('start_date', this.filtros.start_date);
+            if (this.filtros.end_date) params.append('end_date', this.filtros.end_date);
+            
+            // Adicionar filtro de empresa
+            if (this.filtros.empresa) params.append('empresa', this.filtros.empresa);
+            
+            // Adicionar filtro de cliente
+            if (this.filtros.cliente) params.append('cliente', this.filtros.cliente);
+            
+            // Adicionar o centro de resultado específico do drill-down
+            params.append('centro_resultado', centroResultado);
+            
+            const queryString = params.toString();
+            const url = `/financeiro/faturamento/api/geral/centro_resultado_detalhado?${queryString}`;
+            
+            console.log(`📡 URL Drill-down: ${url}`);
+            
             // Buscar dados detalhados
-            const response = await fetch(`/financeiro/faturamento/api/geral/centro_resultado_detalhado?centro_resultado=${encodeURIComponent(centroResultado)}`);
+            const response = await fetch(url);
             const data = await response.json();
             
             if (data.sucesso && data.dados.length > 0) {
@@ -1878,8 +1953,32 @@ class FaturamentoControllerNovo {
         console.log(`📊 Carregando dados do setor: ${setor}`);
         
         try {
+            // Construir URL com filtros
+            const params = new URLSearchParams();
+            
+            // Adicionar filtros de data
+            if (this.filtros.start_date) params.append('start_date', this.filtros.start_date);
+            if (this.filtros.end_date) params.append('end_date', this.filtros.end_date);
+            
+            // Adicionar filtro de empresa
+            if (this.filtros.empresa) params.append('empresa', this.filtros.empresa);
+            
+            // Adicionar filtro de centro de resultado
+            if (this.filtros.centro_resultado) params.append('centro_resultado', this.filtros.centro_resultado);
+            
+            // Adicionar filtro de cliente
+            if (this.filtros.cliente) params.append('cliente', this.filtros.cliente);
+            
+            // Fallback para ano atual se não houver datas
+            if (!this.filtros.start_date && !this.filtros.end_date) {
+                params.append('ano', this.currentAno);
+            }
+            
+            const queryString = params.toString();
+            const url = `/financeiro/faturamento/api/geral/setor/${setor}?${queryString}`;
+            
             // Buscar dados do setor específico
-            const response = await fetch(`/financeiro/faturamento/api/geral/setor/${setor}?ano=${this.currentAno}`);
+            const response = await fetch(url);
             const data = await response.json();
             
             if (!data.success) {
@@ -2157,8 +2256,30 @@ class FaturamentoControllerNovo {
             const activeButton = document.querySelector('.sector-btn.active');
             const setor = activeButton?.getAttribute('data-setor') || 'importacao';
             
+            // Construir URL com filtros
+            const params = new URLSearchParams();
+            params.append('setor', setor);
+            
+            // Adicionar filtros de data
+            if (this.filtros.start_date) params.append('start_date', this.filtros.start_date);
+            if (this.filtros.end_date) params.append('end_date', this.filtros.end_date);
+            
+            // Adicionar filtro de empresa
+            if (this.filtros.empresa) params.append('empresa', this.filtros.empresa);
+            
+            // Adicionar filtro de centro de resultado
+            if (this.filtros.centro_resultado) params.append('centro_resultado', this.filtros.centro_resultado);
+            
+            // Fallback para ano atual se não houver datas
+            if (!this.filtros.start_date && !this.filtros.end_date) {
+                params.append('ano', this.currentAno);
+            }
+            
+            const queryString = params.toString();
+            const url = `/financeiro/faturamento/api/geral/cliente/${clienteId}/detalhes?${queryString}`;
+            
             // Chamar API
-            const response = await fetch(`/financeiro/faturamento/api/geral/cliente/${clienteId}/detalhes?setor=${setor}&ano=${this.currentAno}`);
+            const response = await fetch(url);
             const data = await response.json();
             
             if (!data.success) {

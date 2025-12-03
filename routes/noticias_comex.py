@@ -3,17 +3,25 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 
 from extensions import supabase_admin
 
 bp = Blueprint('noticias_comex', __name__)
 
 
-def _check_bypass() -> bool:
-    """Valida se a requisição possui API bypass válido."""
+def _check_auth() -> bool:
+    """Valida se a requisição é autorizada (Session ou API Key)."""
+    # 1. Check API Key Bypass
     api_bypass_key = os.getenv('API_BYPASS_KEY')
-    return bool(api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key)
+    if api_bypass_key and request.headers.get('X-API-Key') == api_bypass_key:
+        return True
+        
+    # 2. Check User Session
+    if session.get('user'):
+        return True
+        
+    return False
 
 
 def _serialize_news(record: Dict[str, Any]) -> Dict[str, Any]:
@@ -69,10 +77,10 @@ def get_noticias():
     - categoria / source: filtrar por fonte específica
     """
     try:
-        if not _check_bypass():
+        if not _check_auth():
             return jsonify({
                 'error': 'Acesso não autorizado',
-                'message': 'X-API-Key inválida ou não fornecida'
+                'message': 'Sessão inválida ou API Key ausente'
             }), 401
 
         # Obter parâmetros
@@ -101,7 +109,7 @@ def get_noticias():
 def get_noticia_detalhes(noticia_id):
     """Retorna detalhes de uma notícia específica"""
     try:
-        if not _check_bypass():
+        if not _check_auth():
             return jsonify({
                 'error': 'Acesso não autorizado'
             }), 401
@@ -151,7 +159,7 @@ def track_news_click(noticia_id):
     }
     """
     try:
-        if not _check_bypass():
+        if not _check_auth():
             return jsonify({
                 'error': 'Acesso não autorizado'
             }), 401
@@ -216,7 +224,7 @@ def track_news_click(noticia_id):
 def get_categorias():
     """Retorna lista de categorias disponíveis"""
     try:
-        if not _check_bypass():
+        if not _check_auth():
             return jsonify({
                 'error': 'Acesso não autorizado'
             }), 401
@@ -240,7 +248,7 @@ def get_categorias():
 def get_comex_indicators():
     """Retorna indicadores econômicos e comerciais do COMEX"""
     try:
-        if not _check_bypass():
+        if not _check_auth():
             return jsonify({
                 'error': 'Acesso não autorizado'
             }), 401

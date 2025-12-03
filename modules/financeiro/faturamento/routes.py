@@ -128,6 +128,8 @@ def api_geral_kpis():
     try:
         ano = request.args.get('ano', datetime.now().year)
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Buscar dados de faturamento do ano usando a nova tabela
         query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
@@ -136,6 +138,13 @@ def api_geral_kpis():
                 query = query.eq('meta_grupo', 'Consultoria')
             elif empresa == 'imp_exp':
                 query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query = query.eq('cliente', cliente)
+            
         response = query.execute()
         dados_faturamento = response.data
         
@@ -156,6 +165,8 @@ def api_geral_mensal():
     try:
         ano = request.args.get('ano', datetime.now().year)
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Buscar dados de faturamento do ano atual usando a nova tabela
         query_atual = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
@@ -164,6 +175,13 @@ def api_geral_mensal():
                 query_atual = query_atual.eq('meta_grupo', 'Consultoria')
             elif empresa == 'imp_exp':
                 query_atual = query_atual.eq('meta_grupo', 'IMP/EXP')
+        
+        if centro_resultado:
+            query_atual = query_atual.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query_atual = query_atual.eq('cliente', cliente)
+            
         response_atual = query_atual.execute()
         dados_atual = response_atual.data
         
@@ -175,6 +193,13 @@ def api_geral_mensal():
                 query_anterior = query_anterior.eq('meta_grupo', 'Consultoria')
             elif empresa == 'imp_exp':
                 query_anterior = query_anterior.eq('meta_grupo', 'IMP/EXP')
+                
+        if centro_resultado:
+            query_anterior = query_anterior.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query_anterior = query_anterior.eq('cliente', cliente)
+            
         response_anterior = query_anterior.execute()
         dados_anterior = response_anterior.data
         
@@ -230,6 +255,8 @@ def api_geral_proporcao():
     try:
         ano = request.args.get('ano', datetime.now().year)
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Buscar dados de faturamento do ano usando a nova tabela
         query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*').gte('data', f'{ano}-01-01').lte('data', f'{ano}-12-31')
@@ -238,6 +265,13 @@ def api_geral_proporcao():
                 query = query.eq('meta_grupo', 'Consultoria')
             elif empresa == 'imp_exp':
                 query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query = query.eq('cliente', cliente)
+            
         response = query.execute()
         dados_faturamento = response.data
         
@@ -368,9 +402,11 @@ def api_geral_sunburst_data():
         start_date = request.args.get('start_date', '2024-01-01')
         end_date = request.args.get('end_date', '2024-12-31')
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Buscar dados com centro_resultado e categoria
-        query = supabase_admin.table('fin_faturamento_anual').select('centro_resultado, categoria, valor')
+        query = supabase_admin.table('fin_faturamento_anual').select('centro_resultado, categoria, valor, cliente')
         
         # Aplicar filtros
         if start_date:
@@ -379,6 +415,12 @@ def api_geral_sunburst_data():
             query = query.lte('data', end_date)
         if empresa and empresa.strip():
             query = query.eq('empresa', empresa)
+        
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query = query.eq('cliente', cliente)
             
         response = query.execute()
         dados = response.data
@@ -542,9 +584,11 @@ def api_geral_centro_resultado():
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Usar a view atualizada
-        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('centro_resultado, valor, meta_grupo')
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('centro_resultado, valor, meta_grupo, cliente')
         
         # Aplicar filtros
         if start_date:
@@ -558,6 +602,12 @@ def api_geral_centro_resultado():
                 query = query.eq('meta_grupo', 'Consultoria')
             elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
                 query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query = query.eq('cliente', cliente)
             
         response = query.execute()
         dados = response.data
@@ -604,9 +654,11 @@ def api_geral_categoria_operacao():
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
         empresa = request.args.get('empresa', '')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
         # Usar a view atualizada com meta_grupo
-        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, meta_grupo')
+        query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, meta_grupo, centro_resultado, cliente')
         
         # Aplicar filtros
         if start_date:
@@ -620,6 +672,12 @@ def api_geral_categoria_operacao():
                 query = query.eq('meta_grupo', 'Consultoria')
             elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
                 query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query = query.eq('cliente', cliente)
             
         response = query.execute()
         dados = response.data
@@ -669,16 +727,18 @@ def api_geral_centro_resultado_detalhado():
         centro_resultado = request.args.get('centro_resultado', '')
         start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
         end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        empresa = request.args.get('empresa', '')
+        cliente = request.args.get('cliente', '')
         
         if not centro_resultado:
             return jsonify({'error': 'Centro de resultado é obrigatório'}), 400
         
         # Usar a view tratada que tem a hierarquia correta
         try:
-            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, centro_resultado')
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('categoria, valor, centro_resultado, meta_grupo, cliente')
         except:
             # Fallback para tabela original
-            query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor, centro_resultado')
+            query = supabase_admin.table('fin_faturamento_anual').select('categoria, valor, centro_resultado, meta_grupo, cliente')
         
         # Filtrar por centro de resultado
         query = query.eq('centro_resultado', centro_resultado)
@@ -688,6 +748,17 @@ def api_geral_centro_resultado_detalhado():
             query = query.gte('data', start_date)
         if end_date:
             query = query.lte('data', end_date)
+            
+        # Filtro por meta_grupo baseado no parâmetro empresa
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
+        
+        # Filtro por cliente
+        if cliente:
+            query = query.eq('cliente', cliente)
             
         response = query.execute()
         dados = response.data
@@ -1027,8 +1098,10 @@ def api_geral_aderencia_meta():
     try:
         empresa = request.args.get('empresa', 'ambos')
         ano = request.args.get('ano', datetime.now().year)
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
         
-        print(f"🎯 [ADERENCIA_META] Calculando para empresa: {empresa}, ano: {ano}")
+        print(f"🎯 [ADERENCIA_META] Calculando para empresa: {empresa}, ano: {ano}, CR: {centro_resultado}, Cliente: {cliente}")
         
         # Determinar tipo de meta baseado na empresa
         if empresa in ['consultoria', 'Unique Consultoria']:
@@ -1084,11 +1157,17 @@ def api_geral_aderencia_meta():
         data_fim = f'{ano}-{mes_atual:02d}-{ultimo_dia_mes:02d}'
         
         # Usar a view atualizada com meta_grupo
-        query_faturamento = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor, data, meta_grupo').gte('data', f'{ano}-01-01').lte('data', data_fim)
+        query_faturamento = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor, data, meta_grupo, centro_resultado, cliente').gte('data', f'{ano}-01-01').lte('data', data_fim)
         
         # Aplicar filtro de meta_grupo se não for 'ambos'
         if meta_grupo_filtro:
             query_faturamento = query_faturamento.eq('meta_grupo', meta_grupo_filtro)
+            
+        if centro_resultado:
+            query_faturamento = query_faturamento.eq('centro_resultado', centro_resultado)
+            
+        if cliente:
+            query_faturamento = query_faturamento.eq('cliente', cliente)
             
         response_faturamento = query_faturamento.execute()
         dados_faturamento = response_faturamento.data
@@ -1138,8 +1217,11 @@ def api_geral_aderencia_meta():
 def api_geral_setor_dinamico(setor):
     """API dinâmica para dados completos de um setor específico"""
     try:
-        ano = request.args.get('ano', datetime.now().year)
-        ano = int(ano)
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        centro_resultado = request.args.get('centro_resultado', '')
+        cliente = request.args.get('cliente', '')
+        empresa = request.args.get('empresa', '')
         
         # Definir filtro de classe com base no setor
         filtro_classe = ''
@@ -1152,15 +1234,30 @@ def api_geral_setor_dinamico(setor):
         else:
             return jsonify({'success': False, 'message': 'Setor inválido'}), 400
         
-        # Período do ano especificado
-        inicio = f'{ano}-01-01'
-        fim = f'{ano}-12-31'
-        
-        # Buscar dados de faturamento do setor no ano
-        query = supabase_admin.table('fin_faturamento_anual').select('*')
+        # Buscar dados de faturamento do setor no período
+        # Usar a view tratada se possível, ou a tabela original
+        try:
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*')
+        except:
+            query = supabase_admin.table('fin_faturamento_anual').select('*')
+            
         if filtro_classe:
             query = query.ilike('classe', f'%{filtro_classe}%')
-        query = query.gte('data', inicio).lte('data', fim)
+            
+        query = query.gte('data', start_date).lte('data', end_date)
+        
+        # Aplicar filtros adicionais
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+        if cliente:
+            query = query.eq('cliente', cliente)
+            
+        # Filtro por meta_grupo baseado no parâmetro empresa (se aplicável)
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
         
         response = query.execute()
         dados_faturamento = response.data
@@ -1168,9 +1265,24 @@ def api_geral_setor_dinamico(setor):
         # Calcular faturamento total do setor
         total_setor = sum(float(item['valor']) for item in dados_faturamento)
         
-        # Buscar faturamento total da empresa no mesmo período
-        total_query = supabase_admin.table('fin_faturamento_anual').select('valor')
-        total_query = total_query.gte('data', inicio).lte('data', fim)
+        # Buscar faturamento total da empresa no mesmo período (para participação)
+        try:
+            total_query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor')
+        except:
+            total_query = supabase_admin.table('fin_faturamento_anual').select('valor')
+            
+        total_query = total_query.gte('data', start_date).lte('data', end_date)
+        
+        if centro_resultado:
+            total_query = total_query.eq('centro_resultado', centro_resultado)
+        if cliente:
+            total_query = total_query.eq('cliente', cliente)
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                total_query = total_query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                total_query = total_query.eq('meta_grupo', 'IMP/EXP')
+            
         total_response = total_query.execute()
         total_empresa = sum(float(item['valor']) for item in total_response.data)
         
@@ -1178,13 +1290,41 @@ def api_geral_setor_dinamico(setor):
         pct_participacao = (total_setor / total_empresa * 100) if total_empresa > 0 else 0
         
         # Buscar dados do ano anterior para calcular crescimento
-        inicio_anterior = f'{ano-1}-01-01'
-        fim_anterior = f'{ano-1}-12-31'
+        # Calcular datas do ano anterior
+        try:
+            dt_start = datetime.strptime(start_date, '%Y-%m-%d')
+            dt_end = datetime.strptime(end_date, '%Y-%m-%d')
+            
+            start_prev = dt_start.replace(year=dt_start.year - 1).strftime('%Y-%m-%d')
+            # Handle leap year for end date
+            if dt_end.month == 2 and dt_end.day == 29:
+                end_prev = dt_end.replace(year=dt_end.year - 1, day=28).strftime('%Y-%m-%d')
+            else:
+                end_prev = dt_end.replace(year=dt_end.year - 1).strftime('%Y-%m-%d')
+        except:
+            # Fallback
+            start_prev = f"{int(start_date[:4])-1}-01-01"
+            end_prev = f"{int(end_date[:4])-1}-12-31"
         
-        query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+        try:
+            query_anterior = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor')
+        except:
+            query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+            
         if filtro_classe:
             query_anterior = query_anterior.ilike('classe', f'%{filtro_classe}%')
-        query_anterior = query_anterior.gte('data', inicio_anterior).lte('data', fim_anterior)
+            
+        query_anterior = query_anterior.gte('data', start_prev).lte('data', end_prev)
+        
+        if centro_resultado:
+            query_anterior = query_anterior.eq('centro_resultado', centro_resultado)
+        if cliente:
+            query_anterior = query_anterior.eq('cliente', cliente)
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query_anterior = query_anterior.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query_anterior = query_anterior.eq('meta_grupo', 'IMP/EXP')
         
         response_anterior = query_anterior.execute()
         total_anterior = sum(float(item['valor']) for item in response_anterior.data)
@@ -1222,11 +1362,14 @@ def api_geral_setor_dinamico(setor):
             })
         
         # Buscar mapeamento de clientes
-        mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
-        mapeamento_clientes = {}
-        if mapeamento_response.data:
-            for item in mapeamento_response.data:
-                mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+        try:
+            mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+            mapeamento_clientes = {}
+            if mapeamento_response.data:
+                for item in mapeamento_response.data:
+                    mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+        except:
+            mapeamento_clientes = {}
         
         # Ranking de clientes
         clientes_ranking = defaultdict(float)
@@ -1237,11 +1380,11 @@ def api_geral_setor_dinamico(setor):
         
         # Converter para lista e ordenar (top 10)
         ranking_lista = []
-        for cliente, valor in clientes_ranking.items():
+        for cliente_nome, valor in clientes_ranking.items():
             participacao = (valor / total_setor * 100) if total_setor > 0 else 0
             ranking_lista.append({
-                'id': cliente.lower().replace(' ', '_'),  # ID simples para drill-down
-                'nome': cliente,
+                'id': cliente_nome.lower().replace(' ', '_'),  # ID simples para drill-down
+                'nome': cliente_nome,
                 'valor': valor,
                 'participacao': participacao
             })
@@ -1275,8 +1418,10 @@ def api_cliente_detalhes(cliente_id):
     """API para dados detalhados de um cliente específico"""
     try:
         setor = request.args.get('setor', 'importacao')
-        ano = request.args.get('ano', datetime.now().year)
-        ano = int(ano)
+        start_date = request.args.get('start_date', f'{datetime.now().year}-01-01')
+        end_date = request.args.get('end_date', f'{datetime.now().year}-12-31')
+        centro_resultado = request.args.get('centro_resultado', '')
+        empresa = request.args.get('empresa', '')
         
         # Definir filtro de classe com base no setor
         filtro_classe = ''
@@ -1288,32 +1433,47 @@ def api_cliente_detalhes(cliente_id):
             filtro_classe = 'EXP'
         
         # Buscar mapeamento de clientes para encontrar o nome real
-        mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
-        mapeamento_clientes = {}
-        nome_cliente = None
-        
-        if mapeamento_response.data:
-            for item in mapeamento_response.data:
-                mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
-                # Encontrar o nome do cliente baseado no ID
-                if item['nome_padronizado'].lower().replace(' ', '_') == cliente_id:
-                    nome_cliente = item['nome_padronizado']
+        try:
+            mapeamento_response = supabase_admin.table('fin_clientes_mapeamento').select('nome_original, nome_padronizado').execute()
+            mapeamento_clientes = {}
+            nome_cliente = None
+            
+            if mapeamento_response.data:
+                for item in mapeamento_response.data:
+                    mapeamento_clientes[item['nome_original']] = item['nome_padronizado']
+                    # Encontrar o nome do cliente baseado no ID
+                    if item['nome_padronizado'].lower().replace(' ', '_') == cliente_id:
+                        nome_cliente = item['nome_padronizado']
+        except:
+            nome_cliente = None
         
         if not nome_cliente:
             # Se não encontrar no mapeamento, tentar encontrar diretamente
             nome_cliente = cliente_id.replace('_', ' ').title()
         
-        # Período do ano especificado
-        inicio = f'{ano}-01-01'
-        fim = f'{ano}-12-31'
-        
         # Buscar dados de faturamento do cliente no setor
-        query = supabase_admin.table('fin_faturamento_anual').select('*')
+        try:
+            query = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('*')
+        except:
+            query = supabase_admin.table('fin_faturamento_anual').select('*')
+            
         if filtro_classe:
             query = query.ilike('classe', f'%{filtro_classe}%')
-        query = query.gte('data', inicio).lte('data', fim)
+            
+        query = query.gte('data', start_date).lte('data', end_date)
         # Buscar por nome original ou padronizado
         query = query.or_(f'cliente.ilike.%{nome_cliente}%')
+        
+        # Aplicar filtro de centro de resultado
+        if centro_resultado:
+            query = query.eq('centro_resultado', centro_resultado)
+            
+        # Filtro por meta_grupo baseado no parâmetro empresa
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query = query.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query = query.eq('meta_grupo', 'IMP/EXP')
         
         response = query.execute()
         dados_cliente = response.data
@@ -1322,10 +1482,23 @@ def api_cliente_detalhes(cliente_id):
         total_cliente = sum(float(item['valor']) for item in dados_cliente)
         
         # Buscar total do setor para calcular participação
-        query_setor = supabase_admin.table('fin_faturamento_anual').select('valor')
+        try:
+            query_setor = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor')
+        except:
+            query_setor = supabase_admin.table('fin_faturamento_anual').select('valor')
+            
         if filtro_classe:
             query_setor = query_setor.ilike('classe', f'%{filtro_classe}%')
-        query_setor = query_setor.gte('data', inicio).lte('data', fim)
+            
+        query_setor = query_setor.gte('data', start_date).lte('data', end_date)
+        
+        if centro_resultado:
+            query_setor = query_setor.eq('centro_resultado', centro_resultado)
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query_setor = query_setor.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query_setor = query_setor.eq('meta_grupo', 'IMP/EXP')
         
         response_setor = query_setor.execute()
         total_setor = sum(float(item['valor']) for item in response_setor.data)
@@ -1334,14 +1507,39 @@ def api_cliente_detalhes(cliente_id):
         participacao_setor = (total_cliente / total_setor * 100) if total_setor > 0 else 0
         
         # Dados do ano anterior para calcular crescimento
-        inicio_anterior = f'{ano-1}-01-01'
-        fim_anterior = f'{ano-1}-12-31'
+        try:
+            dt_start = datetime.strptime(start_date, '%Y-%m-%d')
+            dt_end = datetime.strptime(end_date, '%Y-%m-%d')
+            
+            start_prev = dt_start.replace(year=dt_start.year - 1).strftime('%Y-%m-%d')
+            # Handle leap year for end date
+            if dt_end.month == 2 and dt_end.day == 29:
+                end_prev = dt_end.replace(year=dt_end.year - 1, day=28).strftime('%Y-%m-%d')
+            else:
+                end_prev = dt_end.replace(year=dt_end.year - 1).strftime('%Y-%m-%d')
+        except:
+            # Fallback
+            start_prev = f"{int(start_date[:4])-1}-01-01"
+            end_prev = f"{int(end_date[:4])-1}-12-31"
         
-        query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+        try:
+            query_anterior = supabase_admin.table('vw_fin_faturamento_anual_tratado').select('valor')
+        except:
+            query_anterior = supabase_admin.table('fin_faturamento_anual').select('valor')
+            
         if filtro_classe:
             query_anterior = query_anterior.ilike('classe', f'%{filtro_classe}%')
-        query_anterior = query_anterior.gte('data', inicio_anterior).lte('data', fim_anterior)
+            
+        query_anterior = query_anterior.gte('data', start_prev).lte('data', end_prev)
         query_anterior = query_anterior.or_(f'cliente.ilike.%{nome_cliente}%')
+        
+        if centro_resultado:
+            query_anterior = query_anterior.eq('centro_resultado', centro_resultado)
+        if empresa and empresa.strip() and empresa != 'ambos':
+            if empresa.lower() in ['consultoria']:
+                query_anterior = query_anterior.eq('meta_grupo', 'Consultoria')
+            elif empresa.lower() in ['imp/exp', 'imp_exp', 'importacao', 'exportacao']:
+                query_anterior = query_anterior.eq('meta_grupo', 'IMP/EXP')
         
         response_anterior = query_anterior.execute()
         total_anterior = sum(float(item['valor']) for item in response_anterior.data)
