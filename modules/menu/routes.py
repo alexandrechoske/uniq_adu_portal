@@ -96,6 +96,29 @@ def test_menu_restyle():
     user_companies_info = user.get('user_companies_info', [])
     return render_template('test_menu_restyle.html', user_companies_info=user_companies_info)
 
+@bp.route('/test-modern')
+@login_required
+def test_menu_modern():
+    """Página de teste do novo layout moderno inspirado no Nimbus AI."""
+    try:
+        user = session.get('user', {})
+        if not isinstance(user, dict):
+            user = {}
+        
+        # Obter menu filtrado baseado nos perfis do usuário
+        filtered_menu = PerfilAccessService.get_filtered_menu_structure()
+        accessible_modules = PerfilAccessService.get_user_accessible_modules()
+        
+        print(f"[MENU MODERN TEST] Menu filtrado para {user.get('email')}: {list(filtered_menu.keys())}")
+        
+        return render_template('test_menu_modern.html', 
+                             filtered_menu=filtered_menu,
+                             accessible_modules=accessible_modules,
+                             user_perfis=user.get('user_perfis', []))
+    except Exception as e:
+        app.logger.exception('[MENU MODERN TEST] Erro ao renderizar: %s', e)
+        return render_template('errors/500.html'), 500
+
 @bp.route('/api/user-companies-debug')
 @login_required
 def user_companies_debug():

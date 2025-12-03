@@ -48,11 +48,50 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * Inicializar opções dos filtros
  */
-function inicializarFiltros() {
-    // TODO: Carregar empresas e departamentos dinamicamente
-    // Será implementado quando necessário
+async function inicializarFiltros() {
+    console.log('🔍 Inicializando filtros...');
     
-    console.log('🔍 Filtros inicializados');
+    // Carregar empresas dinamicamente
+    await carregarEmpresas();
+    
+    console.log('✅ Filtros inicializados');
+}
+
+/**
+ * Carregar lista de empresas para o filtro
+ */
+async function carregarEmpresas() {
+    try {
+        const response = await fetch('/rh/dashboard/api/empresas', {
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const empresaSelect = document.getElementById('empresa-filter');
+            if (empresaSelect) {
+                // Manter a opção "Todas"
+                empresaSelect.innerHTML = '<option value="todas" selected>Todas as Empresas</option>';
+                
+                // Adicionar empresas
+                result.data.forEach(empresa => {
+                    const option = document.createElement('option');
+                    option.value = empresa.id;
+                    option.textContent = empresa.nome;
+                    empresaSelect.appendChild(option);
+                });
+                
+                console.log(`🏢 ${result.data.length} empresas carregadas`);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar empresas:', error);
+    }
 }
 
 /**

@@ -56,6 +56,42 @@ def dashboard_executivo():
 # APIs REST
 # ========================================
 
+@dashboard_rh_bp.route('/api/empresas', methods=['GET'])
+@login_required
+@perfil_required('rh', 'dashboard')
+def api_empresas():
+    """
+    API: Retorna lista de empresas controladoras para filtro
+    Filtra apenas UNIQUE e CERCARGO (empresas com colaboradores RH)
+    """
+    try:
+        # IDs das empresas que t�m colaboradores RH
+        EMPRESAS_RH = [
+            'dc984b7c-3156-43f7-a1bf-f7a0b77db535',  # UNIQUE
+            '9069b93d-9bbd-4ae5-b28f-234c77fcd4ce'   # CERCARGO
+        ]
+        
+        response = supabase.table('estrutura_empresa_controladora')\
+            .select('id, nome')\
+            .in_('id', EMPRESAS_RH)\
+            .order('nome')\
+            .execute()
+        
+        empresas = response.data if response.data else []
+        
+        return jsonify({
+            'success': True,
+            'data': empresas
+        })
+        
+    except Exception as e:
+        print(f"❌ Erro ao buscar empresas: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
 @dashboard_rh_bp.route('/api/dados', methods=['GET'])
 @login_required
 @perfil_required('rh', 'dashboard')
@@ -66,12 +102,14 @@ def api_dados_dashboard():
         - periodo_inicio: data início (YYYY-MM-DD)
         - periodo_fim: data fim (YYYY-MM-DD)
         - departamentos: array de IDs de departamentos (opcional)
+        - empresa: ID da empresa controladora (opcional)
     """
     try:
         # Obter parâmetros de filtro
         periodo_inicio = request.args.get('periodo_inicio')
         periodo_fim = request.args.get('periodo_fim')
         departamentos_ids = request.args.getlist('departamentos[]')
+        empresa_id = request.args.get('empresa')  # NOVO: Filtro por empresa
         
         # Definir período padrão se não fornecido (Este Ano)
         if not periodo_inicio or not periodo_fim:
@@ -81,18 +119,19 @@ def api_dados_dashboard():
         
         print(f"\n📊 ========== DASHBOARD EXECUTIVO RH ==========")
         print(f"📊 Período: {periodo_inicio} a {periodo_fim}")
+        print(f"📊 Empresa filtrada: {empresa_id if empresa_id else 'Todas'}")
         print(f"📊 Departamentos filtrados: {departamentos_ids if departamentos_ids else 'Todos'}")
         print(f"📊 Tipo de departamentos_ids: {type(departamentos_ids)}")
         print(f"📊 Departamentos IDs (detalhado): {repr(departamentos_ids)}")
         
         # Calcular KPIs
-        kpis = calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids)
+        kpis = calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
         
         # Calcular dados para gráficos
-        graficos = calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids)
+        graficos = calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
         
         # Calcular dados para tabelas
-        tabelas = calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids)
+        tabelas = calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
         
         print(f"✅ Dashboard calculado com sucesso!")
         print(f"========================================\n")
@@ -178,7 +217,7 @@ def api_debug_departamentos():
 # FUNÇÕES DE CÁLCULO - KPIs
 # ========================================
 
-def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     Calcula os 10 KPIs principais do Dashboard Executivo
     
@@ -195,25 +234,27 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     10. Idade Média - Idade média dos colaboradores
     """
     print("\n🚀 Calculando KPIs do Dashboard Executivo...")
+    if empresa_id:
+        print(f"   🏢 Filtrando KPIs por empresa: {empresa_id}")
     if departamentos_ids:
         print(f"   🔍 Filtrando KPIs por departamentos: {departamentos_ids}")
     
     kpis = {}
     
     # KPI 1: Headcount (Colaboradores Ativos) - COM FILTRO
-    kpis['headcount'] = calcular_kpi_headcount(departamentos_ids)
+    kpis['headcount'] = calcular_kpi_headcount(departamentos_ids, empresa_id)
     
     # KPI 2: Turnover (Taxa de Rotatividade) - COM FILTRO
-    kpis['turnover'] = calcular_kpi_turnover(periodo_inicio, periodo_fim, kpis['headcount']['valor'], departamentos_ids)
+    kpis['turnover'] = calcular_kpi_turnover(periodo_inicio, periodo_fim, kpis['headcount']['valor'], departamentos_ids, empresa_id)
     
     # KPI 3: Tempo Médio de Contratação
-    kpis['tempo_contratacao'] = calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim)
+    kpis['tempo_contratacao'] = calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim, empresa_id)
     
     # KPI 4: Vagas Abertas
-    kpis['vagas_abertas'] = calcular_kpi_vagas_abertas()
+    kpis['vagas_abertas'] = calcular_kpi_vagas_abertas(empresa_id)
     
     # KPI 5, 6, 7: Custos (Salários, Benefícios e Total) - COM FILTRO
-    custos = calcular_kpi_custo_total(departamentos_ids)
+    custos = calcular_kpi_custo_total(departamentos_ids, empresa_id)
     kpis['custo_salarios'] = {
         'valor': custos['custo_salarios'],
         'variacao': 0,
@@ -237,34 +278,36 @@ def calcular_kpis(periodo_inicio, periodo_fim, departamentos_ids=None):
     }
     
     # KPI 8: Média de Candidatos por Vaga
-    kpis['media_candidatos'] = calcular_kpi_media_candidatos()
+    kpis['media_candidatos'] = calcular_kpi_media_candidatos(empresa_id)
     
     # KPI 9: Tempo Médio de Casa
-    kpis['tempo_medio_casa'] = calcular_kpi_tempo_medio_casa()
+    kpis['tempo_medio_casa'] = calcular_kpi_tempo_medio_casa(empresa_id)
     
     # KPI 10: Idade Média
-    kpis['idade_media'] = calcular_kpi_idade_media()
+    kpis['idade_media'] = calcular_kpi_idade_media(empresa_id)
     
     # KPI 11: Total de Admissões no Período - COM FILTRO
-    kpis['total_admissoes'] = calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids)
+    kpis['total_admissoes'] = calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
     
     # KPI 12: Total de Demissões no Período - COM FILTRO
-    kpis['total_demissoes'] = calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids)
+    kpis['total_demissoes'] = calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
     
     print("✅ KPIs calculados com sucesso!\n")
     return kpis
 
 
-def calcular_kpi_headcount(departamentos_ids=None):
+def calcular_kpi_headcount(departamentos_ids=None, empresa_id=None):
     """
     KPI 1: Headcount - Total de Colaboradores Ativos
     
     Lógica:
     - COUNT(*) da view vw_colaboradores_atual (já filtra apenas ativos)
     - Se departamentos_ids fornecido, filtrar por esses departamentos
+    - Se empresa_id fornecido, filtrar por empresa controladora
     """
     try:
         print(f"   🔍 Calculando Headcount...")
+        print(f"   🔍 Empresa ID: {empresa_id}")
         print(f"   🔍 Departamentos IDs recebidos: {departamentos_ids}")
         print(f"   🔍 Tipo: {type(departamentos_ids)}")
         
@@ -273,6 +316,11 @@ def calcular_kpi_headcount(departamentos_ids=None):
         # NOTA: A view usa 'id' e não 'colaborador_id'
         query = supabase.table('vw_colaboradores_atual')\
             .select('id', count='exact')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            print(f"   🏢 Aplicando filtro .eq('empresa_controladora_id', {empresa_id})")
+            query = query.eq('empresa_controladora_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -311,7 +359,7 @@ def calcular_kpi_headcount(departamentos_ids=None):
         }
 
 
-def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departamentos_ids=None):
+def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departamentos_ids=None, empresa_id=None):
     """
     KPI 2: Turnover - Taxa de Rotatividade (%)
     
@@ -321,6 +369,7 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departam
     Lógica:
     - Buscar desligamentos do histórico no período
     - Se departamentos_ids fornecido, filtrar por esses departamentos
+    - Se empresa_id fornecido, filtrar por empresa controladora
     """
     try:
         # Contar desligamentos no período usando histórico
@@ -329,6 +378,10 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departam
             .eq('tipo_evento', 'Demissão')\
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido (usando empresa_id no histórico)
+        if empresa_id:
+            query_demissoes = query_demissoes.eq('empresa_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -364,7 +417,7 @@ def calcular_kpi_turnover(periodo_inicio, periodo_fim, headcount_atual, departam
         }
 
 
-def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
+def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim, empresa_id=None):
     """
     KPI 3: Tempo Médio de Contratação (Dias)
     
@@ -373,13 +426,18 @@ def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
     """
     try:
         # Buscar vagas fechadas no período
-        response_vagas = supabase.table('rh_vagas')\
+        query = supabase.table('rh_vagas')\
             .select('data_abertura, data_fechamento')\
             .eq('status', 'Fechada')\
             .not_.is_('data_fechamento', 'null')\
             .gte('data_fechamento', periodo_inicio)\
-            .lte('data_fechamento', periodo_fim)\
-            .execute()
+            .lte('data_fechamento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response_vagas = query.execute()
         
         vagas = response_vagas.data if response_vagas.data else []
         
@@ -431,15 +489,20 @@ def calcular_kpi_tempo_contratacao(periodo_inicio, periodo_fim):
         }
 
 
-def calcular_kpi_vagas_abertas():
+def calcular_kpi_vagas_abertas(empresa_id=None):
     """
     KPI 4: Vagas Abertas - Total de Posições em Aberto
     """
     try:
-        response = supabase.table('rh_vagas')\
+        query = supabase.table('rh_vagas')\
             .select('id', count='exact')\
-            .eq('status', 'Aberta')\
-            .execute()
+            .eq('status', 'Aberta')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.execute()
         
         vagas_abertas = response.count if response.count is not None else 0
         
@@ -463,7 +526,7 @@ def calcular_kpi_vagas_abertas():
         }
 
 
-def calcular_kpi_media_candidatos():
+def calcular_kpi_media_candidatos(empresa_id=None):
     """
     KPI 6: Média de Candidatos por Vaga
     
@@ -473,11 +536,38 @@ def calcular_kpi_media_candidatos():
     """
     try:
         print(f"   🔍 Calculando média de candidatos por vaga")
+        if empresa_id:
+            print(f"   🏢 Filtrando por empresa: {empresa_id}")
+        
+        # Buscar vagas da empresa (se filtrado)
+        vagas_ids_filter = None
+        if empresa_id:
+            response_vagas = supabase.table('rh_vagas')\
+                .select('id')\
+                .eq('empresa_controladora_id', empresa_id)\
+                .execute()
+            vagas_ids_filter = [v['id'] for v in (response_vagas.data or [])]
+            print(f"   📊 Vagas da empresa: {len(vagas_ids_filter)}")
         
         # Buscar total de candidatos
-        response_candidatos = supabase.table('rh_candidatos')\
-            .select('id, vaga_id', count='exact')\
-            .execute()
+        query_candidatos = supabase.table('rh_candidatos')\
+            .select('id, vaga_id', count='exact')
+        
+        # Aplicar filtro de vagas da empresa se fornecido
+        if vagas_ids_filter is not None:
+            if vagas_ids_filter:
+                query_candidatos = query_candidatos.in_('vaga_id', vagas_ids_filter)
+            else:
+                # Sem vagas da empresa, retornar 0
+                return {
+                    'valor': 0,
+                    'variacao': 0,
+                    'label': 'Média Candidatos/Vaga',
+                    'icone': 'mdi-account-multiple-outline',
+                    'cor': '#17a2b8'
+                }
+        
+        response_candidatos = query_candidatos.execute()
         
         total_candidatos = response_candidatos.count if response_candidatos.count is not None else 0
         candidatos_data = response_candidatos.data if response_candidatos.data else []
@@ -522,7 +612,7 @@ def calcular_kpi_media_candidatos():
         }
 
 
-def calcular_kpi_tempo_medio_casa():
+def calcular_kpi_tempo_medio_casa(empresa_id=None):
     """
     KPI 7: Tempo Médio de Casa (Anos)
     
@@ -532,14 +622,21 @@ def calcular_kpi_tempo_medio_casa():
     """
     try:
         print(f"   🔍 Calculando tempo médio de casa")
+        if empresa_id:
+            print(f"   🏢 Filtrando por empresa: {empresa_id}")
         
         # Buscar colaboradores ativos com data de admissão
-        response = supabase.table('rh_colaboradores')\
+        query = supabase.table('rh_colaboradores')\
             .select('id, data_admissao')\
             .eq('status', 'Ativo')\
             .is_('data_desligamento', 'null')\
-            .not_.is_('data_admissao', 'null')\
-            .execute()
+            .not_.is_('data_admissao', 'null')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.execute()
         
         colaboradores = response.data if response.data else []
         print(f"   📊 Total de colaboradores ativos com data de admissão: {len(colaboradores)}")
@@ -601,7 +698,7 @@ def calcular_kpi_tempo_medio_casa():
         }
 
 
-def calcular_kpi_idade_media():
+def calcular_kpi_idade_media(empresa_id=None):
     """
     KPI 8: Idade Média dos Colaboradores (Anos)
     
@@ -611,14 +708,21 @@ def calcular_kpi_idade_media():
     """
     try:
         print(f"   🔍 Calculando idade média dos colaboradores")
+        if empresa_id:
+            print(f"   🏢 Filtrando por empresa: {empresa_id}")
         
         # Buscar colaboradores ativos com data de nascimento
-        response = supabase.table('rh_colaboradores')\
+        query = supabase.table('rh_colaboradores')\
             .select('id, data_nascimento')\
             .eq('status', 'Ativo')\
             .is_('data_desligamento', 'null')\
-            .not_.is_('data_nascimento', 'null')\
-            .execute()
+            .not_.is_('data_nascimento', 'null')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response = query.execute()
         
         colaboradores = response.data if response.data else []
         print(f"   📊 Total de colaboradores ativos com data de nascimento: {len(colaboradores)}")
@@ -685,18 +789,21 @@ def calcular_kpi_idade_media():
         }
 
 
-def calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     KPI 11: Total de Admissões no Período
     
     Lógica:
     - Conta eventos de 'Admissão' no histórico dentro do período
     - Aplica filtro de departamento se fornecido
+    - Aplica filtro de empresa se fornecido
     """
     try:
         print(f"   🔍 Calculando total de admissões no período {periodo_inicio} a {periodo_fim}")
         if departamentos_ids:
             print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        if empresa_id:
+            print(f"   🏢 Filtrando por empresa: {empresa_id}")
         
         # Buscar admissões do histórico
         query = supabase.table('rh_historico_colaborador')\
@@ -704,6 +811,10 @@ def calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids=
             .eq('tipo_evento', 'Admissão')\
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido (usando empresa_id no histórico)
+        if empresa_id:
+            query = query.eq('empresa_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -734,18 +845,21 @@ def calcular_kpi_total_admissoes(periodo_inicio, periodo_fim, departamentos_ids=
         }
 
 
-def calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     KPI 12: Total de Demissões no Período
     
     Lógica:
     - Conta eventos de 'Demissão' no histórico dentro do período
     - Aplica filtro de departamento se fornecido
+    - Aplica filtro de empresa se fornecido
     """
     try:
         print(f"   🔍 Calculando total de demissões no período {periodo_inicio} a {periodo_fim}")
         if departamentos_ids:
             print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        if empresa_id:
+            print(f"   🏢 Filtrando por empresa: {empresa_id}")
         
         # Buscar demissões do histórico
         query = supabase.table('rh_historico_colaborador')\
@@ -753,6 +867,10 @@ def calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids=
             .eq('tipo_evento', 'Demissão')\
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido (usando empresa_id no histórico)
+        if empresa_id:
+            query = query.eq('empresa_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -783,7 +901,7 @@ def calcular_kpi_total_demissoes(periodo_inicio, periodo_fim, departamentos_ids=
         }
 
 
-def calcular_kpi_custo_total(departamentos_ids=None):
+def calcular_kpi_custo_total(departamentos_ids=None, empresa_id=None):
     """
     KPI 5, 6, 7: Custos de Pessoal (Salários, Benefícios e Total)
     
@@ -796,13 +914,20 @@ def calcular_kpi_custo_total(departamentos_ids=None):
     - Usa a view vw_colaboradores_atual que já tem total_beneficios calculado
     - View já traz último salário e benefícios de cada colaborador ativo
     - Se departamentos_ids fornecido, filtrar por esses departamentos
+    - Se empresa_id fornecido, filtrar por empresa controladora
     """
     try:
         print(f"   🔍 Buscando custos da view vw_colaboradores_atual...")
+        if empresa_id:
+            print(f"   🏢 Filtrando custos por empresa: {empresa_id}")
         
         # 🔥 OTIMIZAÇÃO: Usar view que já calcula tudo
         query = supabase.table('vw_colaboradores_atual')\
             .select('salario_mensal, total_beneficios')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -884,7 +1009,7 @@ def calcular_kpi_custo_total(departamentos_ids=None):
 # FUNÇÕES DE CÁLCULO - GRÁFICOS
 # ========================================
 
-def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     Calcula os gráficos principais do Dashboard Executivo
     
@@ -896,15 +1021,18 @@ def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
     
     Args:
         departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
+        empresa_id: ID da empresa controladora para filtrar (opcional)
     """
     print("🚀 Calculando Gráficos do Dashboard Executivo...")
     if departamentos_ids:
         print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+    if empresa_id:
+        print(f"   🏢 Filtrando gráficos por empresa: {empresa_id}")
     
     graficos = {}
     
     # Gráfico 1 e 2: Evolução e Admissões/Desligamentos (usam mesmos dados) - ✅ FILTRO IMPLEMENTADO
-    dados_evolucao = calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids)
+    dados_evolucao = calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids, empresa_id)
     graficos['evolucao_headcount'] = dados_evolucao
     graficos['admissoes_desligamentos'] = {
         'labels': dados_evolucao['labels'],
@@ -915,20 +1043,19 @@ def calcular_graficos(periodo_inicio, periodo_fim, departamentos_ids=None):
     }
     
     # Gráfico 3: Turnover por Departamento (Top 5)
-    # TODO: Implementar filtro de departamentos para turnover
-    graficos['turnover_departamento'] = calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim)
+    graficos['turnover_departamento'] = calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim, empresa_id)
     
     # Gráfico 4: Custo Total por Departamento (substituindo distribuição) - ✅ FILTRO IMPLEMENTADO
-    graficos['custo_departamento'] = calcular_grafico_custo_departamento(departamentos_ids)
+    graficos['custo_departamento'] = calcular_grafico_custo_departamento(departamentos_ids, empresa_id)
     
     # Gráfico 5: Distribuição por Departamento - ✅ FILTRO IMPLEMENTADO
-    graficos['distribuicao_departamento'] = calcular_grafico_distribuicao_departamento(departamentos_ids)
+    graficos['distribuicao_departamento'] = calcular_grafico_distribuicao_departamento(departamentos_ids, empresa_id)
     
     print("✅ Gráficos calculados com sucesso!\n")
     return graficos
 
 
-def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     Gráfico 1: Evolução do Headcount (Linha - 12 meses)
     
@@ -941,11 +1068,14 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
     - Buscar TODOS os eventos do período de uma vez
     - Agrupar em Python (O(n) ao invés de 24 queries)
     - Se departamentos_ids fornecido, filtrar por esses departamentos
+    - Se empresa_id fornecido, filtrar por empresa controladora
     """
     try:
         print(f"   🔍 Calculando evolução de headcount para período {periodo_inicio} a {periodo_fim}")
         if departamentos_ids:
             print(f"   🔍 Filtrando evolução por departamentos: {departamentos_ids}")
+        if empresa_id:
+            print(f"   🏢 Filtrando evolução por empresa: {empresa_id}")
         
         # Gerar lista de meses no período
         data_inicio = datetime.strptime(periodo_inicio, '%Y-%m-%d')
@@ -966,6 +1096,10 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)
         
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_admissoes = query_admissoes.eq('empresa_id', empresa_id)
+        
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
             query_admissoes = query_admissoes.in_('departamento_id', departamentos_ids)
@@ -978,6 +1112,10 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
             .eq('tipo_evento', 'Demissão')\
             .gte('data_evento', periodo_inicio)\
             .lte('data_evento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_desligamentos = query_desligamentos.eq('empresa_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -1020,6 +1158,10 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
         # NOTA: A view usa 'id' e não 'colaborador_id'
         query_headcount_inicial = supabase.table('vw_colaboradores_atual')\
             .select('id', count='exact')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_headcount_inicial = query_headcount_inicial.eq('empresa_controladora_id', empresa_id)
         
         # Aplicar filtro de departamento se fornecido
         if departamentos_ids:
@@ -1089,7 +1231,7 @@ def calcular_grafico_evolucao_headcount(periodo_inicio, periodo_fim, departament
         }
 
 
-def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
+def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim, empresa_id=None):
     """
     Gráfico 3: Turnover por Departamento (Barras - Top 5)
     
@@ -1104,6 +1246,8 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
     """
     try:
         print(f"   🔍 Calculando turnover por departamento para período {periodo_inicio} a {periodo_fim}")
+        if empresa_id:
+            print(f"   🏢 Filtrando turnover por empresa: {empresa_id}")
         
         # Buscar departamentos
         response_deps = supabase.table('rh_departamentos')\
@@ -1118,22 +1262,31 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
             return {'labels': [], 'data': []}
         
         # Buscar colaboradores demitidos no período
-        response_demitidos = supabase.table('rh_colaboradores')\
+        query_demitidos = supabase.table('rh_colaboradores')\
             .select('id')\
             .not_.is_('data_desligamento', 'null')\
             .gte('data_desligamento', periodo_inicio)\
-            .lte('data_desligamento', periodo_fim)\
-            .execute()
+            .lte('data_desligamento', periodo_fim)
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_demitidos = query_demitidos.eq('empresa_controladora_id', empresa_id)
+        
+        response_demitidos = query_demitidos.execute()
         
         colaboradores_demitidos_ids = [c['id'] for c in (response_demitidos.data or [])]
         print(f"   📊 Colaboradores demitidos no período: {len(colaboradores_demitidos_ids)}")
         
         # 🔥 OTIMIZAÇÃO: Buscar TODOS os históricos de uma vez
-        response_hist = supabase.table('rh_historico_colaborador')\
+        query_hist = supabase.table('rh_historico_colaborador')\
             .select('colaborador_id, departamento_id')\
-            .not_.is_('departamento_id', 'null')\
-            .order('data_evento', desc=True)\
-            .execute()
+            .not_.is_('departamento_id', 'null')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_hist = query_hist.eq('empresa_id', empresa_id)
+        
+        response_hist = query_hist.order('data_evento', desc=True).execute()
         
         print(f"   📊 Total de registros no histórico: {len(response_hist.data or [])}")
         
@@ -1200,7 +1353,7 @@ def calcular_grafico_turnover_departamento(periodo_inicio, periodo_fim):
         return {'labels': [], 'data': []}
 
 
-def calcular_grafico_distribuicao_departamento(departamentos_ids=None):
+def calcular_grafico_distribuicao_departamento(departamentos_ids=None, empresa_id=None):
     """
     Gráfico 4: Distribuição de Colaboradores por Departamento (Pizza)
     
@@ -1210,11 +1363,14 @@ def calcular_grafico_distribuicao_departamento(departamentos_ids=None):
     
     Args:
         departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
+        empresa_id: ID da empresa controladora para filtrar (opcional)
     """
     try:
         print(f"   🔍 Calculando distribuição por departamento")
         if departamentos_ids:
             print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        if empresa_id:
+            print(f"   🏢 Filtrando distribuição por empresa: {empresa_id}")
         
         # Buscar departamentos (aplicar filtro se fornecido)
         query_deps = supabase.table('rh_departamentos')\
@@ -1233,11 +1389,16 @@ def calcular_grafico_distribuicao_departamento(departamentos_ids=None):
             return {'labels': [], 'data': []}
         
         # Buscar histórico de todos os colaboradores ativos
-        response_colabs = supabase.table('rh_colaboradores')\
+        query_colabs = supabase.table('rh_colaboradores')\
             .select('id')\
             .eq('status', 'Ativo')\
-            .is_('data_desligamento', 'null')\
-            .execute()
+            .is_('data_desligamento', 'null')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_colabs = query_colabs.eq('empresa_controladora_id', empresa_id)
+        
+        response_colabs = query_colabs.execute()
         
         colaboradores_ids = [c['id'] for c in (response_colabs.data or [])]
         print(f"   📊 Total de colaboradores ativos: {len(colaboradores_ids)}")
@@ -1306,7 +1467,7 @@ def calcular_grafico_distribuicao_departamento(departamentos_ids=None):
         return {'labels': [], 'data': []}
 
 
-def calcular_grafico_custo_departamento(departamentos_ids=None):
+def calcular_grafico_custo_departamento(departamentos_ids=None, empresa_id=None):
     """
     Gráfico 5: Custo Total (Pessoal) por Departamento
     
@@ -1317,11 +1478,14 @@ def calcular_grafico_custo_departamento(departamentos_ids=None):
     
     Args:
         departamentos_ids: Lista de IDs de departamentos para filtrar (opcional)
+        empresa_id: ID da empresa controladora para filtrar (opcional)
     """
     try:
         print(f"   🔍 Calculando custo total por departamento")
         if departamentos_ids:
             print(f"   🔍 Filtrando por departamentos: {departamentos_ids}")
+        if empresa_id:
+            print(f"   🏢 Filtrando custo por empresa: {empresa_id}")
         
         # Buscar departamentos (aplicar filtro se fornecido)
         query_deps = supabase.table('rh_departamentos')\
@@ -1340,11 +1504,16 @@ def calcular_grafico_custo_departamento(departamentos_ids=None):
             return {'labels': [], 'data': []}
         
         # Buscar colaboradores ativos
-        response_colabs = supabase.table('rh_colaboradores')\
+        query_colabs = supabase.table('rh_colaboradores')\
             .select('id')\
             .eq('status', 'Ativo')\
-            .is_('data_desligamento', 'null')\
-            .execute()
+            .is_('data_desligamento', 'null')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query_colabs = query_colabs.eq('empresa_controladora_id', empresa_id)
+        
+        response_colabs = query_colabs.execute()
         
         colaboradores_ids = [c['id'] for c in (response_colabs.data or [])]
         print(f"   📊 Total de colaboradores ativos: {len(colaboradores_ids)}")
@@ -1491,25 +1660,30 @@ def calcular_grafico_custo_departamento(departamentos_ids=None):
 # FUNÇÕES DE CÁLCULO - TABELAS
 # ========================================
 
-def calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids=None):
+def calcular_tabelas(periodo_inicio, periodo_fim, departamentos_ids=None, empresa_id=None):
     """
     Calcula dados para tabelas do Dashboard
     
     Tabelas:
     1. Vagas Abertas por Mais Tempo (Top 5)
+    
+    Args:
+        empresa_id: ID da empresa controladora para filtrar (opcional)
     """
     print("🚀 Calculando Tabelas do Dashboard Executivo...")
+    if empresa_id:
+        print(f"   🏢 Filtrando tabelas por empresa: {empresa_id}")
     
     tabelas = {}
     
     # Tabela 1: Vagas Abertas por Mais Tempo
-    tabelas['vagas_abertas_mais_tempo'] = calcular_tabela_vagas_abertas_mais_tempo()
+    tabelas['vagas_abertas_mais_tempo'] = calcular_tabela_vagas_abertas_mais_tempo(empresa_id)
     
     print("✅ Tabelas calculadas com sucesso!\n")
     return tabelas
 
 
-def calcular_tabela_vagas_abertas_mais_tempo():
+def calcular_tabela_vagas_abertas_mais_tempo(empresa_id=None):
     """
     Visão Geral das Vagas em Aberto
     
@@ -1522,17 +1696,27 @@ def calcular_tabela_vagas_abertas_mais_tempo():
     - Custo Estimado (Salário Base)
     
     Mostra TODAS as vagas abertas (sem filtro de 15 dias)
+    
+    Args:
+        empresa_id: ID da empresa controladora para filtrar (opcional)
     """
     try:
         print(f"   🔍 Buscando todas as vagas abertas")
+        if empresa_id:
+            print(f"   🏢 Filtrando vagas por empresa: {empresa_id}")
         
         # Buscar TODAS as vagas com status 'Aberta'
         # NOTA: rh_vagas NÃO TEM departamento_id, apenas cargo_id
         # NOTA: rh_vagas NÃO TEM salario_base, tem faixa_salarial_min e faixa_salarial_max
-        response_vagas = supabase.table('rh_vagas')\
+        query = supabase.table('rh_vagas')\
             .select('id, titulo, data_abertura, cargo_id, localizacao, status, faixa_salarial_min, faixa_salarial_max')\
-            .eq('status', 'Aberta')\
-            .execute()
+            .eq('status', 'Aberta')
+        
+        # Aplicar filtro de empresa se fornecido
+        if empresa_id:
+            query = query.eq('empresa_controladora_id', empresa_id)
+        
+        response_vagas = query.execute()
         
         todas_vagas = response_vagas.data if response_vagas.data else []
         print(f"   📊 Total de vagas com status 'Aberta': {len(todas_vagas)}")
