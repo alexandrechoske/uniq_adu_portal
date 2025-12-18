@@ -154,13 +154,12 @@ def analytics_agente_test():
 def get_stats():
     """
     API para estatísticas básicas do Analytics
-    CORREÇÃO: Usa user_sessions para logins e created_at_br para filtros de data
+    OTIMIZADO: Usa vw_analytics_portal para filtros otimizados
     """
     try:
         # Obter parâmetros de filtro
         date_range = request.args.get('dateRange', '30d')
         user_role = request.args.get('userRole', 'all')
-        action_type = request.args.get('actionType', 'all')
         
         # Calcular datas com timezone do Brasil (UTC-3)
         try:
@@ -170,9 +169,9 @@ def get_stats():
             import pytz
             br_tz = pytz.timezone('America/Sao_Paulo')
         
-        end_date = datetime.now(br_tz)
+        end_date = datetime.now(br_tz).date()
         if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date = end_date
         elif date_range == '7d':
             start_date = end_date - timedelta(days=7)
         elif date_range == '30d':
@@ -180,14 +179,14 @@ def get_stats():
         else:
             start_date = end_date - timedelta(days=30)
         
-        # Query base - usar created_at_br para filtros
-        query = supabase_admin.table('access_logs').select('*')
+        # Query base usando view otimizada (já filtra action_type='page_access' e exclui APIs/sistema)
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
         
-        # Converter datas do Brasil para formato string DD/MM/YYYY para comparação com created_at_br
-        start_date_str = start_date.strftime('%d/%m/%Y 00:00:00')
-        end_date_str = end_date.strftime('%d/%m/%Y 23:59:59')
+        if user_role != 'all':
+            query = query.eq('user_role', user_role)
         
-        # Buscar todos os registros e filtrar no Python devido ao formato de data BR
         def _exec():
             return query.execute()
         response = run_with_retries(
@@ -197,44 +196,10 @@ def get_stats():
             base_delay_seconds=0.8,
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
-        all_logs = response.data if response.data else []
-        
-        # Filtrar logs por data usando created_at_br
-        logs = []
-        for log in all_logs:
-            # Filtrar localhost
-            if (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or log.get('ip_address') == '127.0.0.1':
-                continue
-            
-            # Filtrar por data usando created_at_br
-            created_at_br = log.get('created_at_br')
-            if created_at_br:
-                try:
-                    # Parsear data no formato DD/MM/YYYY HH:MM:SS
-                    log_date = datetime.strptime(created_at_br, '%Y-%m-%dT%H:%M:%S.%f')
-                    if start_date.replace(tzinfo=None) <= log_date <= end_date.replace(tzinfo=None):
-                        logs.append(log)
-                except:
-                    # Se falhar, tentar usar created_at
-                    try:
-                        created_at = log.get('created_at')
-                        if created_at:
-                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                            dt_br = dt.astimezone(br_tz)
-                            if start_date <= dt_br <= end_date:
-                                logs.append(log)
-                    except:
-                        pass
-        
-        # Aplicar filtros adicionais
-        if user_role != 'all':
-            logs = [log for log in logs if log.get('user_role') == user_role]
-        
-        if action_type != 'all':
-            logs = [log for log in logs if log.get('action_type') == action_type]
+        logs = response.data if response.data else []
 
-        # Calcular estatísticas
-        total_access = len([log for log in logs if log.get('action_type') == 'page_access'])
+        # Calcular estatísticas (view já filtra page_access)
+        total_access = len(logs)
         unique_users = len(set(log.get('user_id') for log in logs if log.get('user_id')))
 
         # CORREÇÃO: Logins hoje - contar USUÁRIOS ÚNICOS que fizeram login hoje
@@ -360,13 +325,12 @@ def get_stats():
 def get_charts():
     """
     API para dados dos gráficos
-    CORREÇÃO: Usa timezone do Brasil e created_at_br para processamento correto de datas
+    OTIMIZADO: Usa vw_analytics_portal com colunas access_date e access_hour
     """
     try:
         # Obter parâmetros de filtro
         date_range = request.args.get('dateRange', '30d')
         user_role = request.args.get('userRole', 'all')
-        action_type = request.args.get('actionType', 'all')
         
         # Calcular datas com timezone do Brasil (UTC-3)
         try:
@@ -376,9 +340,9 @@ def get_charts():
             import pytz
             br_tz = pytz.timezone('America/Sao_Paulo')
         
-        end_date = datetime.now(br_tz)
+        end_date = datetime.now(br_tz).date()
         if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date = end_date
             days_back = 1
         elif date_range == '7d':
             start_date = end_date - timedelta(days=7)
@@ -390,14 +354,13 @@ def get_charts():
             start_date = end_date - timedelta(days=30)
             days_back = 30
         
-        # Query base - buscar todos os registros e filtrar no Python
-        query = supabase_admin.table('access_logs').select('*')
+        # Query usando view otimizada (já filtra action_type='page_access' e exclui APIs/sistema)
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
-            
-        if action_type != 'all':
-            query = query.eq('action_type', action_type)
         
         def _exec():
             return query.execute()
@@ -408,200 +371,74 @@ def get_charts():
             base_delay_seconds=0.8,
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
-        all_logs = response.data if response.data else []
+        logs = response.data if response.data else []
         
-        # Filtrar logs por data e remover localhost
-        logs = []
-        for log in all_logs:
-            # Filtrar localhost
-            if (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or log.get('ip_address') == '127.0.0.1':
-                continue
-            
-            # Filtrar por data usando created_at_br ou created_at
-            created_at_br = log.get('created_at_br')
-            if created_at_br:
-                try:
-                    log_date = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
-                    log_date_br = log_date if log_date.tzinfo else br_tz.localize(log_date)
-                    if start_date.replace(tzinfo=None) <= log_date_br.replace(tzinfo=None) <= end_date.replace(tzinfo=None):
-                        logs.append(log)
-                except:
-                    # Fallback para created_at
-                    try:
-                        created_at = log.get('created_at')
-                        if created_at:
-                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                            dt_br = dt.astimezone(br_tz)
-                            if start_date <= dt_br <= end_date:
-                                logs.append(log)
-                    except:
-                        pass
-            else:
-                # Usar created_at se created_at_br não existir
-                try:
-                    created_at = log.get('created_at')
-                    if created_at:
-                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                        dt_br = dt.astimezone(br_tz)
-                        if start_date <= dt_br <= end_date:
-                            logs.append(log)
-                except:
-                    pass
+        # Acessos diários usando access_date da view
+        from collections import Counter, defaultdict
         
-        # Acessos diários (duas métricas: total de acessos e total de usuários únicos)
-        daily_access = []  # total de acessos por dia
-        daily_users = []   # total de usuários únicos por dia
-        logger.info(f"[ANALYTICS] Processando {len(logs)} logs para acessos diários")
-        logger.info(f"[ANALYTICS] Intervalo: {start_date} até {end_date} ({days_back} dias)")
-        
-        # Melhorar processamento: agrupar logs por data primeiro
-        logs_by_date = {}
-        logs_ids_in_days = set()
-        
-        # Agrupar logs por data para processamento mais eficiente - usando created_at_br
+        logs_by_date = defaultdict(list)
         for log in logs:
-            if log.get('action_type') != 'page_access':
-                continue
-                
-            try:
-                # Tentar usar created_at_br primeiro
-                created_at_br = log.get('created_at_br')
-                if created_at_br:
-                    log_time = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
-                else:
-                    # Fallback para created_at convertido para BR
-                    created_at_raw = log.get('created_at', '')
-                    if not created_at_raw:
-                        continue
-                    log_time = datetime.fromisoformat(created_at_raw.replace('Z', '+00:00'))
-                    log_time = log_time.astimezone(br_tz)
-                
-                log_date = log_time.date()
-                
-                if log_date not in logs_by_date:
-                    logs_by_date[log_date] = []
-                logs_by_date[log_date].append(log)
-                
-                # Marcar log_id como usado
-                if log.get('id'):
-                    logs_ids_in_days.add(log['id'])
-                    
-            except Exception as e:
-                logger.warning(f"[ANALYTICS] Erro ao processar log: {e}")
-                continue
+            access_date = log.get('access_date')
+            if access_date:
+                logs_by_date[access_date].append(log)
         
-        # Processar TODOS os dias do período, incluindo hoje
-        days_with_data = []
+        # Processar todos os dias do período
+        daily_access = []
+        daily_users = []
         today_br = datetime.now(br_tz).date()
         
-        for i in range(days_back + 1):  # +1 para incluir o dia de hoje
+        for i in range(days_back + 1):
             day = start_date + timedelta(days=i)
-            day_date = day.date()
-            
-            # Parar se passar de hoje
-            if day_date > today_br:
+            if day > today_br:
                 break
             
-            logs_day = logs_by_date.get(day_date, [])
-            unique_users_day = set()
-            logs_count_day = len(logs_day)
+            day_str = day.isoformat()
+            logs_day = logs_by_date.get(day_str, [])
+            unique_users_day = set(log.get('user_id') for log in logs_day if log.get('user_id'))
             
-            for log in logs_day:
-                user_id = log.get('user_id')
-                if user_id:
-                    unique_users_day.add(user_id)
-            
-            # CORREÇÃO: Incluir TODOS os dias do período, mesmo com 0 acessos
-            # Isso garante que o gráfico mostre corretamente todos os dias incluindo hoje
             daily_access.append({
-                'date': day.strftime('%Y-%m-%d'),
-                'count': logs_count_day
+                'date': day_str,
+                'count': len(logs_day)
             })
             daily_users.append({
-                'date': day.strftime('%Y-%m-%d'),
+                'date': day_str,
                 'count': len(unique_users_day)
             })
-            
-            if logs_count_day > 0:
-                days_with_data.append(day.strftime('%Y-%m-%d'))
-            
-            logger.info(f"[ANALYTICS] Dia {day.strftime('%Y-%m-%d')}: {logs_count_day} acessos, {len(unique_users_day)} usuários únicos")
         
-        logger.info(f"[ANALYTICS] Dias com dados incluídos: {len(days_with_data)}")
-        logger.info(f"[ANALYTICS] Total de dias no array daily_access: {len(daily_access)}")
-        logger.info(f"[ANALYTICS] Primeira data: {daily_access[0]['date'] if daily_access else 'N/A'}")
-        logger.info(f"[ANALYTICS] Última data: {daily_access[-1]['date'] if daily_access else 'N/A'}")
-        logger.info(f"[ANALYTICS] Data de hoje esperada: {today_br.strftime('%Y-%m-%d')}")
+        logger.info(f"[ANALYTICS] Processando {len(logs)} logs para acessos diários")
+        logger.info(f"[ANALYTICS] Total de dias: {len(daily_access)}")
         
-        # LOG EXTRA: Soma dos acessos diários
-        soma_diaria = sum(d['count'] for d in daily_access)
-        total_acessos = len([log for log in logs if log.get('action_type') == 'page_access'])
-        logger.info(f"[ANALYTICS] Soma dos acessos diários: {soma_diaria}")
-        logger.info(f"[ANALYTICS] Total de acessos no período: {total_acessos}")
-        # LOG EXTRA: Logs de page_access que não entraram em nenhum dia
-        ids_logs_page_access = set(log['id'] for log in logs if log.get('action_type') == 'page_access' and log.get('id'))
-        ids_fora = ids_logs_page_access - logs_ids_in_days
-        if ids_fora:
-            logger.warning(f"[ANALYTICS] {len(ids_fora)} logs de page_access não entraram em nenhum dia do gráfico. IDs: {list(ids_fora)[:10]} ...")
-        
-        # Top páginas (filtrar logs sem usuário)
-        page_counts = {}
-        for log in logs:
-            if log.get('action_type') == 'page_access' and log.get('user_name'):
-                page_name = log.get('page_name', 'Sem nome')
-                page_counts[page_name] = page_counts.get(page_name, 0) + 1
-        
+        # Top páginas
+        page_counts = Counter(log.get('page_name', 'Sem nome') for log in logs if log.get('user_name'))
         top_pages = [
             {'page_name': page, 'count': count}
-            for page, count in sorted(page_counts.items(), key=lambda x: x[1], reverse=True)
+            for page, count in page_counts.most_common()
         ]
         
-        # Atividade de usuários (filtrar logs sem usuário)
-        user_counts = {}
-        for log in logs:
-            if log.get('action_type') == 'page_access' and log.get('user_name'):
-                user_name = log.get('user_name')
-                user_counts[user_name] = user_counts.get(user_name, 0) + 1
-        
+        # Atividade de usuários
+        user_counts = Counter(log.get('user_name') for log in logs if log.get('user_name'))
         users_activity = [
             {'user_name': user, 'access_count': count}
-            for user, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)
+            for user, count in user_counts.most_common()
         ]
         
-        # Mapa de calor por horário (com usuários únicos) - usar timezone do Brasil
-        hourly_counts = {}
-        hourly_users = {}
+        # Mapa de calor por horário usando access_hour da view
+        hourly_counts = Counter()
+        hourly_users = defaultdict(set)
+        
         for log in logs:
-            try:
-                if log.get('action_type') == 'page_access' and log.get('user_name'):
-                    # Tentar usar created_at_br primeiro
-                    created_at_br = log.get('created_at_br')
-                    if created_at_br:
-                        log_time = datetime.fromisoformat(created_at_br.replace('Z', '+00:00'))
-                    else:
-                        # Fallback para created_at convertido para BR
-                        created_at = log.get('created_at', '')
-                        if not created_at:
-                            continue
-                        log_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                        log_time = log_time.astimezone(br_tz)
-                    
-                    hour = log_time.hour
-                    hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
-                    
-                    # Contar usuários únicos por hora
-                    if hour not in hourly_users:
-                        hourly_users[hour] = set()
+            if log.get('user_name'):
+                hour = log.get('access_hour')
+                if hour is not None:
+                    hour = int(hour)
+                    hourly_counts[hour] += 1
                     user_id = log.get('user_id')
                     if user_id:
                         hourly_users[hour].add(user_id)
-            except Exception as e:
-                logger.warning(f"[ANALYTICS] Erro ao processar horário do log: {e}")
-                continue
         
         hourly_heatmap = [
             {
-                'hour': hour, 
+                'hour': hour,
                 'count': hourly_counts.get(hour, 0),
                 'unique_users': len(hourly_users.get(hour, set()))
             }
@@ -610,8 +447,8 @@ def get_charts():
         
         return jsonify({
             'success': True,
-            'daily_access': daily_access,   # total de acessos por dia
-            'daily_users': daily_users,     # total de usuários únicos por dia
+            'daily_access': daily_access,
+            'daily_users': daily_users,
             'top_pages': top_pages,
             'users_activity': users_activity,
             'hourly_heatmap': hourly_heatmap
@@ -620,7 +457,7 @@ def get_charts():
     except Exception as e:
         logger.error(f"Erro ao obter dados de gráficos: {e}")
         return jsonify({
-            'success': True,  # Retornar dados vazios para não quebrar
+            'success': True,
             'daily_access': [],
             'top_pages': [],
             'users_activity': [],
@@ -633,6 +470,7 @@ def get_charts():
 def get_top_users():
     """
     API para dados dos top usuários
+    OTIMIZADO: Usa vw_analytics_portal
     """
     try:
         # Obter parâmetros de filtro
@@ -640,9 +478,9 @@ def get_top_users():
         user_role = request.args.get('userRole', 'all')
         
         # Calcular datas
-        end_date = datetime.now()
+        end_date = datetime.now().date()
         if date_range == '1d':
-            start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date = end_date
         elif date_range == '7d':
             start_date = end_date - timedelta(days=7)
         elif date_range == '30d':
@@ -650,10 +488,10 @@ def get_top_users():
         else:
             start_date = end_date - timedelta(days=30)
         
-        # Query base
-        query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
+        # Query usando view otimizada (já filtra action_type='page_access')
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
@@ -668,19 +506,13 @@ def get_top_users():
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
         logs = response.data if response.data else []
-        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
-        logs = [log for log in logs if not (
-            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
-            (log.get('ip_address') == '127.0.0.1')
-        )]
 
-        # Agrupar por usuário (filtrar logs sem usuário)
+        # Agrupar por usuário (view já filtra page_access)
         user_stats = {}
         for log in logs:
             user_id = log.get('user_id')
             user_name = log.get('user_name')
             
-            # Ignorar logs sem usuário (acessos antes do login)
             if not user_id or not user_name:
                 continue
             
@@ -695,16 +527,15 @@ def get_top_users():
                     'favorite_pages': []
                 }
             
-            if log.get('action_type') == 'page_access':
-                user_stats[user_id]['total_access'] += 1
-                page_name = log.get('page_name', 'N/A')
-                if page_name not in user_stats[user_id]['favorite_pages']:
-                    user_stats[user_id]['favorite_pages'].append(page_name)
-                
-                # Atualizar último acesso (page_access mais recente)
-                log_time = log.get('created_at')
-                if not user_stats[user_id]['last_access'] or log_time > user_stats[user_id]['last_access']:
-                    user_stats[user_id]['last_access'] = log_time
+            user_stats[user_id]['total_access'] += 1
+            page_name = log.get('page_name', 'N/A')
+            if page_name not in user_stats[user_id]['favorite_pages']:
+                user_stats[user_id]['favorite_pages'].append(page_name)
+            
+            # Usar access_timestamp_br para último acesso
+            log_time = log.get('access_timestamp_br')
+            if log_time and (not user_stats[user_id]['last_access'] or log_time > user_stats[user_id]['last_access']):
+                user_stats[user_id]['last_access'] = log_time
 
         # Converter para lista e ordenar
         top_users = list(user_stats.values())
@@ -714,49 +545,45 @@ def get_top_users():
         for user in top_users:
             user['favorite_pages'] = ', '.join(user['favorite_pages'][:3])
 
-        return jsonify(top_users[:20])  # Top 20 usuários
+        return jsonify(top_users[:20])
         
     except Exception as e:
         logger.error(f"Erro ao obter top usuários: {e}")
-        return jsonify([])  # Retornar lista vazia
+        return jsonify([])
 
 @bp.route('/api/recent-activity')
 @login_required
 def get_recent_activity():
     """
     API para atividade recente (últimos 7 dias por padrão)
+    OTIMIZADO: Usa vw_analytics_portal
     """
     try:
         # Obter parâmetros de filtro
         date_range = request.args.get('dateRange', '30d')
         user_role = request.args.get('userRole', 'all')
-        action_type = request.args.get('actionType', 'all')
         
         # Calcular datas - forçar pelo menos 7 dias para a tabela de atividades recentes
-        end_date = datetime.now()
+        end_date = datetime.now().date()
         if date_range == '1d':
-            # Mesmo se filtro for 1 dia, pegar 7 dias para a tabela de atividades
             start_date = end_date - timedelta(days=7)
         elif date_range == '7d':
             start_date = end_date - timedelta(days=7)
         elif date_range == '30d':
             start_date = end_date - timedelta(days=30)
         else:
-            start_date = end_date - timedelta(days=7)  # Default: 7 dias
+            start_date = end_date - timedelta(days=7)
         
-        # Query base
-        query = supabase_admin.table('access_logs').select('*')
-        query = query.gte('created_at', start_date.isoformat())
-        query = query.lte('created_at', end_date.isoformat())
-        query = query.not_.is_('user_name', 'null')  # Filtrar registros sem usuário (sintaxe correta Supabase)
-        query = query.order('created_at', desc=True)
-        query = query.limit(150)  # Limitar a 150 registros mais recentes
+        # Query usando view otimizada (já filtra page_access e exclui sistema)
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        query = query.not_.is_('user_name', 'null')
+        query = query.order('access_timestamp_br', desc=True)
+        query = query.limit(150)
         
         if user_role != 'all':
             query = query.eq('user_role', user_role)
-            
-        if action_type != 'all':
-            query = query.eq('action_type', action_type)
         
         def _exec():
             return query.execute()
@@ -768,34 +595,20 @@ def get_recent_activity():
             should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
         )
         logs = response.data if response.data else []
-        # Filtrar logs para remover acessos de IP/desenv (page_url de localhost:5000)
-        logs = [log for log in logs if not (
-            (log.get('page_url') and log['page_url'].startswith('http://127.0.0.1:5000')) or
-            (log.get('ip_address') == '127.0.0.1')
-        )]
         
         # Formatar dados para o frontend
         formatted_logs = []
         for log in logs:
             try:
-                # Tratar a data corretamente
-                created_at = log.get('created_at')
-                if created_at:
-                    # Converter para datetime e depois para timestamp
-                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                    timestamp = dt.isoformat()
-                else:
-                    timestamp = None
-                
                 formatted_log = {
-                    'timestamp': timestamp,
+                    'timestamp': log.get('access_timestamp_br'),
                     'user_name': log.get('user_name', 'N/A'),
                     'user_email': log.get('user_email', 'N/A'),
-                    'action_type': log.get('action_type', 'N/A'),
+                    'action_type': log.get('action_type', 'page_access'),
                     'page_name': log.get('page_name', 'N/A'),
-                    'endpoint': log.get('endpoint', 'N/A'),
-                    'ip_address': log.get('ip_address', 'N/A'),
-                    'user_agent': log.get('user_agent', 'N/A')
+                    'module_name': log.get('module_name', 'N/A'),
+                    'device_type': log.get('device_type', 'N/A'),
+                    'browser': log.get('browser', 'N/A')
                 }
                 formatted_logs.append(formatted_log)
             except Exception as format_error:
@@ -805,7 +618,219 @@ def get_recent_activity():
         
     except Exception as e:
         logger.error(f"Erro ao obter atividade recente: {e}")
-        return jsonify([])  # Retornar lista vazia
+        return jsonify([])
+
+@bp.route('/api/advanced-metrics')
+@login_required
+def get_advanced_metrics():
+    """
+    API para métricas avançadas de engajamento e temporais
+    """
+    try:
+        from collections import Counter, defaultdict
+        
+        # Obter parâmetros de filtro
+        date_range = request.args.get('dateRange', '30d')
+        user_role = request.args.get('userRole', 'all')
+        
+        # Calcular datas
+        try:
+            from zoneinfo import ZoneInfo
+            br_tz = ZoneInfo('America/Sao_Paulo')
+        except:
+            import pytz
+            br_tz = pytz.timezone('America/Sao_Paulo')
+        
+        end_date = datetime.now(br_tz).date()
+        if date_range == '1d':
+            start_date = end_date
+            days_in_period = 1
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+            days_in_period = 7
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+            days_in_period = 30
+        else:
+            start_date = end_date - timedelta(days=30)
+            days_in_period = 30
+        
+        # Query usando view otimizada
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        
+        if user_role != 'all':
+            query = query.eq('user_role', user_role)
+        
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_advanced_metrics',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+        logs = response.data if response.data else []
+        
+        # ===== MÉTRICAS TEMPORAIS =====
+        
+        # Média diária de acessos
+        total_acessos = len(logs)
+        media_diaria = round(total_acessos / max(days_in_period, 1), 1)
+        
+        # Acessos por dia da semana (usando day_of_week: 0=Domingo, 1=Segunda, etc.)
+        dias_semana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+        acessos_por_dow = Counter()
+        for log in logs:
+            dow = log.get('day_of_week')
+            if dow is not None:
+                acessos_por_dow[int(dow)] += 1
+        
+        acessos_por_dia_semana = [
+            {'dia': dias_semana[i], 'acessos': acessos_por_dow.get(i, 0)}
+            for i in range(7)
+        ]
+        
+        # Dia mais ativo
+        if acessos_por_dow:
+            dia_mais_ativo_idx = max(acessos_por_dow, key=acessos_por_dow.get)
+            dia_mais_ativo = dias_semana[dia_mais_ativo_idx]
+        else:
+            dia_mais_ativo = 'N/A'
+        
+        # Horário de pico
+        acessos_por_hora = Counter()
+        for log in logs:
+            hora = log.get('access_hour')
+            if hora is not None:
+                acessos_por_hora[int(hora)] += 1
+        
+        if acessos_por_hora:
+            hora_pico = max(acessos_por_hora, key=acessos_por_hora.get)
+            horario_pico = f"{hora_pico:02d}:00-{hora_pico+1:02d}:00"
+        else:
+            horario_pico = 'N/A'
+        
+        # Comparação semanal (esta semana vs anterior)
+        hoje = datetime.now(br_tz).date()
+        inicio_semana_atual = hoje - timedelta(days=hoje.weekday())  # Segunda-feira desta semana
+        inicio_semana_anterior = inicio_semana_atual - timedelta(days=7)
+        
+        acessos_semana_atual = sum(1 for log in logs 
+            if log.get('access_date') and log['access_date'] >= inicio_semana_atual.isoformat())
+        acessos_semana_anterior = sum(1 for log in logs 
+            if log.get('access_date') and 
+               inicio_semana_anterior.isoformat() <= log['access_date'] < inicio_semana_atual.isoformat())
+        
+        if acessos_semana_anterior > 0:
+            variacao_semanal = round(((acessos_semana_atual - acessos_semana_anterior) / acessos_semana_anterior) * 100, 1)
+        else:
+            variacao_semanal = 100.0 if acessos_semana_atual > 0 else 0.0
+        
+        comparacao_semanal = {
+            'atual': acessos_semana_atual,
+            'anterior': acessos_semana_anterior,
+            'variacao_percentual': variacao_semanal
+        }
+        
+        # ===== MÉTRICAS DE ENGAJAMENTO =====
+        
+        # Contar acessos por usuário
+        acessos_por_usuario = Counter()
+        for log in logs:
+            user_id = log.get('user_id')
+            if user_id:
+                acessos_por_usuario[user_id] += 1
+        
+        # Usuários recorrentes (mais de 1 acesso) vs novos
+        usuarios_recorrentes = sum(1 for count in acessos_por_usuario.values() if count > 1)
+        usuarios_novos = sum(1 for count in acessos_por_usuario.values() if count == 1)
+        
+        # Frequência média (acessos por usuário)
+        total_usuarios = len(acessos_por_usuario)
+        frequencia_media = round(total_acessos / max(total_usuarios, 1), 1)
+        
+        # Top usuário por faixa horária
+        faixas_horarias = [
+            {'nome': '08-12h', 'inicio': 8, 'fim': 12},
+            {'nome': '12-14h', 'inicio': 12, 'fim': 14},
+            {'nome': '14-18h', 'inicio': 14, 'fim': 18},
+            {'nome': '18-22h', 'inicio': 18, 'fim': 22}
+        ]
+        
+        # Agrupar por faixa e usuário
+        acessos_por_faixa_usuario = defaultdict(lambda: defaultdict(lambda: {'count': 0, 'name': ''}))
+        
+        for log in logs:
+            hora = log.get('access_hour')
+            user_id = log.get('user_id')
+            user_name = log.get('user_name')
+            
+            if hora is None or not user_id:
+                continue
+            
+            hora = int(hora)
+            for faixa in faixas_horarias:
+                if faixa['inicio'] <= hora < faixa['fim']:
+                    acessos_por_faixa_usuario[faixa['nome']][user_id]['count'] += 1
+                    acessos_por_faixa_usuario[faixa['nome']][user_id]['name'] = user_name or 'N/A'
+                    break
+        
+        top_usuario_por_hora = []
+        for faixa in faixas_horarias:
+            usuarios_faixa = acessos_por_faixa_usuario[faixa['nome']]
+            if usuarios_faixa:
+                top_user_id = max(usuarios_faixa, key=lambda x: usuarios_faixa[x]['count'])
+                top_usuario_por_hora.append({
+                    'hora': faixa['nome'],
+                    'usuario': usuarios_faixa[top_user_id]['name'],
+                    'acessos': usuarios_faixa[top_user_id]['count']
+                })
+            else:
+                top_usuario_por_hora.append({
+                    'hora': faixa['nome'],
+                    'usuario': 'N/A',
+                    'acessos': 0
+                })
+        
+        return jsonify({
+            'success': True,
+            'temporal': {
+                'media_diaria': media_diaria,
+                'dia_mais_ativo': dia_mais_ativo,
+                'horario_pico': horario_pico,
+                'comparacao_semanal': comparacao_semanal,
+                'acessos_por_dia_semana': acessos_por_dia_semana
+            },
+            'engajamento': {
+                'usuarios_recorrentes': usuarios_recorrentes,
+                'usuarios_novos': usuarios_novos,
+                'frequencia_media': frequencia_media,
+                'top_usuario_por_hora': top_usuario_por_hora
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter métricas avançadas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'temporal': {
+                'media_diaria': 0,
+                'dia_mais_ativo': 'N/A',
+                'horario_pico': 'N/A',
+                'comparacao_semanal': {'atual': 0, 'anterior': 0, 'variacao_percentual': 0},
+                'acessos_por_dia_semana': []
+            },
+            'engajamento': {
+                'usuarios_recorrentes': 0,
+                'usuarios_novos': 0,
+                'frequencia_media': 0,
+                'top_usuario_por_hora': []
+            }
+        })
 
 # ======== ANALYTICS DO AGENTE ========
 
