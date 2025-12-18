@@ -21,13 +21,13 @@ function logDebug(message, ...args) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('[ANALYTICS] Module loaded - Starting initialization');
-    
+
     // Inicializar imediatamente - não depender de unifiedLoadingManager
     initializeAnalytics();
     setupEventListeners();
-    
+
     // Aguardar um pouco antes de carregar para permitir que outros scripts inicializem
     setTimeout(() => {
         console.log('[ANALYTICS] Calling loadAnalyticsStats()');
@@ -48,22 +48,22 @@ function setupEventListeners() {
     document.getElementById('open-filters')?.addEventListener('click', openFiltersModal);
     document.getElementById('refresh-data')?.addEventListener('click', refreshData);
     document.getElementById('reset-filters')?.addEventListener('click', resetFilters);
-    
+
     // Modal de filtros
     document.getElementById('apply-filters')?.addEventListener('click', applyFilters);
     document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
     document.querySelector('.close')?.addEventListener('click', closeFiltersModal);
-    
+
     // Period controls
     document.querySelectorAll('.period-btn').forEach(btn => {
         btn.addEventListener('click', handlePeriodChange);
     });
-    
+
     // Date range selector
     document.getElementById('date-range')?.addEventListener('change', handleDateRangeChange);
-    
+
     // Click outside modal to close
-    window.addEventListener('click', function(event) {
+    window.addEventListener('click', function (event) {
         const modal = document.getElementById('filters-modal');
         if (event.target === modal) {
             closeFiltersModal();
@@ -73,48 +73,51 @@ function setupEventListeners() {
 
 async function loadAnalyticsStats() {
     console.log('[ANALYTICS] loadAnalyticsStats called - isLoading:', isLoading);
-    
+
     if (isLoading) {
         logDebug('[ANALYTICS] Já está carregando, aguardando...');
         return;
     }
-    
+
     isLoading = true;
     loadAttempts++;
-    
+
     try {
         console.log('[ANALYTICS] Fetching data - attempt', loadAttempts);
-        
+
         // Fazer requisições em paralelo
-        const [statsResponse, chartsResponse, usersResponse, activityResponse, inactiveUsersResponse] = await Promise.all([
+        const [statsResponse, chartsResponse, usersResponse, activityResponse, inactiveUsersResponse, advancedMetricsResponse] = await Promise.all([
             fetch('/analytics/api/stats?' + new URLSearchParams(currentFilters)),
             fetch('/analytics/api/charts?' + new URLSearchParams(currentFilters)),
             fetch('/analytics/api/top-users?' + new URLSearchParams(currentFilters)),
             fetch('/analytics/api/recent-activity?' + new URLSearchParams(currentFilters)),
-            fetch('/analytics/api/inactive-users')
+            fetch('/analytics/api/inactive-users'),
+            fetch('/analytics/api/advanced-metrics?' + new URLSearchParams(currentFilters))
         ]);
-        
+
         console.log('[ANALYTICS] Responses received:', {
             stats: statsResponse.status,
             charts: chartsResponse.status,
             users: usersResponse.status,
             activity: activityResponse.status,
-            inactiveUsers: inactiveUsersResponse.status
+            inactiveUsers: inactiveUsersResponse.status,
+            advancedMetrics: advancedMetricsResponse.status
         });
-        
+
         if (!statsResponse.ok || !chartsResponse.ok || !usersResponse.ok || !activityResponse.ok || !inactiveUsersResponse.ok) {
-            throw new Error('Erro ao carregar dados - Status codes: ' + 
+            throw new Error('Erro ao carregar dados - Status codes: ' +
                 [statsResponse.status, chartsResponse.status, usersResponse.status, activityResponse.status, inactiveUsersResponse.status].join(','));
         }
-        
-        const [stats, charts, users, activity, inactiveUsersData] = await Promise.all([
+
+        const [stats, charts, users, activity, inactiveUsersData, advancedMetrics] = await Promise.all([
             statsResponse.json(),
             chartsResponse.json(),
             usersResponse.json(),
             activityResponse.json(),
-            inactiveUsersResponse.json()
+            inactiveUsersResponse.json(),
+            advancedMetricsResponse.json()
         ]);
-        
+
         console.log('[ANALYTICS] Data parsed successfully');
         console.log('[ANALYTICS] Charts data received:', {
             daily_access_count: charts.daily_access?.length,
@@ -122,30 +125,31 @@ async function loadAnalyticsStats() {
             last_date: charts.daily_access?.[charts.daily_access?.length - 1]?.date,
             last_count: charts.daily_access?.[charts.daily_access?.length - 1]?.count
         });
-        
-        analyticsData = { stats, charts, users, activity, inactiveUsers: inactiveUsersData.inactive_users || [] };
-        
+
+        analyticsData = { stats, charts, users, activity, inactiveUsers: inactiveUsersData.inactive_users || [], advancedMetrics };
+
         // Atualizar interface
         updateStatsCards(stats);
         updateCharts(charts);
         updateTopUsersTable(users);
         updateInactiveUsersTable(analyticsData.inactiveUsers);
         updateRecentActivityTable(activity);
+        updateAdvancedMetrics(advancedMetrics);
         updateFilterSummary();
-        
+
         console.log('[ANALYTICS] ✅ All data loaded and rendered successfully');
         loadAttempts = 0; // Reset attempts on success
-        
+
         // Notificar sistema unificado que o carregamento foi concluído
         if (window.unifiedLoadingManager && window.unifiedLoadingManager.isTransitioning) {
             logDebug('[ANALYTICS] Notificando sistema unificado - dados carregados');
             // O sistema unificado detectará automaticamente que os dados carregaram
         }
-        
+
     } catch (error) {
         console.error('[ANALYTICS] ❌ ERROR loading data:', error);
         console.error('[ANALYTICS] Error stack:', error.stack);
-        
+
         // Tentar novamente se não atingiu o máximo
         if (loadAttempts < maxLoadAttempts) {
             console.warn('[ANALYTICS] Retrying in 2 seconds... (attempt', loadAttempts + 1, 'of', maxLoadAttempts, ')');
@@ -170,7 +174,7 @@ function updateStatsCards(data) {
     updateKPIValue('logins-today', data.logins_today || 0);
     updateKPIValue('total-logins', data.total_logins || 0);
     updateKPIValue('avg-session', data.avg_session_minutes || 0, 'min');
-    
+
     logDebug('[ANALYTICS] Cards atualizados');
 }
 
@@ -182,7 +186,7 @@ function updateCharts(chartsData) {
         }
     });
     charts = {};
-    
+
     // Aguardar um pouco para garantir limpeza completa
     setTimeout(() => {
         // Criar gráficos
@@ -190,7 +194,7 @@ function updateCharts(chartsData) {
         createTopPagesChart(chartsData.top_pages || []);
         createUsersActivityChart(chartsData.users_activity || []);
         createHourlyHeatmapChart(chartsData.hourly_heatmap || []);
-        
+
         logDebug('[ANALYTICS] Gráficos atualizados');
     }, 100);
 }
@@ -198,7 +202,7 @@ function updateCharts(chartsData) {
 function createDailyAccessChart(data) {
     const ctx = document.getElementById('daily-access-chart');
     if (!ctx) return;
-    
+
     // Tratamento seguro das datas
     // Espera-se que chartsData tenha daily_access e daily_users
     const accessData = data.daily_access || [];
@@ -215,15 +219,15 @@ function createDailyAccessChart(data) {
     const labels = accessData.map(item => {
         try {
             const date = new Date(item.date);
-            return date.toLocaleDateString('pt-BR', { 
-                day: '2-digit', 
-                month: '2-digit' 
+            return date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit'
             });
         } catch {
             return item.date;
         }
     });
-    
+
     const accessValues = accessData.map(item => item.count || 0);
     const usersValues = usersData.map(item => item.count || 0);
 
@@ -246,7 +250,7 @@ function createDailyAccessChart(data) {
                     backgroundColor: 'rgba(52, 152, 219, 0.1)',
                     fill: true,
                     tension: 0.4,
-                    pointRadius: function(context) {
+                    pointRadius: function (context) {
                         // Mostrar pontos maiores apenas quando há dados
                         return context.raw > 0 ? 5 : 3;
                     },
@@ -262,7 +266,7 @@ function createDailyAccessChart(data) {
                     backgroundColor: 'rgba(16, 185, 129, 0.08)',
                     fill: false,
                     tension: 0.4,
-                    pointRadius: function(context) {
+                    pointRadius: function (context) {
                         // Mostrar pontos maiores apenas quando há dados
                         return context.raw > 0 ? 5 : 3;
                     },
@@ -300,29 +304,29 @@ function createDailyAccessChart(data) {
                     cornerRadius: 8,
                     displayColors: true,
                     callbacks: {
-                        title: function(context) {
+                        title: function (context) {
                             return `Data: ${context[0].label}`;
                         },
-                        label: function(context) {
+                        label: function (context) {
                             return `${context.dataset.label}: ${context.raw}`;
                         }
                     }
                 },
                 datalabels: {
-                    display: function(context) {
+                    display: function (context) {
                         // Mostrar apenas se o valor for maior que 0
                         return context.dataset.data[context.dataIndex] > 0;
                     },
                     align: 'top',
                     anchor: 'end',
-                    color: function(context) {
+                    color: function (context) {
                         return context.datasetIndex === 0 ? '#3498DB' : '#10b981';
                     },
                     font: {
                         size: 10,
                         weight: 'bold'
                     },
-                    formatter: function(value) {
+                    formatter: function (value) {
                         return value > 0 ? value : '';
                     }
                 }
@@ -360,10 +364,10 @@ function createDailyAccessChart(data) {
 function createTopPagesChart(data) {
     const ctx = document.getElementById('top-pages-chart');
     if (!ctx) return;
-    
+
     const labels = data.slice(0, 10).map(item => item.page_name || 'Sem nome');
     const values = data.slice(0, 10).map(item => item.count);
-    
+
     // Mudar para heatmap (bar horizontal)
     charts.topPages = new Chart(ctx, {
         type: 'bar',
@@ -398,7 +402,7 @@ function createTopPagesChart(data) {
                         size: 11,
                         weight: 'bold'
                     },
-                    formatter: function(value) {
+                    formatter: function (value) {
                         return value;
                     }
                 }
@@ -432,10 +436,10 @@ function createTopPagesChart(data) {
 function createUsersActivityChart(data) {
     const ctx = document.getElementById('users-activity-chart');
     if (!ctx) return;
-    
+
     const labels = data.map(item => item.user_name || 'Usuário');
     const values = data.map(item => item.access_count);
-    
+
     charts.usersActivity = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -452,8 +456,8 @@ function createUsersActivityChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    display: false 
+                legend: {
+                    display: false
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -463,10 +467,10 @@ function createUsersActivityChart(data) {
                     borderWidth: 1,
                     cornerRadius: 8,
                     callbacks: {
-                        title: function(context) {
+                        title: function (context) {
                             return `Usuário: ${context[0].label}`;
                         },
-                        label: function(context) {
+                        label: function (context) {
                             return `Acessos: ${context.raw}`;
                         }
                     }
@@ -480,12 +484,12 @@ function createUsersActivityChart(data) {
                         size: 11,
                         weight: 'bold'
                     },
-                    formatter: function(value) {
+                    formatter: function (value) {
                         return value;
                     }
                 }
             },
-            scales: { 
+            scales: {
                 x: {
                     grid: {
                         display: false
@@ -497,18 +501,18 @@ function createUsersActivityChart(data) {
                         }
                     }
                 },
-                y: { 
-                    beginAtZero: true, 
+                y: {
+                    beginAtZero: true,
                     grid: {
                         color: 'rgba(0, 0, 0, 0.05)'
                     },
-                    ticks: { 
+                    ticks: {
                         precision: 0,
                         font: {
                             size: 11
                         }
-                    } 
-                } 
+                    }
+                }
             }
         },
         plugins: [ChartDataLabels]
@@ -518,19 +522,19 @@ function createUsersActivityChart(data) {
 function createHourlyHeatmapChart(data) {
     const ctx = document.getElementById('hourly-heatmap-chart');
     if (!ctx) return;
-    
+
     // Preparar dados para heatmap por hora com usuários únicos
-    const hours = Array.from({length: 24}, (_, i) => i);
+    const hours = Array.from({ length: 24 }, (_, i) => i);
     const hourlyData = hours.map(hour => {
         const hourData = data.find(item => item.hour === hour);
         return hourData ? hourData.count : 0;
     });
-    
+
     const hourlyUsers = hours.map(hour => {
         const hourData = data.find(item => item.hour === hour);
         return hourData ? hourData.unique_users : 0;
     });
-    
+
     charts.hourlyHeatmap = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -572,19 +576,19 @@ function createHourlyHeatmapChart(data) {
                     }
                 },
                 datalabels: {
-                    display: function(context) {
+                    display: function (context) {
                         return context.dataset.data[context.dataIndex] > 0;
                     },
                     align: 'end',
                     anchor: 'end',
-                    color: function(context) {
+                    color: function (context) {
                         return context.datasetIndex === 0 ? '#3498DB' : '#10b981';
                     },
                     font: {
                         size: 9,
                         weight: 'bold'
                     },
-                    formatter: function(value) {
+                    formatter: function (value) {
                         return value > 0 ? value : '';
                     }
                 }
@@ -621,11 +625,11 @@ function createHourlyHeatmapChart(data) {
 function updateTopUsersTable(data) {
     const tbody = document.querySelector('#top-users-table tbody');
     const countElement = document.getElementById('users-count');
-    
+
     if (!tbody || !countElement) return;
-    
+
     countElement.textContent = `${data.length} usuários`;
-    
+
     tbody.innerHTML = data.map(user => `
         <tr>
             <td>
@@ -647,19 +651,19 @@ function updateTopUsersTable(data) {
 function updateInactiveUsersTable(data) {
     const tbody = document.querySelector('#inactive-users-table tbody');
     const countElement = document.getElementById('inactive-users-count');
-    
+
     if (!tbody || !countElement) return;
-    
+
     countElement.textContent = `${data.length} usuários inativos`;
-    
+
     if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #6b7280;">Nenhum usuário inativo encontrado</td></tr>';
         return;
     }
-    
+
     // Garantir ordenação decrescente por dias inativos (mais dias primeiro)
     const sortedData = [...data].sort((a, b) => b.days_inactive - a.days_inactive);
-    
+
     tbody.innerHTML = sortedData.map(user => `
         <tr>
             <td>
@@ -689,15 +693,15 @@ let allActivities = [];
 function updateRecentActivityTable(data) {
     const tbody = document.querySelector('#recent-activity-table tbody');
     const countElement = document.getElementById('activity-count');
-    
+
     if (!tbody || !countElement) return;
-    
+
     // Armazenar todos os dados
     allActivities = data;
-    
+
     // Renderizar primeira página
     renderActivityPage(1);
-    
+
     // Criar controles de paginação
     createPaginationControls();
 }
@@ -705,20 +709,20 @@ function updateRecentActivityTable(data) {
 function renderActivityPage(page) {
     const tbody = document.querySelector('#recent-activity-table tbody');
     const countElement = document.getElementById('activity-count');
-    
+
     if (!tbody || !countElement) return;
-    
+
     currentPage = page;
-    
+
     // Calcular índices
     const startIndex = (page - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageData = allActivities.slice(startIndex, endIndex);
-    
+
     // Atualizar contador
     const totalPages = Math.ceil(allActivities.length / itemsPerPage);
     countElement.textContent = `${allActivities.length} atividades (Página ${page} de ${totalPages})`;
-    
+
     tbody.innerHTML = pageData.map(activity => {
         // Tratamento seguro da data
         let formattedDate = 'Data inválida';
@@ -732,7 +736,7 @@ function renderActivityPage(page) {
                 console.warn('Erro ao formatar data:', activity.timestamp, e);
             }
         }
-        
+
         return `
         <tr>
             <td>${formattedDate}</td>
@@ -756,21 +760,21 @@ function renderActivityPage(page) {
 function createPaginationControls() {
     const container = document.getElementById('recent-activity-container');
     if (!container) return;
-    
+
     // Remover controles existentes
     const existingControls = container.querySelector('.pagination-controls');
     if (existingControls) {
         existingControls.remove();
     }
-    
+
     const totalPages = Math.ceil(allActivities.length / itemsPerPage);
-    
+
     if (totalPages <= 1) return; // Não mostrar paginação se tiver apenas 1 página
-    
+
     const controls = document.createElement('div');
     controls.className = 'pagination-controls';
     controls.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px; margin-top: 10px;';
-    
+
     // Botão anterior
     const prevBtn = document.createElement('button');
     prevBtn.textContent = '‹ Anterior';
@@ -782,12 +786,12 @@ function createPaginationControls() {
             createPaginationControls();
         }
     };
-    
+
     // Informação da página
     const pageInfo = document.createElement('span');
     pageInfo.textContent = `Página ${currentPage} de ${totalPages}`;
     pageInfo.style.cssText = 'color: #6b7280; font-weight: 500;';
-    
+
     // Botão próximo
     const nextBtn = document.createElement('button');
     nextBtn.textContent = 'Próximo ›';
@@ -799,11 +803,11 @@ function createPaginationControls() {
             createPaginationControls();
         }
     };
-    
+
     controls.appendChild(prevBtn);
     controls.appendChild(pageInfo);
     controls.appendChild(nextBtn);
-    
+
     container.appendChild(controls);
 }
 
@@ -828,17 +832,17 @@ function animateNumber(element, finalValue) {
 function handlePeriodChange(event) {
     const period = event.target.dataset.period;
     const chart = event.target.dataset.chart;
-    
+
     // Atualizar botões ativos
     event.target.parentElement.querySelectorAll('.period-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     event.target.classList.add('active');
-    
+
     // Atualizar filtros e recarregar dados
     if (chart === 'daily') {
         currentFilters.dateRange = period;
-        
+
         // Garantir que os gráficos sejam destruídos antes de recarregar
         Object.values(charts).forEach(chart => {
             if (chart && typeof chart.destroy === 'function') {
@@ -846,7 +850,7 @@ function handlePeriodChange(event) {
             }
         });
         charts = {};
-        
+
         loadAnalyticsStats();
     }
 }
@@ -864,7 +868,7 @@ function handleDateRangeChange(event) {
 // Modal Functions
 function openFiltersModal() {
     document.getElementById('filters-modal').style.display = 'flex';
-    
+
     // Preencher valores atuais
     document.getElementById('date-range').value = currentFilters.dateRange;
     document.getElementById('user-role').value = currentFilters.userRole;
@@ -879,7 +883,7 @@ function applyFilters() {
     const dateRange = document.getElementById('date-range').value;
     const userRole = document.getElementById('user-role').value;
     const actionType = document.getElementById('action-type').value;
-    
+
     currentFilters = {
         dateRange,
         userRole,
@@ -887,11 +891,11 @@ function applyFilters() {
         startDate: dateRange === 'custom' ? document.getElementById('start-date').value : null,
         endDate: dateRange === 'custom' ? document.getElementById('end-date').value : null
     };
-    
+
     // Mostrar/esconder botão de reset
     const hasFilters = userRole !== 'all' || actionType !== 'all' || dateRange !== '30d';
     document.getElementById('reset-filters').style.display = hasFilters ? 'block' : 'none';
-    
+
     loadAnalyticsStats();
     closeFiltersModal();
 }
@@ -904,7 +908,7 @@ function clearFilters() {
         startDate: null,
         endDate: null
     };
-    
+
     document.getElementById('reset-filters').style.display = 'none';
     loadAnalyticsStats();
     closeFiltersModal();
@@ -929,7 +933,7 @@ async function silentRefresh() {
         logDebug('[ANALYTICS] Já está carregando, pulando refresh silencioso');
         return;
     }
-    
+
     try {
         await loadAnalyticsStats();
         logDebug('[ANALYTICS] Refresh silencioso concluído com sucesso');
@@ -948,7 +952,7 @@ function resetFilters() {
         startDate: null,
         endDate: null
     };
-    
+
     // Reset form values
     const form = document.getElementById('filters-modal');
     if (form) {
@@ -960,7 +964,7 @@ function resetFilters() {
             }
         });
     }
-    
+
     closeFiltersModal();
     loadAnalyticsStats();
 }
@@ -968,9 +972,9 @@ function resetFilters() {
 function updateFilterSummary() {
     const summaryElement = document.getElementById('filter-summary-text');
     if (!summaryElement) return;
-    
+
     let summary = 'Vendo dados ';
-    
+
     // Período
     switch (currentFilters.dateRange) {
         case '1d': summary += 'de hoje'; break;
@@ -979,7 +983,7 @@ function updateFilterSummary() {
         case 'custom': summary += 'personalizados'; break;
         default: summary += 'dos últimos 30 dias';
     }
-    
+
     // Filtros adicionais
     const filters = [];
     if (currentFilters.userRole !== 'all') {
@@ -988,11 +992,11 @@ function updateFilterSummary() {
     if (currentFilters.actionType !== 'all') {
         filters.push(`ações de ${currentFilters.actionType}`);
     }
-    
+
     if (filters.length > 0) {
         summary += ` - ${filters.join(', ')}`;
     }
-    
+
     summaryElement.textContent = summary;
 }
 
@@ -1012,6 +1016,90 @@ function showError(message) {
     // Pode ser expandido para mostrar toast ou modal de erro
 }
 
+// ===== Advanced Metrics Update =====
+function updateAdvancedMetrics(data) {
+    if (!data || !data.success) {
+        console.warn('[ANALYTICS] No advanced metrics data available');
+        return;
+    }
+
+    const temporal = data.temporal || {};
+    const engajamento = data.engajamento || {};
+
+    // Temporal Metrics
+    const mediaDiariaEl = document.getElementById('media-diaria');
+    if (mediaDiariaEl) mediaDiariaEl.textContent = temporal.media_diaria || 0;
+
+    const diaMaisAtivoEl = document.getElementById('dia-mais-ativo');
+    if (diaMaisAtivoEl) diaMaisAtivoEl.textContent = temporal.dia_mais_ativo || 'N/A';
+
+    const horarioPicoEl = document.getElementById('horario-pico');
+    if (horarioPicoEl) horarioPicoEl.textContent = temporal.horario_pico || 'N/A';
+
+    // Weekly Comparison
+    const comparacao = temporal.comparacao_semanal || {};
+    const variacaoEl = document.getElementById('variacao-semanal');
+    const comparacaoDetalheEl = document.getElementById('comparacao-detalhe');
+    const comparisonCard = document.getElementById('comparison-card');
+
+    if (variacaoEl) {
+        const variacao = comparacao.variacao_percentual || 0;
+        const prefix = variacao >= 0 ? '+' : '';
+        variacaoEl.textContent = `${prefix}${variacao}%`;
+
+        // Update card class based on positive/negative
+        if (comparisonCard) {
+            comparisonCard.classList.remove('positive', 'negative');
+            if (variacao > 0) {
+                comparisonCard.classList.add('positive');
+                comparisonCard.querySelector('.metric-icon i').className = 'mdi mdi-trending-up';
+            } else if (variacao < 0) {
+                comparisonCard.classList.add('negative');
+                comparisonCard.querySelector('.metric-icon i').className = 'mdi mdi-trending-down';
+            }
+        }
+    }
+
+    if (comparacaoDetalheEl) {
+        comparacaoDetalheEl.textContent = `${comparacao.atual || 0} vs ${comparacao.anterior || 0} (semana anterior)`;
+    }
+
+    // Engagement Metrics
+    const usuariosRecorrentesEl = document.getElementById('usuarios-recorrentes');
+    if (usuariosRecorrentesEl) usuariosRecorrentesEl.textContent = engajamento.usuarios_recorrentes || 0;
+
+    const usuariosNovosEl = document.getElementById('usuarios-novos');
+    if (usuariosNovosEl) usuariosNovosEl.textContent = engajamento.usuarios_novos || 0;
+
+    const frequenciaMediaEl = document.getElementById('frequencia-media');
+    if (frequenciaMediaEl) frequenciaMediaEl.textContent = engajamento.frequencia_media || 0;
+
+    // Time Slots - Top Users by Hour
+    const timeSlots = engajamento.top_usuario_por_hora || [];
+    const slotMapping = {
+        '08-12h': 'slot-manha',
+        '12-14h': 'slot-almoco',
+        '14-18h': 'slot-tarde',
+        '18-22h': 'slot-noite'
+    };
+
+    timeSlots.forEach(slot => {
+        const slotId = slotMapping[slot.hora];
+        if (slotId) {
+            const slotCard = document.getElementById(slotId);
+            if (slotCard) {
+                const userEl = slotCard.querySelector('.slot-user');
+                const countEl = slotCard.querySelector('.slot-count');
+
+                if (userEl) userEl.textContent = slot.usuario || 'N/A';
+                if (countEl) countEl.textContent = `${slot.acessos || 0} acessos`;
+            }
+        }
+    });
+
+    logDebug('[ANALYTICS] Advanced metrics updated');
+}
+
 // Auto-refresh a cada 5 minutos
 setInterval(() => {
     logDebug('[ANALYTICS] Auto-refresh das estatísticas');
@@ -1029,8 +1117,8 @@ window.analyticsModule = {
     charts: charts,
     isLoading: () => isLoading,
     hasData: () => {
-        return analyticsData && 
-               Object.keys(analyticsData).length > 0 &&
-               Object.keys(charts).length > 0;
+        return analyticsData &&
+            Object.keys(analyticsData).length > 0 &&
+            Object.keys(charts).length > 0;
     }
 };

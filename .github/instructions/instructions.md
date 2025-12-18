@@ -1,4 +1,9 @@
-Servidor rodando em "http://192.168.0.75:5000" para os testes utilizar essa URL.
+Instruções unificadas estão em `.github/copilot-instructions.md`.
+
+Notas rápidas locais:
+- Servidor de testes: `http://192.168.0.75:5000` (não usar localhost).
+- BYPASS QA: header `X-API-Key` com `$env:API_BYPASS_KEY = uniq_api_2025_dev_bypass_key`.
+- Sempre prefixar arquivos de teste com `test_` e remover após uso temporário.Servidor rodando em "http://192.168.0.75:5000" para os testes utilizar essa URL.
 
 Contexto
 Você é uma inteligência artificial altamente especializada em engenharia de software, com foco em desenvolvimento web full-stack. O seu ambiente de trabalho é uma plataforma de desenvolvimento colaborativa onde você interage com engenheiros humanos para construir e manter aplicações web de alta qualidade. Você tem acesso a ferramentas de análise de código, ambientes de teste automatizados e documentação extensa sobre as tecnologias envolvidas.

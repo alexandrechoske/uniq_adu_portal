@@ -154,6 +154,108 @@
         </div>
     </div>
 
+    <!-- Advanced Metrics Section -->
+    <div class="advanced-metrics-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="mdi mdi-chart-arc"></i>
+                Métricas Avançadas
+            </h2>
+        </div>
+        
+        <!-- Temporal Metrics Row -->
+        <div class="metrics-row">
+            <div class="metric-card metric-temporal">
+                <div class="metric-icon"><i class="mdi mdi-calendar-clock"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Média Diária</span>
+                    <span class="metric-value" id="media-diaria">--</span>
+                    <span class="metric-unit">acessos/dia</span>
+                </div>
+            </div>
+            <div class="metric-card metric-temporal">
+                <div class="metric-icon"><i class="mdi mdi-calendar-star"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Dia Mais Ativo</span>
+                    <span class="metric-value" id="dia-mais-ativo">--</span>
+                </div>
+            </div>
+            <div class="metric-card metric-temporal">
+                <div class="metric-icon"><i class="mdi mdi-clock-fast"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Horário de Pico</span>
+                    <span class="metric-value" id="horario-pico">--</span>
+                </div>
+            </div>
+            <div class="metric-card metric-comparison" id="comparison-card">
+                <div class="metric-icon"><i class="mdi mdi-trending-up"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Comparação Semanal</span>
+                    <span class="metric-value" id="variacao-semanal">--</span>
+                    <span class="metric-detail" id="comparacao-detalhe">vs semana anterior</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Metrics Row -->
+        <div class="metrics-row">
+            <div class="metric-card metric-engagement">
+                <div class="metric-icon"><i class="mdi mdi-account-check"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Usuários Recorrentes</span>
+                    <span class="metric-value" id="usuarios-recorrentes">--</span>
+                    <span class="metric-unit">+1 acesso no período</span>
+                </div>
+            </div>
+            <div class="metric-card metric-engagement">
+                <div class="metric-icon"><i class="mdi mdi-account-plus"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Usuários Novos</span>
+                    <span class="metric-value" id="usuarios-novos">--</span>
+                    <span class="metric-unit">primeiro acesso</span>
+                </div>
+            </div>
+            <div class="metric-card metric-engagement">
+                <div class="metric-icon"><i class="mdi mdi-repeat"></i></div>
+                <div class="metric-content">
+                    <span class="metric-label">Frequência Média</span>
+                    <span class="metric-value" id="frequencia-media">--</span>
+                    <span class="metric-unit">acessos/usuário</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Users by Time Slot -->
+        <div class="time-slot-section">
+            <h3 class="subsection-title">
+                <i class="mdi mdi-trophy"></i>
+                Top Usuário por Faixa Horária
+            </h3>
+            <div class="time-slots-grid" id="time-slots-container">
+                <div class="time-slot-card" id="slot-manha">
+                    <span class="slot-time">08-12h</span>
+                    <span class="slot-user">--</span>
+                    <span class="slot-count">0 acessos</span>
+                </div>
+                <div class="time-slot-card" id="slot-almoco">
+                    <span class="slot-time">12-14h</span>
+                    <span class="slot-user">--</span>
+                    <span class="slot-count">0 acessos</span>
+                </div>
+                <div class="time-slot-card" id="slot-tarde">
+                    <span class="slot-time">14-18h</span>
+                    <span class="slot-user">--</span>
+                    <span class="slot-count">0 acessos</span>
+                </div>
+                <div class="time-slot-card" id="slot-noite">
+                    <span class="slot-time">18-22h</span>
+                    <span class="slot-user">--</span>
+                    <span class="slot-count">0 acessos</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Users Table -->
     <div class="enhanced-table-section" id="top-users-container">
         <div class="enhanced-table-header">

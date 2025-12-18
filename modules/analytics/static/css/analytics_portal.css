@@ -806,3 +806,216 @@
     flex-direction: column;
     justify-content: space-between;
 }
+
+/* ===== Advanced Metrics Section ===== */
+.analytics-portal .advanced-metrics-section {
+    background: var(--unique-background-white);
+    border-radius: 0.75rem;
+    border: 1px solid var(--unique-border-light);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.analytics-portal .advanced-metrics-section .section-header {
+    margin-bottom: 1.25rem;
+}
+
+.analytics-portal .advanced-metrics-section .section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analytics-portal .advanced-metrics-section .section-title i {
+    color: var(--color-primary, #3498DB);
+}
+
+/* Metrics Row */
+.analytics-portal .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Metric Cards */
+.analytics-portal .metric-card {
+    background: linear-gradient(145deg, #f8fafc, #ffffff);
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.analytics-portal .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.analytics-portal .metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.analytics-portal .metric-temporal .metric-icon {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1d4ed8;
+}
+
+.analytics-portal .metric-engagement .metric-icon {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #059669;
+}
+
+.analytics-portal .metric-comparison .metric-icon {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #d97706;
+}
+
+.analytics-portal .metric-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.analytics-portal .metric-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.analytics-portal .metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.analytics-portal .metric-unit,
+.analytics-portal .metric-detail {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Comparison Card Variations */
+.analytics-portal .metric-comparison.positive .metric-value {
+    color: #059669;
+}
+
+.analytics-portal .metric-comparison.positive .metric-icon {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    color: #059669;
+}
+
+.analytics-portal .metric-comparison.negative .metric-value {
+    color: #dc2626;
+}
+
+.analytics-portal .metric-comparison.negative .metric-icon {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #dc2626;
+}
+
+/* Time Slot Section */
+.analytics-portal .time-slot-section {
+    margin-top: 1rem;
+}
+
+.analytics-portal .subsection-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analytics-portal .subsection-title i {
+    color: #f59e0b;
+}
+
+.analytics-portal .time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.analytics-portal .time-slot-card {
+    background: linear-gradient(145deg, #fefce8, #fef9c3);
+    border: 1px solid #fde047;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.analytics-portal .time-slot-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.analytics-portal .slot-time {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.analytics-portal .slot-user {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #78350f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.analytics-portal .slot-count {
+    font-size: 0.75rem;
+    color: #a16207;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .analytics-portal .time-slots-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .analytics-portal .metrics-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .analytics-portal .time-slots-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .analytics-portal .metric-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}

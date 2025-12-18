@@ -620,6 +620,218 @@ def get_recent_activity():
         logger.error(f"Erro ao obter atividade recente: {e}")
         return jsonify([])
 
+@bp.route('/api/advanced-metrics')
+@login_required
+def get_advanced_metrics():
+    """
+    API para métricas avançadas de engajamento e temporais
+    """
+    try:
+        from collections import Counter, defaultdict
+        
+        # Obter parâmetros de filtro
+        date_range = request.args.get('dateRange', '30d')
+        user_role = request.args.get('userRole', 'all')
+        
+        # Calcular datas
+        try:
+            from zoneinfo import ZoneInfo
+            br_tz = ZoneInfo('America/Sao_Paulo')
+        except:
+            import pytz
+            br_tz = pytz.timezone('America/Sao_Paulo')
+        
+        end_date = datetime.now(br_tz).date()
+        if date_range == '1d':
+            start_date = end_date
+            days_in_period = 1
+        elif date_range == '7d':
+            start_date = end_date - timedelta(days=7)
+            days_in_period = 7
+        elif date_range == '30d':
+            start_date = end_date - timedelta(days=30)
+            days_in_period = 30
+        else:
+            start_date = end_date - timedelta(days=30)
+            days_in_period = 30
+        
+        # Query usando view otimizada
+        query = supabase_admin.table('vw_analytics_portal').select('*')
+        query = query.gte('access_date', start_date.isoformat())
+        query = query.lte('access_date', end_date.isoformat())
+        
+        if user_role != 'all':
+            query = query.eq('user_role', user_role)
+        
+        def _exec():
+            return query.execute()
+        response = run_with_retries(
+            'analytics.get_advanced_metrics',
+            _exec,
+            max_attempts=3,
+            base_delay_seconds=0.8,
+            should_retry=lambda e: 'Server disconnected' in str(e) or 'timeout' in str(e).lower()
+        )
+        logs = response.data if response.data else []
+        
+        # ===== MÉTRICAS TEMPORAIS =====
+        
+        # Média diária de acessos
+        total_acessos = len(logs)
+        media_diaria = round(total_acessos / max(days_in_period, 1), 1)
+        
+        # Acessos por dia da semana (usando day_of_week: 0=Domingo, 1=Segunda, etc.)
+        dias_semana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+        acessos_por_dow = Counter()
+        for log in logs:
+            dow = log.get('day_of_week')
+            if dow is not None:
+                acessos_por_dow[int(dow)] += 1
+        
+        acessos_por_dia_semana = [
+            {'dia': dias_semana[i], 'acessos': acessos_por_dow.get(i, 0)}
+            for i in range(7)
+        ]
+        
+        # Dia mais ativo
+        if acessos_por_dow:
+            dia_mais_ativo_idx = max(acessos_por_dow, key=acessos_por_dow.get)
+            dia_mais_ativo = dias_semana[dia_mais_ativo_idx]
+        else:
+            dia_mais_ativo = 'N/A'
+        
+        # Horário de pico
+        acessos_por_hora = Counter()
+        for log in logs:
+            hora = log.get('access_hour')
+            if hora is not None:
+                acessos_por_hora[int(hora)] += 1
+        
+        if acessos_por_hora:
+            hora_pico = max(acessos_por_hora, key=acessos_por_hora.get)
+            horario_pico = f"{hora_pico:02d}:00-{hora_pico+1:02d}:00"
+        else:
+            horario_pico = 'N/A'
+        
+        # Comparação semanal (esta semana vs anterior)
+        hoje = datetime.now(br_tz).date()
+        inicio_semana_atual = hoje - timedelta(days=hoje.weekday())  # Segunda-feira desta semana
+        inicio_semana_anterior = inicio_semana_atual - timedelta(days=7)
+        
+        acessos_semana_atual = sum(1 for log in logs 
+            if log.get('access_date') and log['access_date'] >= inicio_semana_atual.isoformat())
+        acessos_semana_anterior = sum(1 for log in logs 
+            if log.get('access_date') and 
+               inicio_semana_anterior.isoformat() <= log['access_date'] < inicio_semana_atual.isoformat())
+        
+        if acessos_semana_anterior > 0:
+            variacao_semanal = round(((acessos_semana_atual - acessos_semana_anterior) / acessos_semana_anterior) * 100, 1)
+        else:
+            variacao_semanal = 100.0 if acessos_semana_atual > 0 else 0.0
+        
+        comparacao_semanal = {
+            'atual': acessos_semana_atual,
+            'anterior': acessos_semana_anterior,
+            'variacao_percentual': variacao_semanal
+        }
+        
+        # ===== MÉTRICAS DE ENGAJAMENTO =====
+        
+        # Contar acessos por usuário
+        acessos_por_usuario = Counter()
+        for log in logs:
+            user_id = log.get('user_id')
+            if user_id:
+                acessos_por_usuario[user_id] += 1
+        
+        # Usuários recorrentes (mais de 1 acesso) vs novos
+        usuarios_recorrentes = sum(1 for count in acessos_por_usuario.values() if count > 1)
+        usuarios_novos = sum(1 for count in acessos_por_usuario.values() if count == 1)
+        
+        # Frequência média (acessos por usuário)
+        total_usuarios = len(acessos_por_usuario)
+        frequencia_media = round(total_acessos / max(total_usuarios, 1), 1)
+        
+        # Top usuário por faixa horária
+        faixas_horarias = [
+            {'nome': '08-12h', 'inicio': 8, 'fim': 12},
+            {'nome': '12-14h', 'inicio': 12, 'fim': 14},
+            {'nome': '14-18h', 'inicio': 14, 'fim': 18},
+            {'nome': '18-22h', 'inicio': 18, 'fim': 22}
+        ]
+        
+        # Agrupar por faixa e usuário
+        acessos_por_faixa_usuario = defaultdict(lambda: defaultdict(lambda: {'count': 0, 'name': ''}))
+        
+        for log in logs:
+            hora = log.get('access_hour')
+            user_id = log.get('user_id')
+            user_name = log.get('user_name')
+            
+            if hora is None or not user_id:
+                continue
+            
+            hora = int(hora)
+            for faixa in faixas_horarias:
+                if faixa['inicio'] <= hora < faixa['fim']:
+                    acessos_por_faixa_usuario[faixa['nome']][user_id]['count'] += 1
+                    acessos_por_faixa_usuario[faixa['nome']][user_id]['name'] = user_name or 'N/A'
+                    break
+        
+        top_usuario_por_hora = []
+        for faixa in faixas_horarias:
+            usuarios_faixa = acessos_por_faixa_usuario[faixa['nome']]
+            if usuarios_faixa:
+                top_user_id = max(usuarios_faixa, key=lambda x: usuarios_faixa[x]['count'])
+                top_usuario_por_hora.append({
+                    'hora': faixa['nome'],
+                    'usuario': usuarios_faixa[top_user_id]['name'],
+                    'acessos': usuarios_faixa[top_user_id]['count']
+                })
+            else:
+                top_usuario_por_hora.append({
+                    'hora': faixa['nome'],
+                    'usuario': 'N/A',
+                    'acessos': 0
+                })
+        
+        return jsonify({
+            'success': True,
+            'temporal': {
+                'media_diaria': media_diaria,
+                'dia_mais_ativo': dia_mais_ativo,
+                'horario_pico': horario_pico,
+                'comparacao_semanal': comparacao_semanal,
+                'acessos_por_dia_semana': acessos_por_dia_semana
+            },
+            'engajamento': {
+                'usuarios_recorrentes': usuarios_recorrentes,
+                'usuarios_novos': usuarios_novos,
+                'frequencia_media': frequencia_media,
+                'top_usuario_por_hora': top_usuario_por_hora
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter métricas avançadas: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'temporal': {
+                'media_diaria': 0,
+                'dia_mais_ativo': 'N/A',
+                'horario_pico': 'N/A',
+                'comparacao_semanal': {'atual': 0, 'anterior': 0, 'variacao_percentual': 0},
+                'acessos_por_dia_semana': []
+            },
+            'engajamento': {
+                'usuarios_recorrentes': 0,
+                'usuarios_novos': 0,
+                'frequencia_media': 0,
+                'top_usuario_por_hora': []
+            }
+        })
+
 # ======== ANALYTICS DO AGENTE ========
 
 def calculate_response_time_from_log(log_data):

@@ -1,4 +1,92 @@
-# AI Coding Agent Instructions - UniSystem Portal
+# UniSystem Portal — Guia Único (FastAPI + Next.js)
+
+
+Cores Oficiais da Aplicação ( utilizar elas e variantes )
+#165672
+#2d6b92
+#e2ba0a
+
+## Stack & Arquitetura
+- **Backend**: FastAPI + Supabase (client e service role). JWT e dependências para auth/role. Cache-first (Redis/memória) antes de bater no banco.
+- **Frontend**: Next.js 14 (App Router) + Tailwind. Estado global via Context API. Data fetching com TanStack Query.
+- **Design System**: Seguir fielmente o layout `nimbusai.html`/`nimbusai.tsx`: elegante, compacto, minimalista, com modo claro/escuro, sidebar fixa, header fino, cards densos.
+- **Responsividade**: Mobile-first, breakpoints bem testados; sidebar colapsável em mobile; tabelas/grids com scroll horizontal quando necessário.
+
+## UI/UX Padrões
+- **Temas**: Sempre oferecer toggle de tema. Garantir contraste AA, ícones `lucide-react`, tokens de cor baseados no layout Nimbus (azul profundo no claro, cinzas/pretos sutis no escuro).
+- **Tipografia**: Fonte `Inter` (ou compatível). Tamanhos compactos, espaçamento enxuto. Evitar poluição visual.
+- **Componentes**: KPI cards clicáveis, gráficos (Recharts/Apex) minimalistas, tabelas com linhas finas e hover. Skeletons para carregamento.
+- **Acessibilidade**: Semântica HTML, `aria-*`, foco visível, navegação por teclado.
+- **Consistência**: Não criar novas paletas ou estilos fora do padrão Nimbus. Reusar classes utilitárias Tailwind. Layouts claros e escuros devem ter mesma hierarquia visual.
+
+## Backend (FastAPI) Boas Práticas
+- **Auth**: Validar JWT Supabase em dependência. Diferenciar `supabase` (RLS) vs `supabase_admin` (service). Rota de login retorna token + contexto (empresas, perfis, role).
+- **RBAC**: `cliente_unique` sempre filtrado por CNPJs vinculados; `interno_unique` filtra salvo `admin_operacao/master_admin`; `admin` vê tudo. Toda rota protegida deve aplicar esse filtro.
+- **Cache-First**: Antes de query, buscar cache por `user_id` + chave. Invalidate on refresh endpoints.
+- **Datas**: Banco usa DD/MM/YYYY; filtros em ISO. Converter sempre via helpers.
+- **Observabilidade**: Logging estruturado; timeouts coerentes; retries onde já existentes (ex.: enrichers).
+- **Segurança**: Sanitizar input, validar schemas Pydantic, evitar secrets em código. CORS apenas domínios necessários.
+
+## Frontend (Next.js) Boas Práticas
+- **App Router** com server components para layout/slots; client components só onde houver interação.
+- **Estado**: Context API para sessão/tema; TanStack Query para dados; evitar prop drilling.
+- **Temas**: `class`-based (ex.: `dark` no `<html>`). Guardar preferência em `localStorage`.
+- **Reatividade**: Mobile: sidebar off-canvas; header sempre acessível. Use `flex/grid` responsivos.
+- **Dados**: Nunca confiar em dados não filtrados; aplicar company filters também no client ao consumir APIs.
+
+## Regras de Negócio Essenciais
+- **Cache e pré-carga**: Manter padrão cache-first herdado do Flask (30-365 dias) até migração completa.
+- **Module Pages**: Qualquer nova rota/página deve ser inserida em `module_pages` no Supabase para controle de perfis.
+- **Kingspan/Ciser**: Permissões de materiais e aba Armazenagem dependem do vínculo da empresa; preservar flags `has_kingspan_access` etc.
+
+## ⚠️ CONTROLE DE ACESSO POR MÓDULO (CRÍTICO)
+
+### Módulos Sensíveis — Acesso Restrito Máximo
+**RH e Financeiro** são módulos **extremamente sensíveis** que contêm dados confidenciais (salários, dados pessoais, informações financeiras).
+
+**Requisitos de Segurança**:
+1. **Autenticação Obrigatória**: Todas as rotas devem exigir JWT válido.
+2. **Autorização em Múltiplos Níveis**:
+   - Verificar `role` do usuário (apenas `admin` ou perfis específicos como `rh_admin`, `financeiro_admin`).
+   - Verificar perfis detalhados em `users_perfis` (ex.: `master_admin`, `admin_operacao`).
+   - Implementar permissões granulares por página (via `module_pages`).
+3. **Filtros de Empresa**: Mesmo para admins, aplicar filtros de empresa quando aplicável para evitar exposição acidental de dados.
+4. **Auditoria**: Logar todos os acessos a rotas sensíveis (quem, quando, o quê).
+5. **Rate Limiting**: Implementar limites de requisições para prevenir scraping.
+6. **Frontend**: Ocultar completamente módulos/páginas para usuários sem permissão (não apenas desabilitar botões).
+
+### Módulo Aberto — Importações
+**Importações** é o módulo **público** da aplicação (dentro do sistema autenticado).
+
+**Regras de Acesso**:
+- Todos os usuários autenticados (`cliente_unique`, `interno_unique`, `admin`) podem acessar.
+- Aplicar **filtros de empresa** conforme o role:
+  - `cliente_unique`: Vê apenas suas empresas vinculadas.
+  - `interno_unique` (não admin): Vê apenas empresas associadas.
+  - `admin_operacao` e `master_admin`: Veem todas as empresas.
+- **Prioridade de Desenvolvimento**: Importações é o módulo **core** e deve ser migrado primeiro.
+
+### Estrutura dos 3 Módulos Principais
+1. **Importações** (Core, público, primeira prioridade de migração)
+2. **Financeiro** (Sensível, acesso restrito, segunda prioridade)
+3. **RH** (Sensível, acesso restrito, terceira prioridade)
+
+**+ Páginas de Configuração**: Acessíveis apenas para `admin` e perfis específicos.
+
+## Testes
+- Prefixar testes com `test_`. Remover arquivos de teste após uso temporário.
+- Priorizar Playwright/Cypress para front; pytest para API. Cobrir filtros de empresa, temas e responsividade básica.
+- Logs claros em cenários de teste; usar PowerShell para comandos (Windows).
+
+## Estrutura de Módulo (próximos serviços)
+- **Backend**: `app/routers/<feature>.py` com prefixo claro; schemas em `app/schemas`; serviços em `app/services`.
+- **Frontend**: `app/<feature>/page.tsx` + componentes internos; estilos via Tailwind; sem CSS solto fora do padrão.
+
+## Processo ao criar/alterar páginas
+1) Respeitar layout Nimbus (claro/escuro). 2) Garantir filtros de empresa/role em backend e, se exibido, também no frontend. 3) Incluir página em `module_pages` quando aplicável. 4) Adicionar skeleton/loading states. 5) Validar mobile.
+
+## Não esquecer
+- Nunca criar novas paletas; reutilizar tokens Nimbus. Evitar assets pesados. Manter respostas concisas e código limpo.# AI Coding Agent Instructions - UniSystem Portal
 
 ## Architecture Overview
 
