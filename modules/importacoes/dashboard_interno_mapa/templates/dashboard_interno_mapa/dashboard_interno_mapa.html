@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,9 +18,11 @@
             overflow-y: auto;
             min-height: 100vh;
         }
+
         .dashboard-shell {
             position: relative;
         }
+
         #globe-container {
             position: absolute;
             inset: 0;
@@ -27,7 +30,10 @@
             height: 100%;
             pointer-events: none;
         }
-        .kpi-card, .chart-card, .glass-card {
+
+        .kpi-card,
+        .chart-card,
+        .glass-card {
             background: rgba(10, 10, 10, 0.55);
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -35,6 +41,7 @@
             padding: 1.5rem;
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
         }
+
         .map-panel {
             border-radius: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -43,12 +50,14 @@
             overflow: hidden;
             min-height: 360px;
         }
+
         .map-surface-overlay {
             position: absolute;
             inset: 0;
             background: linear-gradient(180deg, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.55));
             pointer-events: none;
         }
+
         .map-overlay-layer {
             position: absolute;
             inset: 0;
@@ -58,6 +67,7 @@
             justify-content: space-between;
             padding: 1.5rem;
         }
+
         .map-overlay-top,
         .map-overlay-bottom {
             pointer-events: none;
@@ -65,6 +75,7 @@
             flex-direction: column;
             gap: 1rem;
         }
+
         .map-kpi-card,
         .map-info-card {
             background: rgba(8, 11, 19, 0.82);
@@ -74,18 +85,21 @@
             pointer-events: auto;
             box-shadow: 0 18px 45px rgba(5, 8, 12, 0.55);
         }
+
         .map-kpi-label {
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.12em;
             color: #94a3b8;
         }
+
         .map-kpi-value {
             font-size: 2.4rem;
             font-weight: 700;
             color: #ffffff;
             line-height: 1.1;
         }
+
         .map-route-item {
             display: flex;
             justify-content: space-between;
@@ -96,11 +110,13 @@
             border: 1px solid transparent;
             transition: border-color 0.3s ease, background 0.3s ease;
         }
+
         .map-route-item.active {
             border-color: rgba(56, 189, 248, 0.6);
             background: rgba(8, 31, 49, 0.55);
             box-shadow: 0 18px 40px rgba(56, 189, 248, 0.18);
         }
+
         .header-exchange-panel {
             display: flex;
             flex-direction: column;
@@ -108,12 +124,14 @@
             justify-content: center;
             gap: 0.75rem;
         }
+
         .header-exchange-title {
             font-size: 0.7rem;
             letter-spacing: 0.18em;
             text-transform: uppercase;
             color: #64748b;
         }
+
         .header-exchange-grid {
             display: flex;
             align-items: center;
@@ -121,6 +139,7 @@
             gap: 2.5rem;
             flex-wrap: wrap;
         }
+
         .currency-pair {
             display: flex;
             align-items: center;
@@ -131,6 +150,7 @@
             border-radius: 9999px;
             box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
         }
+
         .currency-flag-wrapper {
             width: 40px;
             height: 40px;
@@ -139,11 +159,13 @@
             border: 1px solid rgba(148, 163, 184, 0.28);
             box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
         }
+
         .currency-flag-wrapper img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         .currency-label {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -151,12 +173,14 @@
             color: #94a3b8;
             margin-bottom: 0.1rem;
         }
+
         .currency-value {
             font-size: 1.45rem;
             font-weight: 600;
             color: #f8fafc;
             line-height: 1.1;
         }
+
         .map-route-flag {
             width: 32px;
             height: 32px;
@@ -170,17 +194,20 @@
             overflow: hidden;
             flex-shrink: 0;
         }
+
         .map-route-flag img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
+
         .map-route-flag span {
             font-size: 0.65rem;
             font-weight: 600;
             color: #e2e8f0;
             letter-spacing: 0.08em;
         }
+
         .kpi-title {
             font-size: 1.1rem;
             font-weight: 400;
@@ -188,32 +215,48 @@
             margin-bottom: 0.75rem;
             letter-spacing: 0.05em;
         }
+
         .kpi-value {
             font-size: 3rem;
             font-weight: 700;
             color: #ffffff;
             line-height: 1;
         }
+
         .kpi-value-small {
             font-size: 2rem;
         }
+
         .kpi-currency {
             font-size: 1.3rem;
             font-weight: 400;
             color: #94a3b8;
             margin-left: 0.5rem;
         }
+
         .channel-indicator {
             width: 18px;
             height: 18px;
             border-radius: 50%;
             margin-right: 10px;
-            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
         }
-        .channel-green { background-color: #22c55e; box-shadow: 0 0 12px rgba(34, 197, 94, 0.5); }
-        .channel-yellow { background-color: #facc15; box-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
-        .channel-red { background-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
-        
+
+        .channel-green {
+            background-color: #22c55e;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+        }
+
+        .channel-yellow {
+            background-color: #facc15;
+            box-shadow: 0 0 12px rgba(250, 204, 21, 0.5);
+        }
+
+        .channel-red {
+            background-color: #ef4444;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+        }
+
         .hub-label {
             position: absolute;
             background: rgba(15, 23, 42, 0.95);
@@ -230,15 +273,19 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
+
         .hub-label.visible {
             opacity: 1;
         }
+
         .hub-label.origin {
             border-color: rgba(56, 189, 248, 0.5);
         }
+
         .hub-label.dest {
             border-color: rgba(34, 211, 238, 0.5);
         }
+
         .route-info-label {
             position: absolute;
             background: rgba(15, 23, 42, 0.95);
@@ -255,24 +302,28 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
+
         .route-info-label.visible {
             opacity: 1;
         }
+
         .map-kpi-card {
             display: flex;
             flex-direction: column;
             gap: 0.6rem;
             min-height: 120px;
         }
+
         .map-kpi-value {
             margin-top: auto;
         }
-        
+
         .apexcharts-tooltip {
             background: rgba(15, 23, 42, 0.85) !important;
             color: #e2e8f0 !important;
             border: 1px solid rgba(148, 163, 184, 0.2) !important;
         }
+
         .map-legend {
             position: absolute;
             bottom: 1.5rem;
@@ -283,27 +334,29 @@
             color: #9ca3af;
             pointer-events: none;
         }
+
         .map-legend span {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
+
         /* Estilos para o sistema de slider */
         .screen-container {
             position: relative;
             width: 100%;
             overflow: hidden;
         }
-        
+
         .screen {
             width: 100%;
             transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
         }
-        
+
         .screen.hidden {
             display: none;
         }
-        
+
         .slider-controls {
             position: fixed;
             bottom: 2rem;
@@ -314,7 +367,7 @@
             gap: 0.75rem;
             align-items: flex-start;
         }
-        
+
         .slider-nav-buttons {
             display: flex;
             gap: 0.5rem;
@@ -324,7 +377,7 @@
             border: 1px solid rgba(148, 163, 184, 0.2);
             box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
         }
-        
+
         .slider-nav-btn {
             width: 40px;
             height: 40px;
@@ -338,20 +391,20 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .slider-nav-btn:hover {
             background: rgba(56, 189, 248, 0.2);
             border-color: rgba(56, 189, 248, 0.6);
             color: #38bdf8;
         }
-        
+
         .slider-nav-btn.active {
             background: rgba(56, 189, 248, 0.3);
             border-color: #38bdf8;
             color: #38bdf8;
             box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
         }
-        
+
         .slider-auto-toggle {
             display: flex;
             align-items: center;
@@ -364,7 +417,7 @@
             font-size: 0.8rem;
             color: #94a3b8;
         }
-        
+
         .slider-auto-toggle input[type="checkbox"] {
             width: 40px;
             height: 20px;
@@ -375,11 +428,11 @@
             cursor: pointer;
             transition: background 0.3s ease;
         }
-        
+
         .slider-auto-toggle input[type="checkbox"]:checked {
             background: rgba(56, 189, 248, 0.5);
         }
-        
+
         .slider-auto-toggle input[type="checkbox"]::before {
             content: '';
             position: absolute;
@@ -391,12 +444,12 @@
             left: 2px;
             transition: all 0.3s ease;
         }
-        
+
         .slider-auto-toggle input[type="checkbox"]:checked::before {
             left: 22px;
             background: #38bdf8;
         }
-        
+
         .slider-progress {
             width: 200px;
             height: 4px;
@@ -405,7 +458,7 @@
             overflow: hidden;
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
         }
-        
+
         .slider-progress-bar {
             height: 100%;
             background: linear-gradient(90deg, #38bdf8, #0ea5e9);
@@ -415,6 +468,7 @@
         }
     </style>
 </head>
+
 <body class="antialiased">
 
     <!-- Controles do Slider -->
@@ -428,12 +482,14 @@
         </div>
         <div class="slider-nav-buttons">
             <button class="slider-nav-btn active" id="btn-screen-dashboard" title="Dashboard de Operações">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
                 </svg>
             </button>
             <button class="slider-nav-btn" id="btn-screen-indicadores" title="Indicadores Operacionais">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
                     <path d="M3 3v18h18"></path>
                     <path d="M18 17V9"></path>
                     <path d="M13 17V5"></path>
@@ -448,154 +504,167 @@
         <div class="dashboard-shell min-h-screen w-full p-4 md:p-8 flex flex-col gap-6">
             <header class="flex flex-col gap-4 md:grid md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center md:gap-8">
                 <div class="flex items-center gap-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sky-400"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="text-sky-400">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" />
+                    </svg>
                     <div>
                         <h1 class="text-3xl font-bold text-white">Dashboard de Operações</h1>
                         <p class="text-base text-gray-400">Unique Soluções Aduaneiras</p>
                     </div>
                 </div>
-            <div class="header-exchange-panel">
-                <div class="header-exchange-grid">
-                    <div class="currency-pair">
-                        <div class="currency-flag-wrapper">
-                            <img src="https://cdn-icons-png.flaticon.com/512/9729/9729337.png" alt="Estados Unidos" loading="lazy">
+                <div class="header-exchange-panel">
+                    <div class="header-exchange-grid">
+                        <div class="currency-pair">
+                            <div class="currency-flag-wrapper">
+                                <img src="https://cdn-icons-png.flaticon.com/512/9729/9729337.png" alt="Estados Unidos"
+                                    loading="lazy">
+                            </div>
+                            <div>
+                                <p class="currency-label">USD</p>
+                                <p id="header-usd-value" class="currency-value">R$ 0,00</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="currency-label">USD</p>
-                            <p id="header-usd-value" class="currency-value">R$ 0,00</p>
-                        </div>
-                    </div>
-                    <div class="currency-pair">
-                        <div class="currency-flag-wrapper">
-                            <img src="https://cdn-icons-png.flaticon.com/512/679/679984.png" alt="União Europeia" loading="lazy">
-                        </div>
-                        <div>
-                            <p class="currency-label">EUR</p>
-                            <p id="header-eur-value" class="currency-value">R$ 0,00</p>
+                        <div class="currency-pair">
+                            <div class="currency-flag-wrapper">
+                                <img src="https://cdn-icons-png.flaticon.com/512/679/679984.png" alt="União Europeia"
+                                    loading="lazy">
+                            </div>
+                            <div>
+                                <p class="currency-label">EUR</p>
+                                <p id="header-eur-value" class="currency-value">R$ 0,00</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div id="clock" class="text-right">
-                <p class="text-3xl font-bold text-white"></p>
-                <p class="text-base text-gray-400"></p>
-                <p id="last-update" class="text-xs text-gray-500 mt-1">Atualizado em --/--/---- --:--</p>
-            </div>
-        </header>
+                <div id="clock" class="text-right">
+                    <p class="text-3xl font-bold text-white"></p>
+                    <p class="text-base text-gray-400"></p>
+                    <p id="last-update" class="text-xs text-gray-500 mt-1">Atualizado em --/--/---- --:--</p>
+                </div>
+            </header>
 
-        <main class="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(420px,1fr)] gap-6 flex-1">
-            <section class="flex flex-col gap-6">
-                <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-6">
-                    <div class="chart-card glass-card">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Processos Abertos no Mês</h2>
-                            <span class="text-sm uppercase tracking-widest text-gray-400">Atualizado em tempo real</span>
+            <main class="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.4fr)_minmax(420px,1fr)] gap-6 flex-1">
+                <section class="flex flex-col gap-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-6">
+                        <div class="chart-card glass-card">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-white">Processos Abertos no Mês</h2>
+                                <span class="text-sm uppercase tracking-widest text-gray-400">Atualizado em tempo
+                                    real</span>
+                            </div>
+                            <div id="main-chart" class="h-72"></div>
                         </div>
-                        <div id="main-chart" class="h-72"></div>
+                        <div class="glass-card flex flex-col">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-white">Meta Mensal</h2>
+                                <span class="text-xs uppercase tracking-widest text-gray-500">Objetivo do mês</span>
+                            </div>
+                            <div id="meta-chart" class="w-full h-56"></div>
+                            <div class="mt-6 space-y-3 text-base text-gray-400">
+                                <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total"
+                                        class="font-semibold text-white text-lg">0</span></div>
+                                <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta"
+                                        class="text-lg">0 processos</span></div>
+                                <div class="flex justify-between"><span>Restante para meta</span><span
+                                        id="meta-restante" class="text-lg">0</span></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="glass-card flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Meta Mensal</h2>
-                            <span class="text-xs uppercase tracking-widest text-gray-500">Objetivo do mês</span>
-                        </div>
-                        <div id="meta-chart" class="w-full h-56"></div>
-                        <div class="mt-6 space-y-3 text-base text-gray-400">
-                            <div class="flex justify-between"><span>Processos acumulados</span><span id="meta-total" class="font-semibold text-white text-lg">0</span></div>
-                            <div class="flex justify-between"><span>Meta definida</span><span id="meta-meta" class="text-lg">0 processos</span></div>
-                            <div class="flex justify-between"><span>Restante para meta</span><span id="meta-restante" class="text-lg">0</span></div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    <div class="glass-card">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Processos por Modal</h2>
-                            <span class="text-sm text-gray-400">Base mês corrente</span>
-                        </div>
-                        <div id="modal-list" class="space-y-3"></div>
-                    </div>
-                    <div class="glass-card">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Canais (Mês)</h2>
-                            <span class="text-sm text-gray-400">Resultados por cor</span>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="channel-indicator channel-green"></div>
-                                    <span class="text-gray-400 text-sm">Verde</span>
-                                </div>
-                                <span id="kpi-canal-verde" class="font-bold text-white text-2xl">0</span>
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="glass-card">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-white">Processos por Modal</h2>
+                                <span class="text-sm text-gray-400">Base mês corrente</span>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="channel-indicator channel-yellow"></div>
-                                    <span class="text-gray-400 text-sm">Amarelo</span>
-                                </div>
-                                <span id="kpi-canal-amarelo" class="font-bold text-white text-2xl">0</span>
+                            <div id="modal-list" class="space-y-3"></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-white">Canais (Mês)</h2>
+                                <span class="text-sm text-gray-400">Resultados por cor</span>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="channel-indicator channel-red"></div>
-                                    <span class="text-gray-400 text-sm">Vermelho</span>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="channel-indicator channel-green"></div>
+                                        <span class="text-gray-400 text-sm">Verde</span>
+                                    </div>
+                                    <span id="kpi-canal-verde" class="font-bold text-white text-2xl">0</span>
                                 </div>
-                                <span id="kpi-canal-vermelho" class="font-bold text-white text-2xl">0</span>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="channel-indicator channel-yellow"></div>
+                                        <span class="text-gray-400 text-sm">Amarelo</span>
+                                    </div>
+                                    <span id="kpi-canal-amarelo" class="font-bold text-white text-2xl">0</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="channel-indicator channel-red"></div>
+                                        <span class="text-gray-400 text-sm">Vermelho</span>
+                                    </div>
+                                    <span id="kpi-canal-vermelho" class="font-bold text-white text-2xl">0</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="glass-card">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Ranking Importadores</h2>
-                            <span class="text-sm text-gray-400">Top 5 por processos</span>
+                        <div class="glass-card">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-xl font-semibold text-white">Top 5 Importadores</h2>
+                                <span class="text-sm text-gray-400">Registrados</span>
+                            </div>
+                            <div id="ranking-importadores" class="space-y-3"></div>
                         </div>
-                        <div id="ranking-importadores" class="space-y-3"></div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <aside class="map-panel">
-                <div id="globe-container"></div>
-                <div class="map-surface-overlay"></div>
-                <div class="map-overlay-layer">
-                    <div class="map-overlay-top">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                            <div class="map-kpi-card">
-                                <p class="map-kpi-label">Processos Abertos Hoje</p>
-                                <p id="map-kpi-abertos" class="map-kpi-value">0</p>
+                <aside class="map-panel">
+                    <div id="globe-container"></div>
+                    <div class="map-surface-overlay"></div>
+                    <div class="map-overlay-layer">
+                        <div class="map-overlay-top">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                                <div class="map-kpi-card">
+                                    <p class="map-kpi-label">Processos Abertos Hoje</p>
+                                    <p id="map-kpi-abertos" class="map-kpi-value">0</p>
+                                </div>
+                                <div class="map-kpi-card">
+                                    <p class="map-kpi-label">DIs Registradas Hoje</p>
+                                    <p id="map-kpi-dis" class="map-kpi-value">0</p>
+                                </div>
+                                <div class="map-kpi-card">
+                                    <p class="map-kpi-label">Desembaraços Hoje</p>
+                                    <p id="map-kpi-desembaracos" class="map-kpi-value">0</p>
+                                </div>
+                                <div class="map-kpi-card">
+                                    <p class="map-kpi-label">Aguardando Chegada</p>
+                                    <p id="map-kpi-ag-chegada" class="map-kpi-value">0</p>
+                                </div>
                             </div>
-                            <div class="map-kpi-card">
-                                <p class="map-kpi-label">DIs Registradas Hoje</p>
-                                <p id="map-kpi-dis" class="map-kpi-value">0</p>
-                            </div>
-                            <div class="map-kpi-card">
-                                <p class="map-kpi-label">Desembaraços Hoje</p>
-                                <p id="map-kpi-desembaracos" class="map-kpi-value">0</p>
-                            </div>
-                            <div class="map-kpi-card">
-                                <p class="map-kpi-label">Aguardando Chegada</p>
-                                <p id="map-kpi-ag-chegada" class="map-kpi-value">0</p>
+                        </div>
+                        <div class="map-overlay-bottom">
+                            <div class="map-info-card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-lg font-semibold text-white">Rotas em Destaque</h3>
+                                    <span id="map-rotas-timestamp"
+                                        class="text-xs uppercase tracking-wider text-gray-500">-</span>
+                                </div>
+                                <div id="rotas-destaque"
+                                    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 text-sm text-gray-300">
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="map-overlay-bottom">
-                        <div class="map-info-card">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="text-lg font-semibold text-white">Rotas em Destaque</h3>
-                                <span id="map-rotas-timestamp" class="text-xs uppercase tracking-wider text-gray-500">-</span>
-                            </div>
-                            <div id="rotas-destaque" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 text-sm text-gray-300"></div>
-                        </div>
+                    <div id="hub-labels" class="pointer-events-none absolute inset-0"></div>
+                    <div class="map-legend">
+                        <span><span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>Marítimo</span>
+                        <span><span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>Aéreo</span>
+                        <span><span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>Hubs</span>
                     </div>
-                </div>
-                <div id="hub-labels" class="pointer-events-none absolute inset-0"></div>
-                <div class="map-legend">
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span>Marítimo</span>
-                    <span><span class="inline-block w-3 h-3 rounded-full bg-amber-300"></span>Aéreo</span>
-                    <span><span class="inline-block w-3 h-3 rounded-full border border-white/50"></span>Hubs</span>
-                </div>
-            </aside>
-        </main>
+                </aside>
+            </main>
         </div>
     </div>
     <!-- Fim Screen 1: Dashboard -->
@@ -611,23 +680,23 @@
         let autoSlideInterval = null;
         const SLIDE_DURATION = 40000; // 40 segundos por tela
         const PROGRESS_INTERVAL = 100; // Atualizar barra a cada 100ms
-        
+
         const screens = [
             { id: 'dashboard-screen', btn: 'btn-screen-dashboard' },
             { id: 'indicadores-screen', btn: 'btn-screen-indicadores' }
         ];
-        
+
         function showScreen(index) {
             if (index < 0 || index >= screens.length) return;
-            
+
             console.log(`[SLIDER] Mudando para tela ${index}`);
             currentScreen = index;
-            
+
             // Atualizar visibilidade das telas
             screens.forEach((screen, i) => {
                 const element = document.getElementById(screen.id);
                 const btnElement = document.getElementById(screen.btn);
-                
+
                 if (i === index) {
                     element.classList.remove('hidden');
                     element.style.display = 'block';
@@ -638,7 +707,7 @@
                     btnElement.classList.remove('active');
                 }
             });
-            
+
             // Carregar dados específicos da tela
             if (index === 1) { // Indicadores
                 loadIndicadoresOperacionais();
@@ -646,30 +715,30 @@
             } else {
                 stopIndicadoresRefresh();
             }
-            
+
             // Reiniciar progresso
             resetProgressBar();
         }
-        
+
         function nextScreen() {
             const next = (currentScreen + 1) % screens.length;
             showScreen(next);
         }
-        
+
         function startAutoSlide() {
             if (autoSlideInterval) return;
-            
+
             console.log('[SLIDER] Auto-slide ativado');
             autoSlideEnabled = true;
             updateProgressBar();
-            
+
             autoSlideInterval = setInterval(() => {
                 if (autoSlideEnabled) {
                     nextScreen();
                 }
             }, SLIDE_DURATION);
         }
-        
+
         function stopAutoSlide() {
             if (autoSlideInterval) {
                 clearInterval(autoSlideInterval);
@@ -679,59 +748,59 @@
             resetProgressBar();
             console.log('[SLIDER] Auto-slide desativado');
         }
-        
+
         let progressInterval = null;
         let progressStartTime = 0;
-        
+
         function updateProgressBar() {
             if (progressInterval) {
                 clearInterval(progressInterval);
             }
-            
+
             progressStartTime = Date.now();
             const progressBar = document.getElementById('slider-progress-bar');
-            
+
             progressInterval = setInterval(() => {
                 if (!autoSlideEnabled) {
                     clearInterval(progressInterval);
                     return;
                 }
-                
+
                 const elapsed = Date.now() - progressStartTime;
                 const progress = Math.min((elapsed / SLIDE_DURATION) * 100, 100);
                 progressBar.style.width = `${progress}%`;
-                
+
                 if (progress >= 100) {
                     clearInterval(progressInterval);
                 }
             }, PROGRESS_INTERVAL);
         }
-        
+
         function resetProgressBar() {
             const progressBar = document.getElementById('slider-progress-bar');
             progressBar.style.width = '0%';
-            
+
             if (progressInterval) {
                 clearInterval(progressInterval);
                 progressInterval = null;
             }
-            
+
             if (autoSlideEnabled) {
                 updateProgressBar();
             }
         }
-        
+
         // Event listeners para controles
         document.getElementById('btn-screen-dashboard').addEventListener('click', () => {
             stopAutoSlide();
             showScreen(0);
         });
-        
+
         document.getElementById('btn-screen-indicadores').addEventListener('click', () => {
             stopAutoSlide();
             showScreen(1);
         });
-        
+
         document.getElementById('slider-auto-toggle').addEventListener('change', (e) => {
             if (e.target.checked) {
                 startAutoSlide();
@@ -739,55 +808,55 @@
                 stopAutoSlide();
             }
         });
-        
+
         // Inicializar slider
         document.addEventListener('DOMContentLoaded', () => {
             console.log('[SLIDER] Inicializando sistema de slider');
             showScreen(0); // Começar com dashboard
             startAutoSlide();
         });
-        
+
         // ========== FIM SLIDER SYSTEM ==========
-        
+
         // ========== INDICADORES FUNCTIONS ==========
         // Função para carregar e atualizar indicadores operacionais
         async function loadIndicadoresOperacionais() {
             try {
                 console.log('[INDICADORES] Carregando dados...');
                 const response = await fetch('/dashboard-interno-mapa/api/indicadores-operacionais');
-                
+
                 if (!response.ok) {
                     throw new Error(`Erro HTTP ${response.status}`);
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (!result.success) {
                     throw new Error(result.error || 'Erro ao buscar indicadores');
                 }
-                
+
                 const dados = result.data;
                 console.log('[INDICADORES] Dados recebidos:', dados);
-                
+
                 // Usar funil_por_status_timeline para TODOS os cards
                 const funil = dados.funil_por_status_timeline || {};
-                
+
                 // Atualizar cards principais - PRIMEIRA LINHA
                 document.getElementById('ind-abertos').textContent = (dados.total_processos_abertos || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-agd-embarque').textContent = (funil['2_agd_embarque'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-agd-chegada').textContent = (funil['3_agd_chegada'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-agd-registro').textContent = (funil['4_agd_registro'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-em-analise').textContent = (dados.total_em_analise_fiscal || 0).toLocaleString('pt-BR');
-                
+
                 // Tempo médio de análise
                 const tempoMedio = parseFloat(dados.tempo_medio_analise_dias || 0).toFixed(1);
                 document.getElementById('ind-tempo-medio').textContent = `${tempoMedio} dias`;
-                
+
                 // SEGUNDA LINHA: Desembaraço, Fechamento, A Faturar
                 document.getElementById('ind-agd-desembaraco').textContent = (funil['5_agd_desembaraco'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-agd-fechamento').textContent = (funil['6_agd_fechamento'] || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-a-faturar').textContent = (funil['7_a_faturar'] || 0).toLocaleString('pt-BR');
-                
+
                 // Detalhes dos processos em análise - Layout em GALERIA
                 const detalhesContainer = document.getElementById('ind-detalhes-analise');
                 if (dados.detalhe_processos_analise && dados.detalhe_processos_analise.trim()) {
@@ -812,25 +881,25 @@
                 } else {
                     detalhesContainer.innerHTML = '<p class="text-sm text-slate-400 col-span-full">Nenhum processo em análise fiscal no momento</p>';
                 }
-                
+
                 // Metas e registros
                 document.getElementById('ind-registrados-ano').textContent = (dados.processos_registrados_ano || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-meta-anual').textContent = (dados.meta_anual || 0).toLocaleString('pt-BR');
                 document.getElementById('ind-faltam-meta').textContent = (dados.faltam_para_meta_anual || 0).toLocaleString('pt-BR');
-                
+
                 // Percentual da meta
                 const percentual = parseFloat(dados.percentual_meta_anual || 0);
                 document.getElementById('ind-percentual-meta').textContent = `${percentual.toFixed(1)}%`;
                 document.getElementById('ind-progress-bar').style.width = `${Math.min(percentual, 100)}%`;
-                
+
                 // Média mensal
                 const mediaMensal = parseFloat(dados.media_mensal_registros_ano || 0);
                 document.getElementById('ind-media-mensal').textContent = mediaMensal.toFixed(1);
-                
+
                 // Projeção
                 const projecao = parseInt(dados.projecao_registros_fim_ano || 0);
                 document.getElementById('ind-projecao-fim-ano').textContent = projecao.toLocaleString('pt-BR');
-                
+
                 // Status da meta
                 const statusMetaEl = document.getElementById('ind-status-meta-text');
                 const metaAnual = parseInt(dados.meta_anual || 0);
@@ -842,14 +911,14 @@
                     statusMetaEl.textContent = `⚠ Faltam ${deficit} processos`;
                     statusMetaEl.className = 'text-lg font-semibold text-amber-400';
                 }
-                
+
                 // Atualizar timestamp
                 const now = new Date();
-                document.getElementById('indicadores-last-update').textContent = 
+                document.getElementById('indicadores-last-update').textContent =
                     `Atualizado às ${now.toLocaleTimeString('pt-BR')}`;
-                
+
                 console.log('[INDICADORES] Dados carregados com sucesso');
-                
+
             } catch (error) {
                 console.error('[INDICADORES] Erro ao carregar:', error);
                 // Não mostra alerta para não interromper a navegação automática
@@ -1231,8 +1300,8 @@
 
             const metaChartOptions = {
                 series: [metaSeriesValue],
-                chart: { 
-                    type: 'radialBar', 
+                chart: {
+                    type: 'radialBar',
                     height: 280,
                     offsetY: -10
                 },
@@ -1241,22 +1310,22 @@
                     radialBar: {
                         startAngle: -90,
                         endAngle: 90,
-                        hollow: { 
+                        hollow: {
                             size: '70%',
                             margin: 0
                         },
-                        track: { 
+                        track: {
                             background: 'rgba(148, 163, 184, 0.15)',
                             strokeWidth: '100%',
                             margin: 5
                         },
                         dataLabels: {
-                            name: { 
-                                show: true, 
-                                color: '#94a3b8', 
-                                fontSize: '14px', 
+                            name: {
+                                show: true,
+                                color: '#94a3b8',
+                                fontSize: '14px',
                                 offsetY: 25,
-                                text: 'Meta atingida' 
+                                text: 'Meta atingida'
                             },
                             value: {
                                 show: true,
@@ -1322,7 +1391,7 @@
                 'MULTILOG - MOOCA': [-23.55, -46.60],
                 'RECIFE': [-8.05, -34.90],
                 'DEFINIR': [-26.90, -48.66],  // Default para Itajaí
-                
+
                 // Países por código ISO-2 (mais assertivo)
                 'CN': [35.86, 104.19],      // China
                 'US': [37.09, -95.71],      // Estados Unidos
@@ -1362,7 +1431,7 @@
                 'TR': [38.96, 35.24],       // Turquia
                 'IE': [53.41, -8.24],       // Irlanda
                 'UY': [-32.52, -55.77],     // Uruguai
-                
+
                 // Manter nomes completos para compatibilidade (fallback)
                 'CHINA, REPUBLICA POPULAR': [35.86, 104.19],
                 'ESTADOS UNIDOS': [37.09, -95.71],
@@ -1825,4 +1894,5 @@
         });
     </script>
 </body>
+
 </html>

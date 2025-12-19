@@ -52,7 +52,7 @@ class EnhancedDataTable {
 
     setupDOM() {
         this.table = document.getElementById(this.config.tableId);
-        
+
         if (!this.table) {
             console.error(`Table with ID ${this.config.tableId} not found`);
             return;
@@ -60,17 +60,17 @@ class EnhancedDataTable {
 
         // Find container - try multiple strategies
         this.container = document.getElementById(this.config.containerId);
-        
+
         if (!this.container) {
             // Try to find parent container with enhanced-table-section class
             this.container = this.table.closest('.enhanced-table-section');
         }
-        
+
         if (!this.container) {
             // Try to find any parent container that might work
             this.container = this.table.closest('div');
         }
-        
+
         if (!this.container) {
             console.error(`Container for table ${this.config.tableId} not found`);
             return;
@@ -85,7 +85,7 @@ class EnhancedDataTable {
 
         // Add enhanced classes
         this.table.classList.add('enhanced-data-table');
-        
+
         // Setup search container
         if (this.config.searchable && this.searchInput) {
             this.setupSearchContainer();
@@ -96,10 +96,10 @@ class EnhancedDataTable {
 
         // Setup table headers
         this.setupTableHeaders();
-        
+
         // Setup initial sorting if specified
         this.setupInitialSorting();
-        
+
         console.log('[ENHANCED_TABLE] DOM setup completed for', this.config.tableId);
     }
 
@@ -111,7 +111,7 @@ class EnhancedDataTable {
                 const columnKey = this.getColumnKey(index);
                 return columnKey === this.config.sortField;
             });
-            
+
             if (columnIndex >= 0) {
                 this.sortColumn = columnIndex;
                 console.log(`[ENHANCED_TABLE] Initial sort set to column ${columnIndex} (${this.config.sortField}), direction: ${this.config.sortOrder}`);
@@ -156,7 +156,7 @@ class EnhancedDataTable {
             const paginationContainer = document.createElement('div');
             paginationContainer.className = 'enhanced-pagination';
             paginationContainer.id = this.config.tableId + '-pagination';
-            
+
             // Insert after table or table's parent container
             const insertTarget = this.table.closest('.enhanced-table-container') || this.table.parentElement;
             if (insertTarget && insertTarget.parentElement) {
@@ -164,7 +164,7 @@ class EnhancedDataTable {
             } else {
                 this.table.parentElement.appendChild(paginationContainer);
             }
-            
+
             this.paginationContainer = paginationContainer;
             return;
         }
@@ -214,7 +214,7 @@ class EnhancedDataTable {
             this.searchInput.addEventListener('input', (e) => {
                 const value = e.target.value.trim();
                 this.handleSearch(value);
-                
+
                 // Show/hide clear button
                 const clearBtn = this.searchInput.closest('.enhanced-search-container')?.querySelector('.enhanced-search-clear');
                 if (clearBtn) {
@@ -236,13 +236,13 @@ class EnhancedDataTable {
         this.data = data || [];
         this.filteredData = [...this.data];
         this.currentPage = 1;
-        
+
         // Apply initial sorting if configured and not already set
         if (this.config.sortField && this.sortColumn === null) {
             console.log('[ENHANCED_TABLE] Applying initial sort configuration');
             this.setupInitialSorting();
         }
-        
+
         this.sortData();
         console.log('[ENHANCED_TABLE] Calling render with', this.filteredData.length, 'filtered items');
         this.render();
@@ -257,14 +257,39 @@ class EnhancedDataTable {
             this.filteredData = [...this.data];
         } else {
             this.filteredData = this.data.filter(row => {
-                return Object.values(row).some(value => {
-                    if (value === null || value === undefined) return false;
-                    return String(value).toLowerCase().includes(this.searchQuery);
-                });
+                return this.deepSearch(row, this.searchQuery);
             });
         }
 
+        console.log(`[ENHANCED_TABLE] Busca "${query}" encontrou ${this.filteredData.length} de ${this.data.length} registros`);
         this.render();
+    }
+
+    /**
+     * Deep search - busca recursivamente em objetos e arrays aninhados
+     */
+    deepSearch(obj, query) {
+        if (obj === null || obj === undefined) return false;
+
+        // Se for string ou número, verifica diretamente
+        if (typeof obj === 'string') {
+            return obj.toLowerCase().includes(query);
+        }
+        if (typeof obj === 'number') {
+            return String(obj).toLowerCase().includes(query);
+        }
+
+        // Se for array, busca em cada elemento
+        if (Array.isArray(obj)) {
+            return obj.some(item => this.deepSearch(item, query));
+        }
+
+        // Se for objeto, busca em cada valor
+        if (typeof obj === 'object') {
+            return Object.values(obj).some(value => this.deepSearch(value, query));
+        }
+
+        return false;
     }
 
     handleSort(columnIndex, headerElement) {
@@ -306,7 +331,7 @@ class EnhancedDataTable {
 
         const headers = Array.from(this.table.querySelectorAll('thead th'));
         const columnKey = this.getColumnKey(this.sortColumn);
-        
+
         console.log(`[ENHANCED_TABLE] Sorting by column ${this.sortColumn} (${columnKey}), direction: ${this.sortDirection}`);
 
         this.filteredData.sort((a, b) => {
@@ -320,10 +345,10 @@ class EnhancedDataTable {
             // Special handling for dates - check if values look like Brazilian dates first
             if (this.isBrazilianDate(aVal) || this.isBrazilianDate(bVal)) {
                 console.log(`[ENHANCED_TABLE] Comparing dates: "${aVal}" vs "${bVal}"`);
-                
+
                 const aDate = this.parseDate(aVal);
                 const bDate = this.parseDate(bVal);
-                
+
                 console.log(`[ENHANCED_TABLE] Parsed dates: ${aDate ? aDate.toISOString().split('T')[0] : 'null'} vs ${bDate ? bDate.toISOString().split('T')[0] : 'null'}`);
 
                 // If both are valid dates, compare them
@@ -332,11 +357,11 @@ class EnhancedDataTable {
                     console.log(`[ENHANCED_TABLE] Date comparison result: ${result}`);
                     return result;
                 }
-                
+
                 // If only one is a valid date, valid date comes first (or last depending on direction)
                 if (aDate && !bDate) return this.sortDirection === 'asc' ? -1 : 1;
                 if (!aDate && bDate) return this.sortDirection === 'asc' ? 1 : -1;
-                
+
                 // If neither is a valid date, fall back to string comparison
             }
 
@@ -358,8 +383,8 @@ class EnhancedDataTable {
                 return bStr.localeCompare(aStr, 'pt-BR');
             }
         });
-        
-        console.log(`[ENHANCED_TABLE] Sorting completed. First 3 items:`, 
+
+        console.log(`[ENHANCED_TABLE] Sorting completed. First 3 items:`,
             this.filteredData.slice(0, 3).map(item => ({ [columnKey]: item[columnKey] })));
     }
 
@@ -372,10 +397,10 @@ class EnhancedDataTable {
 
     parseDate(dateStr) {
         if (!dateStr) return null;
-        
+
         // Clean the string
         const cleanStr = String(dateStr).trim();
-        
+
         // Try Brazilian format DD/MM/YYYY (with optional time)
         const brazilianMatch = cleanStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(\s.*)?$/);
         if (brazilianMatch) {
@@ -383,13 +408,13 @@ class EnhancedDataTable {
             const dayNum = parseInt(day, 10);
             const monthNum = parseInt(month, 10);
             const yearNum = parseInt(year, 10);
-            
+
             // Basic validation
             if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12 && yearNum >= 1900) {
                 const date = new Date(yearNum, monthNum - 1, dayNum);
                 // Double check the date is valid (handles things like Feb 30)
-                if (date.getFullYear() === yearNum && 
-                    date.getMonth() === monthNum - 1 && 
+                if (date.getFullYear() === yearNum &&
+                    date.getMonth() === monthNum - 1 &&
                     date.getDate() === dayNum) {
                     return date;
                 }
@@ -410,30 +435,30 @@ class EnhancedDataTable {
         // PRIORIZAR data-sort attribute do HTML (mais confiável)
         const headers = Array.from(this.table.querySelectorAll('thead th'));
         const headerElement = headers[columnIndex];
-        
+
         if (!headerElement) {
             console.warn(`[ENHANCED_TABLE] Header at index ${columnIndex} not found`);
             return `column_${columnIndex}`;
         }
-        
+
         // 1. Tentar obter de data-sort (MELHOR OPÇÃO)
         const dataSortAttr = headerElement.getAttribute('data-sort');
         if (dataSortAttr) {
             console.log(`[ENHANCED_TABLE] Using data-sort="${dataSortAttr}" for column ${columnIndex}`);
-            
+
             // Aplicar mapeamento se necessário (mesma lógica dos filtros)
             const columnMap = {
                 'status': 'status_sistema',        // data-sort="status" → status_sistema
                 'material': 'mercadoria',          // data-sort="material" → mercadoria
                 'urf_despacho': 'urf_despacho_normalizado' // data-sort="urf_despacho" → normalizado
             };
-            
+
             return columnMap[dataSortAttr] || dataSortAttr;
         }
-        
+
         // 2. Fallback: usar texto do header (menos confiável por causa de traduções)
         const headerText = headerElement.textContent?.trim()?.toLowerCase();
-        
+
         if (!headerText) {
             console.warn(`[ENHANCED_TABLE] Header text at index ${columnIndex} is empty`);
             return `column_${columnIndex}`;
@@ -469,13 +494,13 @@ class EnhancedDataTable {
         if (columnKey === 'urf_despacho_normalizado') {
             const normalizedValue = item.urf_despacho_normalizado;
             const originalValue = item.urf_despacho;
-            
+
             // If normalized value exists and is not 'N/A', use it; otherwise fallback to original
             if (normalizedValue && normalizedValue !== 'N/A') {
                 // console.log(`[ENHANCED_TABLE] URF - using normalized: "${normalizedValue}"`);
                 return normalizedValue;
             }
-            
+
             // console.log(`[ENHANCED_TABLE] URF - using fallback: "${originalValue}"`);
             return originalValue || '';
         }
@@ -532,7 +557,7 @@ class EnhancedDataTable {
     renderEmptyState() {
         const tbody = this.table.querySelector('tbody');
         const colCount = this.table.querySelectorAll('thead th').length;
-        
+
         tbody.innerHTML = `
             <tr>
                 <td colspan="${colCount}" class="enhanced-table-empty">
@@ -549,7 +574,7 @@ class EnhancedDataTable {
             console.warn('[ENHANCED_TABLE] filteredData is not a valid array, initializing empty');
             this.filteredData = [];
         }
-        
+
         const totalItems = this.filteredData.length || 0;
         const totalPages = Math.ceil(totalItems / this.config.itemsPerPage) || 1;
         const startItem = totalItems > 0 ? (this.currentPage - 1) * this.config.itemsPerPage + 1 : 0;
@@ -593,10 +618,10 @@ class EnhancedDataTable {
 
         const pages = [];
         const maxVisible = 5;
-        
+
         let startPage = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
         let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-        
+
         if (endPage - startPage < maxVisible - 1) {
             startPage = Math.max(1, endPage - maxVisible + 1);
         }
@@ -626,7 +651,7 @@ class EnhancedDataTable {
     // Utility functions
     formatCurrency(value) {
         if (value === null || value === undefined || isNaN(value)) return 'R$ 0,00';
-        
+
         const num = parseFloat(value);
         return num.toLocaleString('pt-BR', {
             style: 'currency',
@@ -636,7 +661,7 @@ class EnhancedDataTable {
 
     formatNumber(value, decimals = 0) {
         if (value === null || value === undefined || isNaN(value)) return '0';
-        
+
         const num = parseFloat(value);
         return num.toLocaleString('pt-BR', {
             minimumFractionDigits: decimals,
@@ -646,7 +671,7 @@ class EnhancedDataTable {
 
     formatDate(dateStr) {
         if (!dateStr) return '-';
-        
+
         // If already in Brazilian format, return as is
         if (dateStr.match(/\d{1,2}\/\d{1,2}\/\d{4}/)) {
             return dateStr;

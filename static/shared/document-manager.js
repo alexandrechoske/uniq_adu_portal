@@ -68,16 +68,16 @@ class DocumentManager {
                 e.preventDefault();
                 fileInputLabel.classList.add('drag-over');
             });
-            
+
             fileInputLabel.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 fileInputLabel.classList.remove('drag-over');
             });
-            
+
             fileInputLabel.addEventListener('drop', (e) => {
                 e.preventDefault();
                 fileInputLabel.classList.remove('drag-over');
-                
+
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     fileInput.files = files;
@@ -91,20 +91,20 @@ class DocumentManager {
         try {
             console.log('[DOCUMENT_MANAGER] Carregando documentos...');
             console.log('[DOCUMENT_MANAGER] Process ref unique:', this.processRefUnique);
-            
+
             // Encode the ref_unique to handle special characters
             const encodedRefUnique = encodeURIComponent(this.processRefUnique);
             const url = `/api/documents/process/${encodedRefUnique}`;
             console.log('[DOCUMENT_MANAGER] URL da requisição:', url);
-            
+
             const response = await fetch(url);
-            
+
             // Check if response is ok
             if (!response.ok) {
                 console.error('[DOCUMENT_MANAGER] Erro HTTP:', response.status, response.statusText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const result = await response.json();
 
             if (result.success) {
@@ -150,7 +150,7 @@ class DocumentManager {
     renderDocumentItem(doc) {
         const canDelete = ['admin', 'interno_unique', 'cliente_unique'].includes(this.userRole); // TODAS as roles podem deletar
         const uploadDate = new Date(doc.data_upload).toLocaleDateString('pt-BR');
-        
+
         return `
             <div class="document-item" data-doc-id="${doc.id}">
                 <div class="document-icon">
@@ -212,11 +212,11 @@ class DocumentManager {
         if (modal) {
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            
+
             // Limpar form
             const form = document.getElementById('document-upload-form');
             if (form) form.reset();
-            
+
             // Limpar preview
             this.clearFilePreview();
         }
@@ -234,7 +234,7 @@ class DocumentManager {
         const file = event.target.files[0];
         if (file) {
             this.showFilePreview(file);
-            
+
             // Auto-preencher nome de exibição se vazio
             const displayNameInput = document.getElementById('document-display-name');
             if (displayNameInput && !displayNameInput.value) {
@@ -250,7 +250,7 @@ class DocumentManager {
         if (!preview) return;
 
         const sizeFormatted = this.formatFileSize(file.size);
-        
+
         preview.innerHTML = `
             <div class="file-preview-item">
                 <i class="mdi ${this.getFileIcon(file.name.split('.').pop())}"></i>
@@ -281,23 +281,23 @@ class DocumentManager {
 
     async handleUpload(event) {
         event.preventDefault();
-        
+
         const form = event.target;
         const formData = new FormData(form);
-        
+
         // Adicionar ref_unique
         formData.append('ref_unique', this.processRefUnique);
-        
+
         try {
             this.showUploadProgress(true);
-            
+
             const response = await fetch('/api/documents/upload', {
                 method: 'POST',
                 body: formData
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showSuccess('Documento enviado com sucesso!');
                 this.hideUploadModal();
@@ -316,12 +316,12 @@ class DocumentManager {
     showUploadProgress(show) {
         const button = document.querySelector('#document-upload-form button[type="submit"]');
         const spinner = document.getElementById('upload-spinner');
-        
+
         if (button) {
             button.disabled = show;
             button.textContent = show ? 'Enviando...' : 'Enviar Documento';
         }
-        
+
         if (spinner) {
             spinner.style.display = show ? 'block' : 'none';
         }
@@ -330,13 +330,41 @@ class DocumentManager {
     async downloadDocument(documentId) {
         try {
             console.log('[DOCUMENT_MANAGER] Iniciando download:', documentId);
-            
+
             const response = await fetch(`/api/documents/${documentId}/download`);
             const result = await response.json();
 
             if (result.success) {
-                // Abrir URL de download em nova janela
-                window.open(result.download_url, '_blank');
+                // Buscar o documento correspondente para obter o nome
+                const doc = this.documents.find(d => d.id === documentId);
+                const fileName = doc ? doc.nome_exibicao : 'documento';
+
+                // Forçar download via fetch e blob
+                try {
+                    const fileResponse = await fetch(result.download_url);
+                    const blob = await fileResponse.blob();
+
+                    // Criar link temporário com atributo download
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = fileName;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Limpar
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(downloadUrl);
+                    }, 100);
+
+                    console.log('[DOCUMENT_MANAGER] Download iniciado:', fileName);
+                } catch (fetchError) {
+                    console.error('[DOCUMENT_MANAGER] Erro ao baixar arquivo:', fetchError);
+                    // Fallback: abrir em nova aba se o download falhar
+                    window.open(result.download_url, '_blank');
+                }
             } else {
                 this.showError('Erro no download: ' + result.error);
             }
@@ -361,7 +389,7 @@ class DocumentManager {
             const response = await fetch(`/api/documents/${documentId}/delete`, {
                 method: 'DELETE'
             });
-            
+
             const result = await response.json();
 
             if (result.success) {
@@ -392,7 +420,7 @@ class DocumentManager {
         // Implementação simples com alert
         // TODO: Implementar sistema de toast/notificação mais elegante
         console.log(`[DOCUMENT_MANAGER] ${type.toUpperCase()}: ${message}`);
-        
+
         if (type === 'error') {
             alert('Erro: ' + message);
         } else if (type === 'success') {
@@ -410,39 +438,39 @@ let documentManager = null;
 function downloadDocument(documentId) {
     console.log('[GLOBAL] downloadDocument chamado para ID:', documentId);
     console.log('[GLOBAL] Verificando window.documentManager:', !!window.documentManager);
-    
+
     if (!window.documentManager) {
         console.error('[GLOBAL] window.documentManager não está inicializado');
         alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
         return;
     }
-    
+
     return window.documentManager.downloadDocument(documentId);
 }
 
 // Função global para editar documento
 function editDocument(documentId) {
     console.log('[GLOBAL] editDocument chamado para ID:', documentId);
-    
+
     if (!window.documentManager) {
         console.error('[GLOBAL] window.documentManager não está inicializado');
         alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
         return;
     }
-    
+
     return window.documentManager.editDocument(documentId);
 }
 
 // Função global para deletar documento
 function deleteDocument(documentId) {
     console.log('[GLOBAL] deleteDocument chamado para ID:', documentId);
-    
+
     if (!window.documentManager) {
         console.error('[GLOBAL] window.documentManager não está inicializado');
         alert('Sistema de documentos não está pronto. Tente novamente em alguns segundos.');
         return;
     }
-    
+
     return window.documentManager.deleteDocument(documentId);
 }
 
