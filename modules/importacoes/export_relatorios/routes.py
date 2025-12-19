@@ -87,6 +87,80 @@ def serialize_cell_value(value):
             return str(value)
     return value
 
+
+def extract_despesas_categories(rows):
+    """Extrai todas as categorias de despesas únicas de todos os registros.
+    
+    Retorna uma lista ordenada de categorias encontradas.
+    """
+    categories = set()
+    for row in rows:
+        despesas = row.get('despesas_processo')
+        if despesas:
+            # Pode vir como string JSON ou já como lista
+            if isinstance(despesas, str):
+                try:
+                    despesas = json.loads(despesas)
+                except:
+                    continue
+            
+            if isinstance(despesas, list):
+                for item in despesas:
+                    if isinstance(item, dict) and 'categoria_custo' in item:
+                        cat = item.get('categoria_custo')
+                        if cat:
+                            categories.add(cat)
+    
+    # Ordenar categorias para manter consistência
+    return sorted(list(categories))
+
+
+def expand_despesas_to_columns(row, categories):
+    """Expande o campo despesas_processo em colunas separadas por categoria.
+    
+    Retorna um dicionário com chaves no formato 'despesa_{categoria}' e valores numéricos.
+    Se uma categoria tiver múltiplas entradas, soma os valores.
+    """
+    result = {f'despesa_{cat}': '' for cat in categories}
+    
+    despesas = row.get('despesas_processo')
+    if not despesas:
+        return result
+    
+    # Pode vir como string JSON ou já como lista
+    if isinstance(despesas, str):
+        try:
+            despesas = json.loads(despesas)
+        except:
+            return result
+    
+    if not isinstance(despesas, list):
+        return result
+    
+    # Acumular valores por categoria (caso haja múltiplas entradas da mesma categoria)
+    category_totals = {}
+    for item in despesas:
+        if isinstance(item, dict):
+            cat = item.get('categoria_custo')
+            valor = item.get('valor_custo')
+            if cat and valor is not None:
+                try:
+                    valor_num = float(str(valor).replace(',', '.'))
+                    if cat in category_totals:
+                        category_totals[cat] += valor_num
+                    else:
+                        category_totals[cat] = valor_num
+                except (ValueError, TypeError):
+                    pass
+    
+    # Preencher resultado
+    for cat, total in category_totals.items():
+        key = f'despesa_{cat}'
+        if key in result:
+            result[key] = total
+    
+    return result
+
 def parse_br_date(date_str):
     """Converte data em formato DD/MM/YYYY para datetime; retorna None se inválida."""
     if not date_str or not isinstance(date_str, str):
@@ -535,17 +609,36 @@ def export_csv():
             rows = rows[:max_rows]
         
         # Colunas a usar (documentos é buscado sob demanda na página)
-        columns_to_export = [c for c in TABLE_COLUMNS if c != 'documentos']
+        # Excluir 'despesas_processo' pois será expandida em colunas separadas
+        columns_to_export = [c for c in TABLE_COLUMNS if c not in ['documentos', 'despesas_processo']]
+        
+        # Extrair categorias únicas de despesas para criar colunas dinâmicas
+        despesas_categories = extract_despesas_categories(rows)
+        despesas_columns = [f'despesa_{cat}' for cat in despesas_categories]
+        print(f"[EXPORT_REL] Categorias de despesas encontradas: {despesas_categories}")
+        
+        # Colunas finais: colunas base + colunas de despesas expandidas
+        final_columns = columns_to_export + despesas_columns
         
         # Gerar CSV em stream
         output = io.StringIO()
         writer = csv.writer(output, delimiter=';')
         
-        # Usar colunas sem documentos
-        writer.writerow(columns_to_export)
+        # Usar colunas finais expandidas
+        writer.writerow(final_columns)
         
         for r in rows:
-            writer.writerow([serialize_cell_value(r.get(col)) for col in columns_to_export])
+            # Expandir despesas para esta linha
+            despesas_expanded = expand_despesas_to_columns(r, despesas_categories)
+            
+            row_values = []
+            for col in final_columns:
+                if col.startswith('despesa_'):
+                    row_values.append(despesas_expanded.get(col, ''))
+                else:
+                    row_values.append(serialize_cell_value(r.get(col)))
+            
+            writer.writerow(row_values)
         
         csv_data = output.getvalue()
         output.close()
@@ -607,9 +700,18 @@ def export_excel():
             rows = rows[:max_rows]
         
         # Colunas a usar (documentos é buscado sob demanda na página)
-        columns_to_export = [c for c in TABLE_COLUMNS if c != 'documentos']
+        # Excluir 'despesas_processo' pois será expandida em colunas separadas
+        columns_to_export = [c for c in TABLE_COLUMNS if c not in ['documentos', 'despesas_processo']]
         
-        print(f"[EXPORT_REL] Gerando Excel com {len(rows)} registros")
+        # Extrair categorias únicas de despesas para criar colunas dinâmicas
+        despesas_categories = extract_despesas_categories(rows)
+        despesas_columns = [f'despesa_{cat}' for cat in despesas_categories]
+        print(f"[EXPORT_REL] Categorias de despesas encontradas: {despesas_categories}")
+        
+        # Colunas finais: colunas base + colunas de despesas expandidas
+        final_columns = columns_to_export + despesas_columns
+        
+        print(f"[EXPORT_REL] Gerando Excel com {len(rows)} registros e {len(final_columns)} colunas")
         
         # Criar workbook Excel
         wb = Workbook()
@@ -621,11 +723,18 @@ def export_excel():
         header_font = Font(bold=True, color="FFFFFF", size=11)
         header_alignment = Alignment(horizontal="center", vertical="center")
         
+        # Estilo diferenciado para colunas de despesas
+        despesa_header_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+        
         # Escrever cabeçalho
-        for col_idx, col_name in enumerate(columns_to_export, 1):
+        for col_idx, col_name in enumerate(final_columns, 1):
             cell = ws.cell(row=1, column=col_idx)
             cell.value = col_name
-            cell.fill = header_fill
+            # Usar cor verde para colunas de despesas
+            if col_name.startswith('despesa_'):
+                cell.fill = despesa_header_fill
+            else:
+                cell.fill = header_fill
             cell.font = header_font
             cell.alignment = header_alignment
         
@@ -635,12 +744,21 @@ def export_excel():
             if row_idx % 5000 == 0:
                 print(f"[EXPORT_REL] Progresso: {row_idx}/{len(rows)} registros")
             
-            for col_idx, col_name in enumerate(columns_to_export, 1):
+            # Expandir despesas para esta linha
+            despesas_expanded = expand_despesas_to_columns(row_data, despesas_categories)
+            
+            for col_idx, col_name in enumerate(final_columns, 1):
                 cell = ws.cell(row=row_idx, column=col_idx)
-                cell.value = serialize_cell_value(row_data.get(col_name))
+                
+                # Se for coluna de despesa, pegar do dicionário expandido
+                if col_name.startswith('despesa_'):
+                    value = despesas_expanded.get(col_name, '')
+                    cell.value = value
+                else:
+                    cell.value = serialize_cell_value(row_data.get(col_name))
         
         # Ajustar largura das colunas
-        for col_idx in range(1, len(columns_to_export) + 1):
+        for col_idx in range(1, len(final_columns) + 1):
             ws.column_dimensions[get_column_letter(col_idx)].width = 15
         
         # Salvar em BytesIO
