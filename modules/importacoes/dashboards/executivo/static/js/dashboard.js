@@ -45,6 +45,7 @@ const AVAILABLE_COLUMNS = [
 
     // Grupo: Datas e Prazos
     { id: 'data_chegada', label: 'Previsão Chegada', visible: true, fixed: false, sortField: 'data_chegada', category: 'Datas e Prazos', order: 8 },
+    { id: 'presenca_carga', label: 'Presença Carga', visible: false, fixed: false, sortField: 'presenca_carga', category: 'Datas e Prazos', order: 8.5 },
     { id: 'data_embarque', label: 'Data Embarque', visible: false, fixed: false, sortField: 'data_embarque', category: 'Datas e Prazos', order: 9 },
     { id: 'transit_time', label: 'Transit Time', visible: false, fixed: false, sortField: 'transit_time', category: 'Datas e Prazos', order: 10 },
     { id: 'data_registro', label: 'Data Registro', visible: false, fixed: false, sortField: 'data_registro', category: 'Datas e Prazos', order: 11 },
@@ -69,20 +70,20 @@ const AVAILABLE_COLUMNS = [
     { id: 'limite_segundo_periodo', label: 'Limite 2º Período', visible: false, fixed: false, sortable: false, sortField: 'limite_segundo_periodo', category: 'Armazenagem', order: 24 },
     { id: 'dias_extras_armazenagem', label: 'Dias Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'dias_extras_armazenagem', category: 'Armazenagem', order: 25 },
     { id: 'valor_despesas_extras', label: 'Desp. Extras Armazenagem', visible: false, fixed: false, sortable: false, sortField: 'valor_despesas_extras', category: 'Armazenagem', order: 26 },
-    
+
     // Grupo: Kingspan - Pedido
     { id: 'po_cliente', label: 'PO Cliente', visible: false, fixed: false, sortable: true, sortField: 'po_cliente', category: 'Kingspan - Pedido', order: 27 },
     { id: 'referencia_exportador', label: 'Referência Exportador', visible: false, fixed: false, sortable: true, sortField: 'referencia_exportador', category: 'Kingspan - Pedido', order: 28 },
     { id: 'codigo_produto', label: 'Código Produto', visible: false, fixed: false, sortable: true, sortField: 'codigo_produto', category: 'Kingspan - Pedido', order: 29 },
     { id: 'filial_codigo', label: 'Filial', visible: false, fixed: false, sortable: true, sortField: 'filial_codigo', category: 'Kingspan - Pedido', order: 30 },
     { id: 'licenca_importacao', label: 'Licença Importação', visible: false, fixed: false, sortable: true, sortField: 'licenca_importacao', category: 'Kingspan - Pedido', order: 31 },
-    
+
     // Grupo: Kingspan - Logística
     { id: 'freetime', label: 'Freetime', visible: false, fixed: false, sortable: true, sortField: 'freetime', category: 'Kingspan - Logística', order: 32 },
     { id: 'etb', label: 'ETB', visible: false, fixed: false, sortable: true, sortField: 'etb', category: 'Kingspan - Logística', order: 33 },
     { id: 'navio', label: 'Navio', visible: false, fixed: false, sortable: true, sortField: 'navio', category: 'Kingspan - Logística', order: 34 },
     { id: 'armador_agente_trade', label: 'Armador/Agente Trade', visible: false, fixed: false, sortable: true, sortField: 'armador_agente_trade', category: 'Kingspan - Logística', order: 35 },
-    
+
     // Grupo: Kingspan - Financeiro
     { id: 'moeda', label: 'Moeda', visible: false, fixed: false, sortable: true, sortField: 'moeda', category: 'Kingspan - Financeiro', order: 36 },
     { id: 'total_pedido_moeda_origem', label: 'Total Pedido (Moeda Origem)', visible: false, fixed: false, sortable: true, sortField: 'total_pedido_moeda_origem', category: 'Kingspan - Financeiro', order: 37 },
@@ -186,7 +187,7 @@ function getAvailableColumnsFiltered() {
             .filter(col => !col.category || !col.category.startsWith('Kingspan'))
             .map(col => ({ ...col }));
     }
-    
+
     // Se tem acesso ou não definido (admin), retornar todas
     return AVAILABLE_COLUMNS.map(col => ({ ...col }));
 }
@@ -438,30 +439,30 @@ let dashboardCache = {
     filterOptions: null,
     lastUpdate: null,
     cacheTimeout: 5 * 60 * 1000, // 5 minutos
-    
+
     // Verificar se o cache é válido
-    isValid: function() {
+    isValid: function () {
         return this.lastUpdate && (Date.now() - this.lastUpdate) < this.cacheTimeout;
     },
-    
+
     // Invalidar cache
-    invalidate: function() {
+    invalidate: function () {
         this.kpis = null;
         this.charts = null;
         this.operations = null;
         this.lastUpdate = null;
         console.log('[DASHBOARD_CACHE] Cache invalidado');
     },
-    
+
     // Definir dados no cache
-    set: function(type, data) {
+    set: function (type, data) {
         this[type] = data;
         this.lastUpdate = Date.now();
         console.log(`[DASHBOARD_CACHE] Cache atualizado para ${type}`);
     },
-    
+
     // Obter dados do cache
-    get: function(type) {
+    get: function (type) {
         if (this.isValid() && this[type]) {
             console.log(`[DASHBOARD_CACHE] Usando cache para ${type}`);
             return this[type];
@@ -497,20 +498,20 @@ function setDashboardLoadingState(isLoading) {
 }
 
 // Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando...');
-    
+
     // Check if user has company warning - if so, don't initialize dashboard
     if (window.showCompanyWarning) {
         console.log('[DASHBOARD_EXECUTIVO] Dashboard bloqueado - usuário sem empresas vinculadas');
         return; // Exit early, don't initialize any dashboard functionality
     }
-    
+
     // Detectar se o usuário está voltando para a página (cache do navegador)
-    window.addEventListener('pageshow', function(event) {
+    window.addEventListener('pageshow', function (event) {
         if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
             console.log('[DASHBOARD_EXECUTIVO] Página restaurada do cache do navegador');
-            
+
             // Se o dashboard já foi inicializado mas os gráficos estão vazios, recriar
             if (dashboardState.isInitialized) {
                 setTimeout(() => {
@@ -519,10 +520,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
+
     // Inicializar sistema de filtro por KPI clicável
     initializeKpiClickFilters();
-    
+
     // Simple initialization - wait a bit for scripts to load
     setTimeout(() => {
         console.log('[DASHBOARD_EXECUTIVO] Chart.js disponível:', typeof Chart !== 'undefined');
@@ -551,14 +552,14 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initializeKpiClickFilters() {
     console.log('[KPI_FILTER] Inicializando sistema de filtros clicáveis');
-    
+
     const clickableKpis = document.querySelectorAll('.kpi-card.kpi-clickable');
-    
+
     clickableKpis.forEach(kpi => {
-        kpi.addEventListener('click', function() {
+        kpi.addEventListener('click', function () {
             const status = this.getAttribute('data-kpi-status');
             console.log('[KPI_FILTER] KPI clicado:', status);
-            
+
             // Toggle filtro: se já está ativo, remove; senão aplica
             if (this.classList.contains('kpi-active')) {
                 clearKpiFilter();
@@ -574,24 +575,24 @@ function initializeKpiClickFilters() {
  */
 async function applyKpiFilter(status) {
     console.log('[KPI_FILTER] Aplicando filtro:', status);
-    
+
     // Remover classe active de todos os KPIs
     document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
         kpi.classList.remove('kpi-active');
     });
-    
+
     // Adicionar classe active no KPI clicado
     const activeKpi = document.querySelector(`.kpi-card[data-kpi-status="${status}"]`);
     if (activeKpi) {
         activeKpi.classList.add('kpi-active');
     }
-    
+
     // Aplicar filtro baseado no status
     currentFilters.kpi_status = status;
-    
+
     // Invalidar cache para forçar reload com filtro
     dashboardCache.invalidate();
-    
+
     // Recarregar todos os componentes com filtro
     try {
         console.log('[KPI_FILTER] Recarregando componentes com filtro...');
@@ -607,18 +608,18 @@ async function applyKpiFilter(status) {
  */
 async function clearKpiFilter() {
     console.log('[KPI_FILTER] Limpando filtro de KPI');
-    
+
     // Remover classe active de todos os KPIs
     document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
         kpi.classList.remove('kpi-active');
     });
-    
+
     // Remover filtro
     delete currentFilters.kpi_status;
-    
+
     // Invalidar cache para forçar reload sem filtro
     dashboardCache.invalidate();
-    
+
     // Recarregar todos os componentes sem filtro
     try {
         console.log('[KPI_FILTER] Recarregando componentes sem filtro...');
@@ -632,7 +633,7 @@ async function clearKpiFilter() {
 // ===== Stubs leves para evitar ReferenceError sem mudar comportamento =====
 // Algumas funções podem não existir dependendo da ordem de scripts; criamos stubs no-ops
 if (typeof window.createDashboardChartsWithValidation !== 'function') {
-    window.createDashboardChartsWithValidation = function(charts) {
+    window.createDashboardChartsWithValidation = function (charts) {
         // fallback para createDashboardCharts se existir
         if (typeof window.createDashboardCharts === 'function') {
             return window.createDashboardCharts(charts);
@@ -641,13 +642,13 @@ if (typeof window.createDashboardChartsWithValidation !== 'function') {
     };
 }
 if (typeof window.updateDashboardKPIs !== 'function') {
-    window.updateDashboardKPIs = function(kpis) {
+    window.updateDashboardKPIs = function (kpis) {
         console.warn('[DASHBOARD_EXECUTIVO] Stub: updateDashboardKPIs ausente');
         // No-op: manter sem UI change; loaders por componente já serão ocultados via wrappers
     };
 }
 if (typeof window.setMonthlyChartPeriod !== 'function') {
-    window.setMonthlyChartPeriod = function(period) {
+    window.setMonthlyChartPeriod = function (period) {
         // Ajusta variável local e dispara loadMonthlyChart
         try {
             monthlyChartPeriod = period || monthlyChartPeriod || 'mensal';
@@ -658,19 +659,19 @@ if (typeof window.setMonthlyChartPeriod !== 'function') {
     };
 }
 if (typeof window.createMonthlyChartWithValidation !== 'function') {
-    window.createMonthlyChartWithValidation = function() { /* no-op */ };
+    window.createMonthlyChartWithValidation = function () { /* no-op */ };
 }
 if (typeof window.createStatusChartWithValidation !== 'function') {
-    window.createStatusChartWithValidation = function() { /* no-op */ };
+    window.createStatusChartWithValidation = function () { /* no-op */ };
 }
 if (typeof window.createGroupedModalChartWithValidation !== 'function') {
-    window.createGroupedModalChartWithValidation = function() { /* no-op */ };
+    window.createGroupedModalChartWithValidation = function () { /* no-op */ };
 }
 if (typeof window.createUrfChartWithValidation !== 'function') {
-    window.createUrfChartWithValidation = function() { /* no-op */ };
+    window.createUrfChartWithValidation = function () { /* no-op */ };
 }
 if (typeof window.createMaterialChartWithValidation !== 'function') {
-    window.createMaterialChartWithValidation = function() { /* no-op */ };
+    window.createMaterialChartWithValidation = function () { /* no-op */ };
 }
 
 // ===== Implementações reais de KPIs e gráficos (com validação) =====
@@ -689,12 +690,12 @@ function destroyChartIfExists(id) {
     if (!canvas) return;
     const existing = Chart.getChart(canvas);
     if (existing) {
-        try { existing.destroy(); } catch (_) {}
+        try { existing.destroy(); } catch (_) { }
     }
 }
 
 // Atualização de KPIs
-window.updateDashboardKPIs = function(kpis) {
+window.updateDashboardKPIs = function (kpis) {
     try {
         if (!kpis || typeof kpis !== 'object') return;
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -711,12 +712,12 @@ window.updateDashboardKPIs = function(kpis) {
         setText('kpi-agd-fechamento', formatNumber(kpis.agd_fechamento || 0));
         setText('kpi-total-despesas', formatCurrencyCompact(kpis.total_despesas || 0));
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('kpi-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('kpi-loading'); } catch (_) { }
     }
 };
 
 // Orquestrador principal dos gráficos (usa funções com validação)
-window.createDashboardChartsWithValidation = function(charts) {
+window.createDashboardChartsWithValidation = function (charts) {
     try {
         if (!charts || typeof charts !== 'object') return;
         if (charts.monthly) window.createMonthlyChartWithValidation(charts.monthly);
@@ -731,7 +732,7 @@ window.createDashboardChartsWithValidation = function(charts) {
 };
 
 // Evolução Mensal (mixed chart)
-window.createMonthlyChart = function(data) {
+window.createMonthlyChart = function (data) {
     try {
         if (!data || !data.labels || !data.datasets) {
             console.warn('[DASHBOARD_EXECUTIVO] Dados inválidos para gráfico mensal');
@@ -740,8 +741,8 @@ window.createMonthlyChart = function(data) {
         destroyChartIfExists('monthly-chart');
         const ctx = getCanvasContext('monthly-chart');
         if (!ctx) return;
-    const labelsCount = Array.isArray(data.labels) ? data.labels.length : 0;
-    const dense = (typeof monthlyChartPeriod !== 'undefined' && monthlyChartPeriod === 'diario') || labelsCount > 45;
+        const labelsCount = Array.isArray(data.labels) ? data.labels.length : 0;
+        const dense = (typeof monthlyChartPeriod !== 'undefined' && monthlyChartPeriod === 'diario') || labelsCount > 45;
         dashboardCharts.monthly = new Chart(ctx, {
             data: {
                 labels: data.labels,
@@ -773,7 +774,7 @@ window.createMonthlyChart = function(data) {
                             label: (ctx) => {
                                 const yId = ctx.dataset.yAxisID;
                                 const v = ctx.parsed.y;
-                return yId === 'y' ? ` ${formatCurrencyCompact(v)}` : ` ${formatNumber(v)}`;
+                                return yId === 'y' ? ` ${formatCurrencyCompact(v)}` : ` ${formatNumber(v)}`;
                             }
                         }
                     },
@@ -811,11 +812,11 @@ window.createMonthlyChart = function(data) {
             }
         });
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) { }
     }
 };
 
-window.createMonthlyChartWithValidation = function(payload) {
+window.createMonthlyChartWithValidation = function (payload) {
     try {
         // Aceita payload em dois formatos: já pronto (labels/datasets) ou {labels, data/processes/values}
         if (!payload) return;
@@ -848,19 +849,19 @@ window.createMonthlyChartWithValidation = function(payload) {
             });
         }
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('monthly-loading'); } catch (_) { }
     }
 };
 
 // Status (doughnut)
-window.createStatusChart = function(data) {
+window.createStatusChart = function (data) {
     try {
         if (!data || !data.labels || !data.data) return;
         destroyChartIfExists('status-chart');
         const ctx = getCanvasContext('status-chart');
         if (!ctx) return;
-    // Normalizar labels vazias para 'Sem Info'
-    data.labels = data.labels.map(l => (l && (''+l).trim()) ? l : 'Sem Info');
+        // Normalizar labels vazias para 'Sem Info'
+        data.labels = data.labels.map(l => (l && ('' + l).trim()) ? l : 'Sem Info');
         dashboardCharts.status = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -879,7 +880,7 @@ window.createStatusChart = function(data) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
+                    legend: {
                         position: 'right',
                         labels: {
                             font: {
@@ -926,17 +927,17 @@ window.createStatusChart = function(data) {
             }
         });
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) { }
     }
 };
 
-window.createStatusChartWithValidation = function(payload) {
+window.createStatusChartWithValidation = function (payload) {
     try { if (payload) return window.createStatusChart(payload); }
-    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) {} }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('status-loading'); } catch (_) { } }
 };
 
 // Modal (barras + Barras)
-window.createGroupedModalChart = function(data) {
+window.createGroupedModalChart = function (data) {
     try {
         if (!data || !data.labels || !data.datasets) return;
         destroyChartIfExists('grouped-modal-chart');
@@ -958,7 +959,7 @@ window.createGroupedModalChart = function(data) {
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { 
+                    legend: {
                         position: 'top',
                         labels: {
                             font: {
@@ -1006,17 +1007,17 @@ window.createGroupedModalChart = function(data) {
             }
         });
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) { }
     }
 };
 
-window.createGroupedModalChartWithValidation = function(payload) {
+window.createGroupedModalChartWithValidation = function (payload) {
     try { if (payload) return window.createGroupedModalChart(payload); }
-    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) {} }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('modal-loading'); } catch (_) { } }
 };
 
 // URF (horizontal bar)
-window.createUrfChart = function(data) {
+window.createUrfChart = function (data) {
     try {
         if (!data || !data.labels || !data.data) return;
         destroyChartIfExists('urf-chart');
@@ -1039,9 +1040,9 @@ window.createUrfChart = function(data) {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { 
-                        beginAtZero: true, 
-                        grid: { display: false }, 
+                    x: {
+                        beginAtZero: true,
+                        grid: { display: false },
                         border: { display: false },
                         ticks: {
                             font: {
@@ -1049,8 +1050,8 @@ window.createUrfChart = function(data) {
                             }
                         }
                     },
-                    y: { 
-                        grid: { display: false }, 
+                    y: {
+                        grid: { display: false },
                         border: { display: false },
                         ticks: {
                             font: {
@@ -1063,23 +1064,23 @@ window.createUrfChart = function(data) {
             }
         });
     } finally {
-        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) {}
+        try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) { }
     }
 };
 
-window.createUrfChartWithValidation = function(payload) {
+window.createUrfChartWithValidation = function (payload) {
     try { if (payload) return window.createUrfChart(payload); }
-    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) {} }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('urf-loading'); } catch (_) { } }
 };
 
 // Principais Materiais (tabela)
-window.createPrincipaisMateriaisTableWithValidation = function(payload) {
+window.createPrincipaisMateriaisTableWithValidation = function (payload) {
     try { if (payload) return window.createPrincipaisMateriaisTable(payload); }
-    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('material-loading'); } catch (_) {} }
+    finally { try { if (window.DASH_EXEC_HIDE_LOADER) window.DASH_EXEC_HIDE_LOADER('material-loading'); } catch (_) { } }
 };
 
 // Ajuste de período do gráfico mensal
-window.setMonthlyChartPeriod = function(period) {
+window.setMonthlyChartPeriod = function (period) {
     try {
         monthlyChartPeriod = period || 'mensal';
         // Atualizar botões ativos
@@ -1097,17 +1098,17 @@ window.setMonthlyChartPeriod = function(period) {
  */
 function validateAndRecreateCharts() {
     console.log('[DASHBOARD_EXECUTIVO] Validando estado dos gráficos...');
-    
+
     // Lista de gráficos esperados
     const expectedCharts = [
         'monthly-chart',
-        'status-chart', 
+        'status-chart',
         'grouped-modal-chart',
         'urf-chart'
     ];
-    
+
     let missingCharts = 0;
-    
+
     // Verificar se os canvas existem e se têm gráficos ativos
     expectedCharts.forEach(chartId => {
         const canvas = document.getElementById(chartId);
@@ -1121,7 +1122,7 @@ function validateAndRecreateCharts() {
                     const ops = Array.isArray(window.currentOperations) ? window.currentOperations : [];
                     // Aqui, 'data' não está definido neste escopo, então este bloco deve ser removido ou ajustado.
                     // Se necessário, adicione lógica de recriação do gráfico aqui.
-                } catch(e){ console.warn('[URF_CHART] Ajuste Sem Info falhou', e); }
+                } catch (e) { console.warn('[URF_CHART] Ajuste Sem Info falhou', e); }
             }
         }
     });
@@ -1134,40 +1135,40 @@ async function initializeDashboard() {
         console.log('[DASHBOARD_EXECUTIVO] Dashboard bloqueado - usuário sem empresas vinculadas');
         return;
     }
-    
+
     // Evitar múltiplas inicializações simultâneas
     if (dashboardState.isLoading || dashboardState.isInitialized) {
         console.log('[DASHBOARD_EXECUTIVO] Dashboard já está carregando ou inicializado');
         return;
     }
-    
+
     try {
         dashboardState.isLoading = true;
         setDashboardLoadingState(true);
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento do dashboard...');
-        
+
         // Initialize enhanced table FIRST, before loading data
         initializeEnhancedTable();
-        
+
         // Then load initial data with cache check
         await loadInitialDataWithCache();
-        
+
         // Setup event listeners and filters
         setupEventListeners();
         setMonthlyChartPeriod('mensal');
-        
+
         dashboardState.isInitialized = true;
         updateLastUpdate();
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Dashboard inicializado com sucesso');
-        
+
         // Notificar sistema unificado que o carregamento foi concluído
         if (window.unifiedLoadingManager && window.unifiedLoadingManager.isTransitioning) {
             console.log('[DASHBOARD_EXECUTIVO] Notificando sistema unificado - dados carregados');
             // O sistema unificado detectará automaticamente que os dados carregaram
         }
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro na inicialização:', error);
         showError('Erro ao carregar dashboard: ' + error.message);
@@ -1182,33 +1183,33 @@ async function initializeDashboard() {
  */
 function initializeEnhancedTable() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando Enhanced Table...');
-    
+
     // Check if EnhancedDataTable is available
     if (typeof EnhancedDataTable === 'undefined') {
         console.error('[DASHBOARD_EXECUTIVO] EnhancedDataTable não está disponível');
         return;
     }
-    
+
     // Create enhanced table instance
     recentOperationsTable = new EnhancedDataTable('recent-operations-table', {
         containerId: 'recent-operations-container',
         searchInputId: 'recent-operations-search',
         itemsPerPage: 15,
         searchFields: [
-            'ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal', 
-            'status_timeline', 'status_processo', 'status_macro_sistema', 'mercadoria', 
+            'ref_unique', 'ref_importador', 'importador', 'exportador_fornecedor', 'modal',
+            'status_timeline', 'status_processo', 'status_macro_sistema', 'mercadoria',
             'urf_despacho_normalizado', 'urf_despacho',
             // Kingspan fields
-            'po_cliente', 'referencia_exportador', 'codigo_produto', 'filial_codigo', 
+            'po_cliente', 'referencia_exportador', 'codigo_produto', 'filial_codigo',
             'licenca_importacao', 'freetime', 'etb', 'navio', 'armador_agente_trade',
             'moeda', 'total_pedido_moeda_origem', 'ptax', 'incoterm'
         ],
         sortField: 'data_chegada',
         sortOrder: 'desc'
     });
-    
+
     // Override row rendering method para suportar colunas dinâmicas
-    recentOperationsTable.renderRow = function(operation) {
+    recentOperationsTable.renderRow = function (operation) {
         const visibleColumns = getVisibleColumns();
 
         if (!visibleColumns.length) {
@@ -1320,6 +1321,8 @@ function initializeEnhancedTable() {
                     return `<td><span class="currency-value">${formatCurrency(custoTotal)}</span></td>`;
                 case 'data_chegada':
                     return `<td>${formatDataChegada(operation.data_chegada)}</td>`;
+                case 'presenca_carga':
+                    return `<td>${operation.presenca_carga || '-'}</td>`;
                 case 'data_embarque':
                     return `<td>${formatDate(operation.data_embarque)}</td>`;
                 case 'transit_time': {
@@ -1438,7 +1441,7 @@ function setupEventListeners() {
 
     // Period buttons for monthly chart
     document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const period = this.dataset.period;
             setMonthlyChartPeriod(period);
         });
@@ -1452,7 +1455,7 @@ function setupEventListeners() {
 
     // Modal event listeners
     setupModalEventListeners();
-    
+
     // NOVO: Filter event listeners
     setupFilterEventListeners();
 }
@@ -1462,7 +1465,7 @@ function setupEventListeners() {
  */
 function setupFilterEventListeners() {
     console.log('[DASHBOARD_EXECUTIVO] Configurando event listeners dos filtros...');
-    
+
     // Filter modal
     const openFiltersBtn = document.getElementById('open-filters');
     const closeModalBtn = document.getElementById('close-modal');
@@ -1470,11 +1473,11 @@ function setupFilterEventListeners() {
     const applyFiltersBtn = document.getElementById('apply-filters');
     const clearFiltersBtn = document.getElementById('clear-filters');
     const resetFiltersBtn = document.getElementById('reset-filters'); // NOVO
-    
+
     if (openFiltersBtn) {
-        openFiltersBtn.addEventListener('click', function() {
+        openFiltersBtn.addEventListener('click', function () {
             console.log('[DASHBOARD_EXECUTIVO] Botão Filtros clicado');
-            
+
             // Verificar se as opções de filtros foram carregadas
             const materialOptions = document.getElementById('material-options');
             if (materialOptions && materialOptions.children.length === 0) {
@@ -1487,36 +1490,36 @@ function setupFilterEventListeners() {
             }
         });
     }
-    
+
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', closeFilterModal);
     }
-    
+
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', applyFilters);
     }
-    
+
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', clearFilters);
     }
-    
+
     // NOVO: Reset filters button
     if (resetFiltersBtn) {
         resetFiltersBtn.addEventListener('click', resetAllFilters);
     }
-    
+
     // Click outside modal to close
     if (filterModal) {
-        filterModal.addEventListener('click', function(e) {
+        filterModal.addEventListener('click', function (e) {
             if (e.target === filterModal) {
                 closeFilterModal();
             }
         });
     }
-    
+
     // Quick period buttons
     document.querySelectorAll('.btn-quick').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const days = parseInt(this.dataset.days);
             setQuickPeriod(days);
         });
@@ -1536,7 +1539,7 @@ function setupModalEventListeners() {
     // Close modal when clicking outside
     const modalOverlay = document.getElementById('process-modal');
     if (modalOverlay) {
-        modalOverlay.addEventListener('click', function(e) {
+        modalOverlay.addEventListener('click', function (e) {
             if (e.target === modalOverlay) {
                 closeProcessModal();
             }
@@ -1544,7 +1547,7 @@ function setupModalEventListeners() {
     }
 
     // Close modal with ESC key
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeProcessModal();
         }
@@ -1559,24 +1562,24 @@ async function loadInitialData() {
         console.log('[DASHBOARD_EXECUTIVO] Já está carregando, aguardando...');
         return;
     }
-    
+
     isLoading = true;
     loadAttempts++;
-    
+
     try {
         console.log('[DASHBOARD_EXECUTIVO] Carregando dados iniciais... (tentativa', loadAttempts, ')');
-        
+
         // Load data
         const response = await fetch('/dashboard-executivo/api/load-data');
         const result = await response.json();
-        
+
         if (!result.success) {
             throw new Error(result.error || 'Erro ao carregar dados');
         }
-        
+
         dashboardData = result.data;
         console.log(`[DASHBOARD_EXECUTIVO] Dados carregados: ${result.total_records} registros`);
-        
+
         // Load KPIs, charts and filter options
         await Promise.all([
             loadDashboardKPIs(),
@@ -1584,13 +1587,13 @@ async function loadInitialData() {
             loadRecentOperations(),
             loadFilterOptions()  // NOVO: Carregar opções de filtros
         ]);
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Dados iniciais carregados com sucesso');
         loadAttempts = 0; // Reset attempts on success
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar dados:', error);
-        
+
         // Tentar novamente se não atingiu o máximo
         if (loadAttempts < maxLoadAttempts) {
             console.log('[DASHBOARD_EXECUTIVO] Tentando novamente em 2 segundos...');
@@ -1615,16 +1618,16 @@ async function loadInitialDataWithCache() {
     setDashboardLoadingState(true);
     try {
         console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento com cache...');
-        
+
         // Carregar dados base com retry
         dashboardData = await loadDataWithRetry();
-        
+
         // Carregar componentes com retry automático
         await loadComponentsWithRetry();
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro fatal ao carregar dados:', error);
-        
+
         // Tentar recuperação usando cache como último recurso
         await attemptCacheRecovery();
     } finally {
@@ -1639,24 +1642,24 @@ async function loadDataWithRetry(maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt}/${maxRetries} - Carregando dados base...`);
-            
+
             const response = await fetch('/dashboard-executivo/api/load-data');
             const result = await response.json();
-            
+
             if (result.success && result.data && result.data.length > 0) {
                 console.log(`[DASHBOARD_EXECUTIVO] Dados carregados com sucesso: ${result.total_records} registros`);
                 return result.data;
             } else {
                 throw new Error(result.error || 'Dados não encontrados ou vazios');
             }
-            
+
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} falhou:`, error.message);
-            
+
             if (attempt === maxRetries) {
                 throw new Error(`Falha após ${maxRetries} tentativas: ${error.message}`);
             }
-            
+
             // Aguardar antes da próxima tentativa (backoff exponencial)
             const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
             console.log(`[DASHBOARD_EXECUTIVO] Aguardando ${delay}ms antes da próxima tentativa...`);
@@ -1676,7 +1679,7 @@ async function loadComponentsWithRetry() {
         { name: 'Países', loadFunction: () => loadPaisesProcedenciaWithRetry() },
         { name: 'Filtros', loadFunction: () => loadFilterOptionsWithRetry() }
     ];
-    
+
     // Carregar componentes em paralelo com tratamento individual de erros
     const results = await Promise.allSettled(components.map(async (component) => {
         try {
@@ -1688,12 +1691,12 @@ async function loadComponentsWithRetry() {
             return { component: component.name, success: false, error: error.message };
         }
     }));
-    
+
     // Verificar resultados
     const failed = results.filter(r => r.value && !r.value.success);
     if (failed.length > 0) {
         console.warn(`[DASHBOARD_EXECUTIVO] ${failed.length} componentes falharam:`, failed.map(f => f.value.component));
-        
+
         // Mostrar mensagem discreta para o usuário
         showWarningMessage(`Alguns dados podem estar desatualizados. ${failed.length} componente(s) com problema.`);
     }
@@ -1708,12 +1711,12 @@ async function loadComponentsWithCache() {
         let kpisData = dashboardCache.get('kpis');
         let chartsData = dashboardCache.get('charts');
         let operationsData = dashboardCache.get('operations');
-        
+
         const promises = [];
-        
+
         // Carregar KPIs (sempre, pois podem mudar com filtros)
         promises.push(loadDashboardKPIsWithCache());
-        
+
         // Carregar gráficos se não estiver em cache ou se filtros mudaram
         if (!chartsData || hasFiltersChanged()) {
             promises.push(loadDashboardChartsWithCache());
@@ -1721,12 +1724,12 @@ async function loadComponentsWithCache() {
             console.log('[DASHBOARD_EXECUTIVO] Usando gráficos em cache');
             createDashboardChartsWithValidation(chartsData);
         }
-        
+
         // Carregar operações recentes
         promises.push(loadRecentOperationsWithCache());
-        
+
         await Promise.all(promises);
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao carregar componentes:', error);
         throw error;
@@ -1739,7 +1742,7 @@ async function loadComponentsWithCache() {
 function hasFiltersChanged() {
     const currentFilterString = buildFilterQueryString();
     const cachedFilterString = dashboardCache.lastFilterString || '';
-    
+
     if (currentFilterString !== cachedFilterString) {
         dashboardCache.lastFilterString = currentFilterString;
         return true;
@@ -1796,10 +1799,10 @@ async function loadDashboardKPIsWithRetry(maxRetries = 2) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Carregando KPIs (tentativa ${attempt}/${maxRetries})...`);
-            
+
             // NOVO: Construir query string SEM kpi_status para KPIs mostrarem valores totais
             const queryString = buildFilterQueryString(true); // true = excluir kpi_status
-            
+
             const response = await fetchWithAbort('kpis', `/dashboard-executivo/api/kpis?${queryString}`);
             const result = await response.json();
             if (result.success && result.kpis) {
@@ -1942,7 +1945,7 @@ async function loadRecentOperations() {
                 }
                 window.dashboardData.data = result.operations_all;
                 console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups:', result.operations_all.length);
-                
+
                 // CORREÇÃO BUG: Usar operations_all (dados completos) para a tabela E modal
                 // operations_all contém TODOS os campos incluindo pais_procedencia
                 updateRecentOperationsTable(result.operations_all);
@@ -1976,7 +1979,7 @@ async function loadRecentOperationsWithCache() {
                 }
                 window.dashboardData.data = result.operations_all;
                 console.log('[DASHBOARD_EXECUTIVO] Dados completos para mini popups (cache):', result.operations_all.length);
-                
+
                 // CORREÇÃO BUG: Usar operations_all para cache e tabela
                 dashboardCache.set('operations', result.operations_all);
                 updateRecentOperationsTable(result.operations_all);
@@ -2005,7 +2008,7 @@ async function loadRecentOperationsWithRetry(maxRetries = 2) {
             const result = await response.json();
             if (result.success && result.operations) {
                 console.log(`[DASHBOARD_EXECUTIVO] Operações carregadas: ${result.operations.length} registros`);
-                
+
                 // CORREÇÃO BUG: Usar operations_all se disponível, pois contém todos os campos
                 const operationsToUse = result.operations_all || result.operations;
                 dashboardCache.set('operations', operationsToUse);
@@ -2187,13 +2190,13 @@ function adjustTableHeadersAndColumns() {
  */
 function updateRecentOperationsTable(operations) {
     console.log('[DASHBOARD_EXECUTIVO] Atualizando tabela com', operations.length, 'operações');
-    
+
     adjustTableHeadersAndColumns();
-    
+
     if (!recentOperationsTable) {
         console.warn('[DASHBOARD_EXECUTIVO] Enhanced table não inicializada, tentando inicializar...');
         initializeEnhancedTable();
-        
+
         // Se ainda não conseguiu inicializar, retorna
         if (!recentOperationsTable) {
             console.error('[DASHBOARD_EXECUTIVO] Falha ao inicializar enhanced table');
@@ -2205,11 +2208,11 @@ function updateRecentOperationsTable(operations) {
     const sortedOperations = [...operations].sort((a, b) => {
         const dateA = parseDate(a.data_chegada);
         const dateB = parseDate(b.data_chegada);
-        
+
         if (!dateA && !dateB) return 0;
         if (!dateA) return 1;
         if (!dateB) return -1;
-        
+
         return dateB - dateA; // Descending order (newest first)
     });
 
@@ -2226,21 +2229,21 @@ function updateRecentOperationsTable(operations) {
 
     // Store operations data globally for modal access FIRST
     window.currentOperations = sortedOperations;
-    
+
     // CORREÇÃO: Armazenar também em window.dashboardData para consistência com mini popups
     if (!window.dashboardData) {
         window.dashboardData = {};
     }
     window.dashboardData.data = sortedOperations;
-    
+
     console.log('[DASHBOARD_EXECUTIVO] Operações armazenadas globalmente:', window.currentOperations.length);
     console.log('[DASHBOARD_EXECUTIVO] Dados também em window.dashboardData.data para mini popups');
-    
+
     // Debug: verificar campos disponíveis no primeiro item
     if (sortedOperations.length > 0) {
         console.log('[DASHBOARD_EXECUTIVO] Campos disponíveis no primeiro item:', Object.keys(sortedOperations[0]));
         console.log('[DASHBOARD_EXECUTIVO] Primeiro item completo:', sortedOperations[0]);
-        
+
         // DEBUG ESPECÍFICO: Verificar se data_fechamento está presente no processo 5360
         const processo5360 = sortedOperations.find(op => op.ref_unique && op.ref_unique.includes('5360'));
         if (processo5360) {
@@ -2250,10 +2253,10 @@ function updateRecentOperationsTable(operations) {
             console.log('[DASHBOARD_EXECUTIVO] Campos de data disponíveis:', Object.keys(processo5360).filter(k => k.includes('data')));
         }
     }
-    
+
     // Then set data to enhanced table (this triggers render)
     recentOperationsTable.setData(sortedOperations);
-    
+
     // Inicializar filtros de coluna após carregar dados
     if (typeof window.initColumnFilters === 'function') {
         console.log('[DASHBOARD_EXECUTIVO] Inicializando filtros de coluna...');
@@ -2263,13 +2266,13 @@ function updateRecentOperationsTable(operations) {
     } else {
         console.warn('[DASHBOARD_EXECUTIVO] Função initColumnFilters não encontrada');
     }
-    
+
     // Debug: mostrar primeiros 10 processos do array global com detalhes
     console.log('[DASHBOARD_EXECUTIVO] Primeiros 10 processos no array global:');
     sortedOperations.slice(0, 10).forEach((op, idx) => {
         console.log(`[DASHBOARD_EXECUTIVO] Index ${idx}: ${op.ref_unique} - ${op.importador} (${typeof op.ref_unique})`);
     });
-    
+
     // Debug: verificar se os dados estão sendo passados corretamente para a tabela
     console.log('[DASHBOARD_EXECUTIVO] Verificando dados passados para a tabela...');
     if (recentOperationsTable.data && recentOperationsTable.data.length > 0) {
@@ -2285,13 +2288,13 @@ function updateRecentOperationsTable(operations) {
  */
 function parseDate(dateStr) {
     if (!dateStr) return null;
-    
+
     const brazilianMatch = String(dateStr).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (brazilianMatch) {
         const [, day, month, year] = brazilianMatch;
         return new Date(year, month - 1, day);
     }
-    
+
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? null : date;
 }
@@ -2302,11 +2305,11 @@ function parseDate(dateStr) {
 async function refreshData() {
     try {
         showLoading(true);
-        
+
         // Invalidar cache antes de recarregar
         dashboardCache.invalidate();
         console.log('[DASHBOARD_EXECUTIVO] Cache invalidado - recarregando dados...');
-        
+
         await loadInitialDataWithCache();
         updateLastUpdate();
         showLoading(false);
@@ -2326,16 +2329,16 @@ async function forceRefreshDashboard() {
     try {
         console.log('[DASHBOARD_EXECUTIVO] === INICIANDO FORCE REFRESH ===');
         showLoading(true);
-        
+
         // Mostrar mensagem específica para force refresh
         const loadingText = document.querySelector('.loading-spinner p');
         if (loadingText) {
             loadingText.textContent = 'Buscando dados atualizados do banco...';
         }
-        
+
         // 1. Chamar endpoint específico de force refresh do dashboard
         console.log('[DASHBOARD_EXECUTIVO] Chamando force refresh específico...');
-        
+
         const response = await fetch('/dashboard-executivo/api/force-refresh', {
             method: 'POST',
             headers: {
@@ -2344,42 +2347,42 @@ async function forceRefreshDashboard() {
                 'Pragma': 'no-cache'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`Erro HTTP: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (!result.success) {
             throw new Error(result.error || 'Erro desconhecido no force refresh');
         }
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Force refresh bem-sucedido:', result);
-        
+
         // 2. Invalidar cache local
         dashboardCache.invalidate();
-        
+
         // 3. Recarregar todos os componentes com dados frescos
         await loadInitialDataWithCache();
-        
+
         updateLastUpdate();
         showLoading(false);
-        
+
         // Mostrar feedback detalhado do force refresh
         const message = `
             ✅ Cache atualizado com dados frescos!<br>
             📊 ${result.total_records} registros processados<br>
-            💰 Custo total: R$ ${(result.total_custo || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            💰 Custo total: R$ ${(result.total_custo || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
         `;
-        
+
         if (result.processo_6555?.encontrado) {
             const custoProcesso = result.processo_6555.custo_total || 0;
-            showSuccess(`${message}<br>🎯 Processo 6555: R$ ${custoProcesso.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+            showSuccess(`${message}<br>🎯 Processo 6555: R$ ${custoProcesso.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
         } else {
             showSuccess(message);
         }
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro no force refresh:', error);
         showError('Erro ao forçar atualização: ' + error.message);
@@ -2395,14 +2398,14 @@ function exportData() {
         showError('Nenhum dado disponível para exportar');
         return;
     }
-    
+
     // Create CSV content
     const headers = Object.keys(dashboardData[0]);
     const csvContent = [
         headers.join(','),
         ...dashboardData.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
     ].join('\n');
-    
+
     // Download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -2454,7 +2457,7 @@ function showError(message) {
  */
 function showWarningMessage(message) {
     console.warn('[DASHBOARD_EXECUTIVO] Warning:', message);
-    
+
     // Criar elemento de aviso se não existir
     let warningDiv = document.getElementById('dashboard-warning');
     if (!warningDiv) {
@@ -2476,12 +2479,12 @@ function showWarningMessage(message) {
         `;
         document.body.appendChild(warningDiv);
     }
-    
+
     warningDiv.innerHTML = `
         <strong>⚠️ Aviso:</strong> ${message}
         <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; font-size: 16px; cursor: pointer; margin-left: 10px;">×</button>
     `;
-    
+
     // Auto remover após 8 segundos
     setTimeout(() => {
         if (warningDiv && warningDiv.parentElement) {
@@ -2495,22 +2498,22 @@ function showWarningMessage(message) {
  */
 async function attemptCacheRecovery() {
     console.log('[DASHBOARD_EXECUTIVO] Tentando recuperação via cache...');
-    
+
     try {
         // Tentar recuperar cada componente do cache
         const cachedKpis = dashboardCache.get('kpis');
         const cachedCharts = dashboardCache.get('charts');
         const cachedOperations = dashboardCache.get('operations');
         const cachedFilterOptions = dashboardCache.get('filterOptions');
-        
+
         let recoveredComponents = 0;
-        
+
         if (cachedKpis) {
             updateDashboardKPIs(cachedKpis);
             recoveredComponents++;
             console.log('[DASHBOARD_EXECUTIVO] ✅ KPIs recuperados do cache');
         }
-        
+
         if (cachedCharts) {
             createDashboardChartsWithValidation(cachedCharts);
             recoveredComponents++;
@@ -2519,7 +2522,7 @@ async function attemptCacheRecovery() {
             createEmptyCharts();
             console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criados gráficos vazios');
         }
-        
+
         if (cachedOperations) {
             updateRecentOperationsTable(cachedOperations);
             recoveredComponents++;
@@ -2528,7 +2531,7 @@ async function attemptCacheRecovery() {
             updateRecentOperationsTable([]);
             console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criada tabela vazia');
         }
-        
+
         if (cachedFilterOptions) {
             populateFilterOptions(cachedFilterOptions);
             recoveredComponents++;
@@ -2542,13 +2545,13 @@ async function attemptCacheRecovery() {
             });
             console.log('[DASHBOARD_EXECUTIVO] ⚠️ Criados filtros vazios');
         }
-        
+
         if (recoveredComponents > 0) {
             showWarningMessage(`Dashboard carregado com dados em cache. ${recoveredComponents} componente(s) recuperado(s).`);
         } else {
             showError('Não foi possível carregar os dados. Tente recarregar a página.');
         }
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro na recuperação via cache:', error);
         showError('Erro ao carregar dashboard. Recarregue a página.');
@@ -2560,7 +2563,7 @@ async function attemptCacheRecovery() {
  */
 function createEmptyCharts() {
     console.log('[DASHBOARD_EXECUTIVO] Criando gráficos vazios...');
-    
+
     const emptyCharts = {
         monthly: {
             labels: ['Sem dados'],
@@ -2591,7 +2594,7 @@ function createEmptyCharts() {
             data: []
         }
     };
-    
+
     createDashboardChartsWithValidation(emptyCharts);
 }
 
@@ -2604,9 +2607,9 @@ function createEmptyCharts() {
  */
 function normalizePesoBruto(peso) {
     if (!peso || isNaN(peso)) return 0;
-    
+
     const pesoNum = Number(peso);
-    
+
     // If peso is > 100,000 kg (100 tons), it's probably scaled wrong
     // Divide by 100 to get the correct value
     // Example: 1790512 -> 17905.12 kg
@@ -2614,7 +2617,7 @@ function normalizePesoBruto(peso) {
         console.log(`[PESO_FIX] Detected wrong scale: ${pesoNum} -> ${pesoNum / 100}`);
         return pesoNum / 100;
     }
-    
+
     return pesoNum;
 }
 
@@ -2693,29 +2696,29 @@ function getContrastTextColor(bgColor) {
  */
 function openProcessModal(operationIndex) {
     console.log('[DASHBOARD_EXECUTIVO] Abrindo modal para processo:', operationIndex);
-    
+
     // Validation checks
     if (!window.currentOperations) {
         console.error('[DASHBOARD_EXECUTIVO] Array global de operações não encontrado');
         return;
     }
-    
+
     if (operationIndex === -1) {
         console.error('[DASHBOARD_EXECUTIVO] Índice inválido (-1) - processo não encontrado no array global');
         return;
     }
-    
+
     if (!window.currentOperations[operationIndex]) {
         console.error('[DASHBOARD_EXECUTIVO] Operação não encontrada no índice:', operationIndex);
         console.error('[DASHBOARD_EXECUTIVO] Array global tem:', window.currentOperations.length, 'elementos');
         console.error('[DASHBOARD_EXECUTIVO] Índices válidos: 0 a', window.currentOperations.length - 1);
         return;
     }
-    
+
     const operation = window.currentOperations[operationIndex];
     console.log('[DASHBOARD_EXECUTIVO] Dados da operação completos:', operation);
     console.log('[DASHBOARD_EXECUTIVO] ref_unique do processo:', operation.ref_unique);
-    
+
     // LOG ESPECÍFICO PARA CAMPOS DE CUSTO
     console.log('[DASHBOARD_EXECUTIVO] === ANÁLISE DE CUSTOS ===');
     console.log('[DASHBOARD_EXECUTIVO] custo_total:', operation.custo_total);
@@ -2723,7 +2726,7 @@ function openProcessModal(operationIndex) {
     console.log('[DASHBOARD_EXECUTIVO] custo_total_original:', operation.custo_total_original);
     console.log('[DASHBOARD_EXECUTIVO] despesas_processo tipo:', typeof operation.despesas_processo);
     console.log('[DASHBOARD_EXECUTIVO] despesas_processo length:', operation.despesas_processo ? operation.despesas_processo.length : 'N/A');
-    
+
     // LOG ESPECÍFICO PARA PROCESSO 6555
     if (operation.ref_unique && operation.ref_unique.includes('6555')) {
         console.log('[DASHBOARD_EXECUTIVO] *** DETECTADO PROCESSO 6555 NO MODAL ***');
@@ -2731,22 +2734,22 @@ function openProcessModal(operationIndex) {
         console.log('[DASHBOARD_EXECUTIVO] operation.custo_total:', operation.custo_total);
         console.log('[DASHBOARD_EXECUTIVO] operation.custo_total_view:', operation.custo_total_view);
         console.log('[DASHBOARD_EXECUTIVO] operation.custo_total_original:', operation.custo_total_original);
-        
+
         if (operation.despesas_processo && Array.isArray(operation.despesas_processo)) {
             console.log('[DASHBOARD_EXECUTIVO] Despesas do processo 6555:');
             let total_manual = 0;
             operation.despesas_processo.forEach((despesa, i) => {
                 const valor = parseFloat(despesa.valor_custo) || 0;
                 total_manual += valor;
-                console.log(`[DASHBOARD_EXECUTIVO] ${i+1}. ${despesa.categoria_custo}: R$ ${valor.toFixed(2)}`);
+                console.log(`[DASHBOARD_EXECUTIVO] ${i + 1}. ${despesa.categoria_custo}: R$ ${valor.toFixed(2)}`);
             });
             console.log('[DASHBOARD_EXECUTIVO] Total manual calculado:', total_manual.toFixed(2));
         }
     }
-    
+
     // Debug: verificar se o índice está correto
     console.log(`[DASHBOARD_EXECUTIVO] Operação no índice ${operationIndex}:`, operation.ref_unique, '-', operation.importador);
-    
+
     // Debug específico dos campos problemáticos
     console.log('[MODAL_DEBUG] ref_importador:', operation.ref_importador);
     console.log('[MODAL_DEBUG] cnpj_importador:', operation.cnpj_importador);
@@ -2756,7 +2759,7 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] peso_bruto:', operation.peso_bruto);
     console.log('[MODAL_DEBUG] urf_despacho:', operation.urf_despacho);
     console.log('[MODAL_DEBUG] urf_despacho_normalizado:', operation.urf_despacho_normalizado);
-    
+
     // NOVO: Debug específico do campo pais_procedencia
     console.log('[MODAL_DEBUG] === ANÁLISE PAÍS PROCEDÊNCIA ===');
     console.log('[MODAL_DEBUG] pais_procedencia:', operation.pais_procedencia);
@@ -2764,25 +2767,25 @@ function openProcessModal(operationIndex) {
     console.log('[MODAL_DEBUG] url_bandeira:', operation.url_bandeira);
     console.log('[MODAL_DEBUG] Tipo pais_procedencia:', typeof operation.pais_procedencia);
     console.log('[MODAL_DEBUG] Valor após safeValue será:', safeValue(operation.pais_procedencia_normalizado || operation.pais_procedencia));
-    
+
     // NOVO: Debug específico do campo data_fechamento
     console.log('[MODAL_DEBUG] === ANÁLISE DATA FECHAMENTO ===');
     console.log('[MODAL_DEBUG] data_fechamento:', operation.data_fechamento);
     console.log('[MODAL_DEBUG] Tipo data_fechamento:', typeof operation.data_fechamento);
     console.log('[MODAL_DEBUG] Valor após safeValue será:', safeValue(operation.data_fechamento));
-    
+
     // Update modal title
     const modalTitle = document.getElementById('modal-title');
     if (modalTitle) {
         modalTitle.textContent = `Detalhes do Processo ${operation.ref_unique || 'N/A'}`;
         console.log('[DASHBOARD_EXECUTIVO] Título do modal atualizado para:', operation.ref_unique);
     }
-    
+
     // Update timeline - extract numeric value from status_timeline like "2 - Agd Embarque"
     console.log('[TIMELINE_DEBUG] Status timeline original:', operation.status_timeline);
     console.log('[TIMELINE_DEBUG] Status processo fallback:', operation.status_processo);
     console.log('[TIMELINE_DEBUG] Status macro fallback:', operation.status_macro_sistema);
-    
+
     // CORREÇÃO: Usar função do process_modal.js que suporta 6 etapas
     if (typeof window.openProcessModal === 'undefined') {
         // Se a função do process_modal.js não estiver disponível, usar a local
@@ -2795,7 +2798,7 @@ function openProcessModal(operationIndex) {
         console.log('[TIMELINE_DEBUG] Usando função do process_modal.js - Número extraído:', statusTimelineNumber);
         updateProcessTimeline(statusTimelineNumber);
     }
-    
+
     // Update general information
     updateElementValue('detail-ref-unique', operation.ref_unique);
     updateElementValue('detail-ref-importador', operation.ref_importador);
@@ -2803,42 +2806,43 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-importador', operation.importador);
     updateElementValue('detail-exportador', operation.exportador_fornecedor);
     updateElementValue('detail-cnpj', formatCNPJ(operation.cnpj_importador));
-    
+
     // CORREÇÃO: Mostrar status_sistema (campo existe na view vw_importacoes_6_meses_abertos_dash)
     let statusToDisplay = operation.status_sistema;
-    
+
     console.log('[MODAL_DEBUG] ========================================');
     console.log('[MODAL_DEBUG] DASHBOARD.JS - STATUS PROCESSING');
     console.log('[MODAL_DEBUG] status_sistema:', operation.status_sistema);
     console.log('[MODAL_DEBUG] Campos disponíveis:', Object.keys(operation));
-    
+
     // Fallback se status_sistema estiver vazio
     if (!statusToDisplay || statusToDisplay.trim() === '') {
         console.log('[MODAL_DEBUG] status_sistema vazio, usando fallback...');
         statusToDisplay = operation.status_processo || operation.status || 'Sem Informação';
     }
-    
+
     console.log('[MODAL_DEBUG] Status final para exibição:', statusToDisplay);
     console.log('[MODAL_DEBUG] ========================================');
-    
+
     updateElementValue('detail-status', statusToDisplay);
-    
+
     // CORREÇÃO: Remover referências a elementos inexistentes no template
     // Os elementos 'detail-country-name' e 'detail-country-flag' não existem no process_modal.html
     // Removido para evitar erro "Cannot read properties of null"
-    
+
     // Update cargo and transport details
     updateElementValue('detail-modal', operation.modal);
     updateContainerField(operation.container); // NOVO: Função para processar containers múltiplos
     updateElementValue('detail-data-embarque', operation.data_embarque);
     updateElementValue('detail-data-chegada', operation.data_chegada);
+    updateElementValue('detail-presenca-carga', operation.presenca_carga); // NOVO: Presença Carga
     updateElementValue('detail-data-fechamento', operation.data_fechamento); // NOVA data
     updateElementValue('detail-transit-time', operation.transit_time_real ? operation.transit_time_real + ' dias' : null);
-    
+
     // FIX: Normalize peso_bruto if value seems incorrectly scaled
     const pesoNormalized = normalizePesoBruto(operation.peso_bruto);
     updateElementValue('detail-peso-bruto', pesoNormalized ? formatNumber(pesoNormalized) + ' Kg' : null);
-    
+
     // Update customs information
     updateElementValue('detail-numero-di', operation.numero_di);
     updateElementValue('detail-data-registro', operation.data_registro);
@@ -2846,23 +2850,23 @@ function openProcessModal(operationIndex) {
     updateElementValue('detail-data-desembaraco', operation.data_desembaraco);
     updateElementValue('detail-pais-procedencia', operation.pais_procedencia_normalizado || operation.pais_procedencia);
     // CORREÇÃO: Tratar "N/A" como valor inválido no fallback
-    const urfDespacho = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A') 
-                        ? operation.urf_despacho_normalizado 
-                        : operation.urf_despacho;
+    const urfDespacho = (operation.urf_despacho_normalizado && operation.urf_despacho_normalizado !== 'N/A')
+        ? operation.urf_despacho_normalizado
+        : operation.urf_despacho;
     updateElementValue('detail-urf-despacho', urfDespacho);
-    
+
     // Update financial summary using new category-based system
     updateFinancialSummary(operation);
-    
+
     // Update Kingspan specific data (only visible if user has access)
     updateKingspanData(operation);
-    
+
     // Update documents (placeholder for now)
     updateDocumentsList(operation);
-    
+
     // Initialize tabs navigation
     initializeModalTabs();
-    
+
     // Show modal
     const modal = document.getElementById('process-modal');
     if (modal) {
@@ -2878,13 +2882,13 @@ function openProcessModal(operationIndex) {
 function initializeModalTabs() {
     const tabs = document.querySelectorAll('.modal-tab');
     const tabContents = document.querySelectorAll('.info-card[data-tab-content]');
-    
+
     console.log('[TAB_RESET] Resetando abas para primeira aba (Informações Gerais)');
-    
+
     // BUGFIX: Remove ALL active classes first (cleanup)
     tabs.forEach(t => t.classList.remove('active'));
     tabContents.forEach(c => c.classList.remove('active'));
-    
+
     // BUGFIX: ALWAYS activate first tab (Informações Gerais) when opening modal
     if (tabs.length > 0) {
         tabs[0].classList.add('active');
@@ -2894,7 +2898,7 @@ function initializeModalTabs() {
         tabContents[0].classList.add('active');
         console.log('[TAB_RESET] Conteúdo "Informações Gerais" ativado');
     }
-    
+
     // Tab click handlers
     // Check if listeners already attached to avoid duplicates
     tabs.forEach(tab => {
@@ -2902,23 +2906,23 @@ function initializeModalTabs() {
         const newTab = tab.cloneNode(true);
         tab.parentNode.replaceChild(newTab, tab);
     });
-    
+
     // Re-query after clone
     const freshTabs = document.querySelectorAll('.modal-tab');
-    
+
     // Add fresh click handlers
     freshTabs.forEach(tab => {
-        tab.addEventListener('click', function() {
+        tab.addEventListener('click', function () {
             const targetTab = this.getAttribute('data-tab');
             console.log('[TAB_CLICK] Usuário clicou na aba:', targetTab);
-            
+
             // Remove active class from all tabs and contents
             freshTabs.forEach(t => t.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
-            
+
             // Add active class to clicked tab
             this.classList.add('active');
-            
+
             // Show corresponding content
             const targetContent = document.querySelector(`.info-card[data-tab-content="${targetTab}"]`);
             if (targetContent) {
@@ -2934,7 +2938,7 @@ function initializeModalTabs() {
  */
 function closeProcessModal() {
     console.log('[DASHBOARD_EXECUTIVO] Fechando modal');
-    
+
     const modal = document.getElementById('process-modal');
     if (modal) {
         modal.classList.remove('active');
@@ -2947,7 +2951,7 @@ function closeProcessModal() {
  */
 function extractStatusMacroNumber(statusMacro) {
     if (!statusMacro) return 1;
-    
+
     // Extract the first number from strings like "5 - AG REGISTRO"
     const match = statusMacro.toString().match(/^(\d+)/);
     return match ? parseInt(match[1]) : 1;
@@ -2958,15 +2962,15 @@ function extractStatusMacroNumber(statusMacro) {
  */
 function formatCNPJ(cnpj) {
     if (!cnpj) return '-';
-    
+
     // Remove non-digits
     const cleanCNPJ = cnpj.replace(/\D/g, '');
-    
+
     // Format as XX.XXX.XXX/XXXX-XX
     if (cleanCNPJ.length === 14) {
         return cleanCNPJ.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
     }
-    
+
     return cnpj;
 }
 
@@ -2975,20 +2979,20 @@ function formatCNPJ(cnpj) {
  */
 function updateProcessTimelineFromStatusTimeline(statusTimeline) {
     console.log('[TIMELINE_DEBUG] Atualizando timeline com status_timeline:', statusTimeline);
-    
+
     const timelineSteps = document.querySelectorAll('.timeline-step');
     console.log('[TIMELINE_DEBUG] Steps encontrados:', timelineSteps.length);
-    
+
     // Resetar todos os steps
     timelineSteps.forEach(step => {
         step.classList.remove('completed', 'active');
     });
-    
+
     if (!statusTimeline) {
         console.log('[TIMELINE_DEBUG] Status timeline vazio - nenhum step ativo');
         return;
     }
-    
+
     // ATUALIZADO: Mapear status_processo ou status_timeline para steps (6 etapas)
     // 1. Abertura, 2. Embarque, 3. Chegada, 4. Registro, 5. Desembaraço, 6. Finalizado
     const timelineMap = {
@@ -2998,21 +3002,21 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         'PROCESSO ABERTO': 1,
         'AGUARDANDO EMBARQUE': 1,
         'MERCADORIA EMBARCADA': 1,
-        
+
         // Estágio 2: Embarque/Em Trânsito
-        'EMBARQUE': 2, 
+        'EMBARQUE': 2,
         'EMBARCADO': 2,
         'EM TRANSITO': 2,
         'EMBARQUE CONFIRMADO': 2,
         'MERCADORIA EM TRANSITO': 2,
-        
+
         // Estágio 3: Chegada
         'CHEGADA': 3,
         'CHEGOU': 3,
         'CHEGADA CONFIRMADA': 3,
         'MERCADORIA CHEGOU': 3,
         'AGUARDANDO CHEGADA': 3,
-        
+
         // Estágio 4: Registro
         'REGISTRO': 4,
         'REGISTRADO': 4,
@@ -3028,7 +3032,7 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         'PREENCHIMENTO DA DECLARACAO DE IMPORTACAO ESTA OK.': 4,
         'DECLARAÇÃO DE IMPORTAÇÃO NÃO FOI REGISTRADA': 4,
         'DECLARACAO DE IMPORTACAO NAO FOI REGISTRADA': 4,
-        
+
         // Estágio 5: Desembaraço
         'DESEMBARACO': 5,
         'DESEMBARAÇO': 5,
@@ -3038,7 +3042,7 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         'DECLARAÇÃO DESEMBARAÇADA': 5,
         'DESEMBARACO AUTORIZADO': 5,
         'DESEMBARAÇO AUTORIZADO': 5,
-        
+
         // Estágio 6: Finalizado
         'FINALIZADO': 6,
         'PROCESSO CONCLUIDO': 6,
@@ -3047,12 +3051,12 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
         'CONCLUÍDO': 6,
         'ENTREGUE': 6
     };
-    
+
     // Extrair o nome do status (remover número, pontos e traços)
     let statusName = statusTimeline.replace(/^\d+[\.\-\s]*/, '').trim().toUpperCase();
     console.log(`[TIMELINE_DEBUG] Status original: "${statusTimeline}"`);
     console.log(`[TIMELINE_DEBUG] Status limpo: "${statusName}"`);
-    
+
     // Buscar correspondência no mapeamento (case insensitive)
     let currentStep = null;
     for (const [key, step] of Object.entries(timelineMap)) {
@@ -3062,7 +3066,7 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
             break;
         }
     }
-    
+
     // Se não encontrou correspondência, tentar extrair número diretamente
     if (!currentStep) {
         const numeroMatch = statusTimeline.match(/^(\d+)/);
@@ -3075,13 +3079,13 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
             }
         }
     }
-    
+
     console.log(`[TIMELINE_DEBUG] Step final: ${currentStep}`);
-    
+
     if (currentStep) {
         timelineSteps.forEach((step, index) => {
             const stepNumber = index + 1;
-            
+
             if (stepNumber < currentStep) {
                 step.classList.add('completed');
                 console.log(`[TIMELINE_DEBUG] Step ${stepNumber} marcado como completed`);
@@ -3100,17 +3104,17 @@ function updateProcessTimelineFromStatusTimeline(statusTimeline) {
  */
 function updateContainerField(containerValue) {
     const containerElement = document.getElementById('detail-container');
-    
+
     if (!containerElement) {
         console.warn('[MODAL_DEBUG] Elemento detail-container não encontrado');
         return;
     }
-    
+
     if (!containerValue || containerValue.trim() === '') {
         containerElement.innerHTML = '-';
         return;
     }
-    
+
     // Suportar múltiplos separadores: vírgula, ponto e vírgula, quebra de linha
     const rawParts = containerValue
         .split(/[,;\n]/)
@@ -3172,7 +3176,7 @@ function processExpensesByCategory(despesasProcesso) {
         console.log('[DASHBOARD_EXECUTIVO] Entrada - despesasProcesso:', despesasProcesso);
         console.log('[DASHBOARD_EXECUTIVO] Tipo:', typeof despesasProcesso);
         console.log('[DASHBOARD_EXECUTIVO] É array:', Array.isArray(despesasProcesso));
-        
+
         if (!despesasProcesso || !Array.isArray(despesasProcesso)) {
             console.warn('[DASHBOARD_EXECUTIVO] Despesas processo não é um array válido:', despesasProcesso);
             return {
@@ -3189,12 +3193,12 @@ function processExpensesByCategory(despesasProcesso) {
 
         despesasProcesso.forEach((despesa, index) => {
             console.log(`[DASHBOARD_EXECUTIVO] Despesa ${index + 1}:`, despesa);
-            
+
             // Categoria exatamente como vem do banco
             const categoria = despesa.categoria_custo || 'Outros Custos';
             const valorStr = despesa.valor_custo;
             const valor = parseFloat(valorStr) || 0;
-            
+
             console.log(`[DASHBOARD_EXECUTIVO] Processando: categoria="${categoria}", valorStr="${valorStr}", valor=${valor}`);
 
             // Acumular valor na categoria
@@ -3253,15 +3257,15 @@ function generateFinancialSummaryHTML(expenseData, valorCif = 0) {
 
         // Usar categorias ajustadas se disponível, senão usar categorias originais
         const catAdj = categoriasAjustadas && Object.keys(categoriasAjustadas).length ? categoriasAjustadas : categorias;
-        
+
         // NOVA LÓGICA DINÂMICA: Renderizar TODAS as categorias que vieram do banco
         // Ordenar alfabeticamente para consistência visual
         const categoriasOrdenadas = Object.entries(catAdj || {})
             .filter(([k, v]) => v > 0) // Só mostrar categorias com valor > 0
             .sort(([a], [b]) => a.localeCompare(b, 'pt-BR')); // Ordem alfabética
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Categorias dinâmicas ordenadas:', categoriasOrdenadas);
-        
+
         // Renderizar cada categoria dinamicamente
         categoriasOrdenadas.forEach(([categoria, valor]) => {
             html += `
@@ -3317,7 +3321,7 @@ function updateFinancialSummary(operation) {
         }
 
         let expenseData;
-        
+
         // LÓGICA SIMPLIFICADA:
         // 1. Se temos despesas_processo, calcular sempre manualmente (mais confiável)
         // 2. Senão, usar custo_total do backend como fallback
@@ -3326,7 +3330,7 @@ function updateFinancialSummary(operation) {
             expenseData = processExpensesByCategory(operation.despesas_processo);
         } else {
             console.log('[DASHBOARD_EXECUTIVO] Fallback: usando custo_total do backend');
-            
+
             // Priorizar custo_total_view, depois custo_total
             let custoTotal = 0;
             if (operation.custo_total_view !== undefined && operation.custo_total_view !== null && operation.custo_total_view > 0) {
@@ -3334,19 +3338,19 @@ function updateFinancialSummary(operation) {
             } else if (operation.custo_total !== undefined && operation.custo_total !== null && operation.custo_total > 0) {
                 custoTotal = operation.custo_total;
             }
-            
+
             expenseData = {
                 categorias: { 'Total de Custos': custoTotal },
                 total: custoTotal,
                 categoriasAjustadas: { 'Total de Custos': custoTotal }
             };
         }
-        
+
         console.log('[DASHBOARD_EXECUTIVO] expenseData final:', expenseData);
-        
+
         // Não mostrar "Valor CIF" separadamente no resumo
         const valorCif = 0;
-        
+
         // Gerar HTML dinâmico
         const summaryHTML = generateFinancialSummaryHTML(expenseData, valorCif);
 
@@ -3375,7 +3379,7 @@ function calculateOtherExpenses(operation) {
         const expenseData = processExpensesByCategory(operation.despesas_processo);
         return expenseData.total;
     }
-    
+
     // Fallback para o formato antigo
     const expenseFields = [
         'custo_ii', 'custo_ipi', 'custo_pis', 'custo_cofins', 'custo_icms',
@@ -3383,7 +3387,7 @@ function calculateOtherExpenses(operation) {
         'custo_licenca_importacao', 'custo_taxa_utilizacao_siscomex', 'custo_multa',
         'custo_juros_mora', 'custo_outros'
     ];
-    
+
     let total = 0;
     expenseFields.forEach(field => {
         const value = operation[field];
@@ -3391,7 +3395,7 @@ function calculateOtherExpenses(operation) {
             total += Number(value);
         }
     });
-    
+
     return total;
 }
 
@@ -3405,26 +3409,26 @@ function updateKingspanData(operation) {
     console.log('[KINGSPAN_DATA] Processo:', operation.ref_unique);
     console.log('[KINGSPAN_DATA] Importador:', operation.importador);
     console.log('[KINGSPAN_DATA] CNPJ:', operation.cnpj_importador);
-    
+
     // Debug: Verificar todos os campos relacionados a Kingspan
     console.log('[KINGSPAN_DATA] === CAMPOS KINGSPAN NO OBJETO ===');
     console.log('[KINGSPAN_DATA] has_kingspan_access:', operation.has_kingspan_access);
     console.log('[KINGSPAN_DATA] can_edit_armazenagem:', operation.can_edit_armazenagem);
     console.log('[KINGSPAN_DATA] has_armazenagem_data:', operation.has_armazenagem_data);
     console.log('[KINGSPAN_DATA] armazenagem_data:', operation.armazenagem_data);
-    
+
     // Verificar se é processo Kingspan pelo nome
     const isKingspanProcess = (operation.importador || '').toUpperCase().includes('KINGSPAN');
     console.log('[KINGSPAN_DATA] É processo Kingspan (pelo nome)?', isKingspanProcess);
-    
+
     // LÓGICA DE ACESSO: Se é processo Kingspan, mostrar campos
     const hasKingspanAccess = operation.has_kingspan_access === true || isKingspanProcess;
     console.log('[KINGSPAN_DATA] Decisão final - Mostrar campos?', hasKingspanAccess);
-    
+
     // Mostrar ou ocultar todos os campos com classe .kingspan-field
     const kingspanFields = document.querySelectorAll('.kingspan-field');
     console.log('[KINGSPAN_DATA] Total de campos encontrados com .kingspan-field:', kingspanFields.length);
-    
+
     kingspanFields.forEach(field => {
         if (hasKingspanAccess) {
             field.style.display = '';  // Mostrar (usar display padrão)
@@ -3432,14 +3436,14 @@ function updateKingspanData(operation) {
             field.style.display = 'none';  // Ocultar
         }
     });
-    
+
     if (!hasKingspanAccess) {
         console.log('[KINGSPAN_DATA] ❌ Campos Kingspan OCULTOS - Usuário não tem acesso');
         return;
     }
-    
+
     console.log('[KINGSPAN_DATA] ✅ Campos Kingspan EXIBIDOS - Populando dados...');
-    
+
     // ==== CAMPOS DE ARMAZENAGEM ====
     console.log('[KINGSPAN_DATA] Populando campos de Armazenagem...');
     console.log('[KINGSPAN_DATA] - data_desova:', operation.data_desova);
@@ -3450,7 +3454,7 @@ function updateKingspanData(operation) {
     updateElementValue('detail-data-desova', operation.data_desova);
     updateElementValue('detail-limite-primeiro', operation.limite_primeiro_periodo);
     updateElementValue('detail-limite-segundo', operation.limite_segundo_periodo);
-    
+
     // Dias extras com formatação especial
     if (operation.dias_extras_armazenagem !== null && operation.dias_extras_armazenagem !== undefined) {
         const dias = parseInt(operation.dias_extras_armazenagem);
@@ -3462,7 +3466,7 @@ function updateKingspanData(operation) {
     } else {
         updateElementValue('detail-dias-extras', null);
     }
-    
+
     // Valor despesas extras com formatação de moeda
     if (operation.valor_despesas_extras !== null && operation.valor_despesas_extras !== undefined) {
         const valor = parseFloat(operation.valor_despesas_extras);
@@ -3474,7 +3478,7 @@ function updateKingspanData(operation) {
     } else {
         updateElementValue('detail-valor-extras', null);
     }
-    
+
     // ==== CAMPOS DE INFORMAÇÕES DO PEDIDO ====
     console.log('[KINGSPAN_DATA] Populando campos de Pedido...');
     console.log('[KINGSPAN_DATA] - po_cliente:', operation.po_cliente);
@@ -3487,7 +3491,7 @@ function updateKingspanData(operation) {
     updateElementValue('detail-codigo-produto', operation.codigo_produto);
     updateElementValue('detail-filial-codigo', operation.filial_codigo);
     updateElementValue('detail-licenca-importacao', operation.licenca_importacao);
-    
+
     // ==== CAMPOS FINANCEIROS E LOGÍSTICOS ====
     console.log('[KINGSPAN_DATA] Populando campos Financeiros e Logísticos...');
     console.log('[KINGSPAN_DATA] - moeda:', operation.moeda);
@@ -3499,7 +3503,7 @@ function updateKingspanData(operation) {
     console.log('[KINGSPAN_DATA] - armador_agente_trade:', operation.armador_agente_trade);
     console.log('[KINGSPAN_DATA] - navio:', operation.navio);
     updateElementValue('detail-moeda', operation.moeda);
-    
+
     // Total pedido com formatação de moeda
     if (operation.total_pedido_moeda_origem !== null && operation.total_pedido_moeda_origem !== undefined) {
         const total = parseFloat(operation.total_pedido_moeda_origem);
@@ -3511,7 +3515,7 @@ function updateKingspanData(operation) {
     } else {
         updateElementValue('detail-total-pedido', null);
     }
-    
+
     // PTAX com formatação
     if (operation.ptax !== null && operation.ptax !== undefined) {
         const ptax = parseFloat(operation.ptax);
@@ -3523,13 +3527,13 @@ function updateKingspanData(operation) {
     } else {
         updateElementValue('detail-ptax', null);
     }
-    
+
     updateElementValue('detail-incoterm', operation.incoterm);
     updateElementValue('detail-freetime', operation.freetime);
     updateElementValue('detail-etb', operation.etb);
     updateElementValue('detail-armador', operation.armador_agente_trade);
     updateElementValue('detail-navio', operation.navio);
-    
+
     console.log('[KINGSPAN_DATA] ✅ Todos os campos Kingspan atualizados com sucesso!');
     console.log('[KINGSPAN_DATA] ========================================');
 }
@@ -3541,7 +3545,7 @@ function updateDocumentsList(operation) {
     const documentsList = document.getElementById('documents-list');
 
     if (!documentsList) return;
-    
+
     // Verificar se temos o ref_unique da operação
     const refUnique = operation?.ref_unique;
     console.log('[DOCUMENT_MANAGER] ref_unique recebido:', refUnique);
@@ -3549,23 +3553,23 @@ function updateDocumentsList(operation) {
         documentsList.innerHTML = '<p class="no-documents">Referência do processo não encontrada</p>';
         return;
     }
-    
+
     // Verificar se DocumentManager está disponível
     if (typeof DocumentManager === 'undefined') {
         console.error('DocumentManager não carregado');
         documentsList.innerHTML = '<p class="no-documents">Sistema de documentos não disponível</p>';
         return;
     }
-    
+
     try {
         // Inicializar DocumentManager para este processo e armazenar na variável global
         // O DocumentManager já chama loadDocuments() automaticamente no init()
         window.documentManager = new DocumentManager(refUnique);
         console.log('[DASHBOARD_EXECUTIVO] DocumentManager inicializado e armazenado em window.documentManager');
-        
+
         // Configurar botão "Baixar Todos"
         setupDownloadAllButton();
-        
+
     } catch (error) {
         console.error('Erro ao inicializar DocumentManager:', error);
         documentsList.innerHTML = '<p class="no-documents">Erro ao carregar sistema de documentos</p>';
@@ -3577,19 +3581,19 @@ function updateDocumentsList(operation) {
  */
 function setupDownloadAllButton() {
     const downloadAllBtn = document.getElementById('download-all-docs-btn');
-    
+
     if (!downloadAllBtn) {
         console.warn('[DOWNLOAD_ALL] Botão download-all-docs-btn não encontrado');
         return;
     }
-    
+
     // Remove event listeners antigos (se existirem)
     const newBtn = downloadAllBtn.cloneNode(true);
     downloadAllBtn.parentNode.replaceChild(newBtn, downloadAllBtn);
-    
+
     // Adicionar event listener
     newBtn.addEventListener('click', downloadAllDocuments);
-    
+
     // Mostrar/ocultar botão baseado na existência de documentos
     // Aguardar um momento para o DocumentManager carregar os documentos
     setTimeout(() => {
@@ -3606,47 +3610,47 @@ function setupDownloadAllButton() {
  */
 async function downloadAllDocuments() {
     const btn = document.getElementById('download-all-docs-btn');
-    
+
     if (!window.documentManager) {
         alert('Sistema de documentos não disponível');
         return;
     }
-    
+
     const documents = window.documentManager.documents;
-    
+
     if (!documents || documents.length === 0) {
         alert('Nenhum documento disponível para download');
         return;
     }
-    
+
     // Verificar se JSZip está disponível
     if (typeof JSZip === 'undefined') {
         console.error('[DOWNLOAD_ALL] JSZip não está carregado. Usando método antigo.');
         await downloadAllDocumentsLegacy();
         return;
     }
-    
+
     console.log('[DOWNLOAD_ALL] Criando arquivo ZIP com', documents.length, 'documentos');
-    
+
     // Desabilitar botão e adicionar classe loading
     btn.disabled = true;
     btn.classList.add('downloading');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Preparando ZIP...';
-    
+
     try {
         const zip = new JSZip();
         let successCount = 0;
         let errorCount = 0;
-        
+
         // Baixar todos os documentos e adicionar ao ZIP
         for (let i = 0; i < documents.length; i++) {
             const doc = documents[i];
-            
+
             try {
                 btn.innerHTML = `<i class="mdi mdi-loading mdi-spin"></i> Processando ${i + 1}/${documents.length}...`;
                 console.log(`[DOWNLOAD_ALL] Processando ${i + 1}/${documents.length}: ${doc.nome_arquivo}`);
-                
+
                 // Fazer requisição para obter a URL de download (rota correta: /api/documents/)
                 const response = await fetch(`/api/documents/${doc.id}/download`, {
                     method: 'GET',
@@ -3654,30 +3658,30 @@ async function downloadAllDocuments() {
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
-                
+
                 // API retorna JSON com download_url
                 const data = await response.json();
-                
+
                 if (!data.success || !data.download_url) {
                     throw new Error('URL de download não disponível');
                 }
-                
+
                 // Baixar o arquivo da URL do Supabase
                 const fileResponse = await fetch(data.download_url);
-                
+
                 if (!fileResponse.ok) {
                     throw new Error(`Erro ao baixar arquivo: HTTP ${fileResponse.status}`);
                 }
-                
+
                 const blob = await fileResponse.blob();
-                
+
                 // Usar o nome do arquivo retornado pela API ou o original
                 const fileName = data.filename || doc.nome_arquivo;
-                
+
                 // Garantir nome único no ZIP (evitar duplicatas)
                 let uniqueFileName = fileName;
                 let counter = 1;
@@ -3688,26 +3692,26 @@ async function downloadAllDocuments() {
                     uniqueFileName = `${baseName}_${counter}.${ext}`;
                     counter++;
                 }
-                
+
                 // Adicionar arquivo ao ZIP
                 zip.file(uniqueFileName, blob);
                 successCount++;
-                
+
             } catch (error) {
                 console.error(`[DOWNLOAD_ALL] Erro ao processar ${doc.nome_arquivo}:`, error);
                 errorCount++;
             }
         }
-        
+
         if (successCount === 0) {
             alert('❌ Nenhum documento pôde ser adicionado ao arquivo ZIP.');
             return;
         }
-        
+
         // Gerar o arquivo ZIP
         btn.innerHTML = '<i class="mdi mdi-loading mdi-spin"></i> Gerando arquivo ZIP...';
         console.log('[DOWNLOAD_ALL] Gerando arquivo ZIP...');
-        
+
         const zipBlob = await zip.generateAsync({
             type: 'blob',
             compression: 'DEFLATE',
@@ -3719,12 +3723,12 @@ async function downloadAllDocuments() {
             const percent = metadata.percent.toFixed(0);
             btn.innerHTML = `<i class="mdi mdi-loading mdi-spin"></i> Compactando ${percent}%...`;
         });
-        
+
         // Criar nome do arquivo ZIP baseado no processo
         const processNumber = window.currentProcesso?.numero_processo || 'documentos';
         const timestamp = new Date().toISOString().split('T')[0];
         const zipFileName = `${processNumber}_documentos_${timestamp}.zip`;
-        
+
         // Download do arquivo ZIP
         const url = window.URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
@@ -3734,16 +3738,16 @@ async function downloadAllDocuments() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        
+
         // Mensagem de sucesso
         console.log('[DOWNLOAD_ALL] ZIP criado com sucesso:', zipFileName);
-        
+
         if (errorCount === 0) {
             alert(`✅ Arquivo ZIP criado com sucesso!\n\n📦 ${successCount} documento(s) compactado(s)\n📁 Arquivo: ${zipFileName}`);
         } else {
             alert(`⚠️ Arquivo ZIP criado com avisos:\n\n✅ ${successCount} documento(s) incluído(s)\n❌ ${errorCount} documento(s) com erro\n📁 Arquivo: ${zipFileName}`);
         }
-        
+
     } catch (error) {
         console.error('[DOWNLOAD_ALL] Erro ao criar ZIP:', error);
         alert('❌ Erro ao criar arquivo ZIP. Verifique o console para detalhes.');
@@ -3762,19 +3766,19 @@ async function downloadAllDocuments() {
 async function downloadAllDocumentsLegacy() {
     const btn = document.getElementById('download-all-docs-btn');
     const documents = window.documentManager.documents;
-    
+
     btn.disabled = true;
     btn.classList.add('downloading');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<i class="mdi mdi-download-multiple"></i> Baixando...';
-    
+
     let successCount = 0;
     let errorCount = 0;
-    
+
     try {
         for (let i = 0; i < documents.length; i++) {
             const doc = documents[i];
-            
+
             try {
                 console.log(`[DOWNLOAD_ALL] Baixando ${i + 1}/${documents.length}: ${doc.nome_arquivo}`);
                 await downloadDocumentDirect(doc);
@@ -3785,13 +3789,13 @@ async function downloadAllDocumentsLegacy() {
                 errorCount++;
             }
         }
-        
+
         if (errorCount === 0) {
             alert(`✅ Todos os ${successCount} documentos foram baixados com sucesso!`);
         } else {
             alert(`⚠️ Download concluído:\n✅ ${successCount} com sucesso\n❌ ${errorCount} com erro`);
         }
-        
+
     } finally {
         btn.disabled = false;
         btn.classList.remove('downloading');
@@ -3810,28 +3814,28 @@ async function downloadDocumentDirect(doc) {
             'Content-Type': 'application/json'
         }
     });
-    
+
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
     }
-    
+
     // API retorna JSON com download_url
     const data = await response.json();
-    
+
     if (!data.success || !data.download_url) {
         throw new Error('URL de download não disponível');
     }
-    
+
     // Baixar o arquivo da URL do Supabase
     const fileResponse = await fetch(data.download_url);
-    
+
     if (!fileResponse.ok) {
         throw new Error(`Erro ao baixar arquivo: HTTP ${fileResponse.status}`);
     }
-    
+
     const blob = await fileResponse.blob();
     const fileName = data.filename || doc.nome_arquivo;
-    
+
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -3889,28 +3893,28 @@ function getStatusBadge(status) {
 
 function getCanalBadge(canal) {
     if (!canal) return '<span class="badge badge-secondary">-</span>';
-    
+
     // Normalizar o texto para maiúsculo
     const canalUpper = String(canal).toUpperCase().trim();
-    
+
     // Mapeamento de cores para os canais
     const canalMap = {
         'VERDE': 'success',
-        'AMARELO': 'warning', 
+        'AMARELO': 'warning',
         'VERMELHO': 'danger'
     };
-    
+
     const badgeClass = canalMap[canalUpper] || 'secondary';
-    
+
     return `<span class="badge badge-${badgeClass}">${canalUpper}</span>`;
 }
 
 function getModalBadge(modal) {
     if (!modal) return '<span class="badge badge-secondary">-</span>';
-    
+
     // Normalizar o texto para maiúsculo
     const modalUpper = String(modal).toUpperCase().trim();
-    
+
     // Mapeamento de ícones para os modais (apenas ícone, sem texto na tabela)
     if (modalUpper.includes('MARÍTIMA') || modalUpper.includes('MARITIMA')) {
         return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-ferry"></i></span>`;
@@ -3925,22 +3929,22 @@ function getModalBadge(modal) {
     } else if (modalUpper.includes('COURIER') || modalUpper.includes('EXPRESS')) {
         return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-package-variant"></i></span>`;
     }
-    
+
     return `<span class="modal-icon-badge" title="${modalUpper}"><i class="mdi mdi-help"></i></span>`;
 }
 
 function formatDataChegada(dateString) {
     if (!dateString) return '-';
-    
+
     const hoje = new Date();
     const chegadaDate = parseDate(dateString);
-    
+
     if (!chegadaDate) return formatDate(dateString);
-    
+
     // Zerar horários para comparação apenas da data
     chegadaDate.setHours(0, 0, 0, 0);
     hoje.setHours(0, 0, 0, 0);
-    
+
     // Se a data de chegada é exatamente hoje, mostrar indicador
     if (chegadaDate.getTime() === hoje.getTime()) {
         return `<span class="chegada-proxima">
@@ -3948,7 +3952,7 @@ function formatDataChegada(dateString) {
             ${formatDate(dateString)}
         </span>`;
     }
-    
+
     return formatDate(dateString);
 }
 
@@ -3998,31 +4002,31 @@ async function loadFilterOptions() {
  */
 function populateFilterOptions(options) {
     console.log('[DASHBOARD_EXECUTIVO] Populando opções de filtros...');
-    
+
     // Material filter
     if (options.materiais) {
         populateMultiSelect('material', options.materiais);
         console.log(`[DASHBOARD_EXECUTIVO] Materiais: ${options.materiais.length} opções`);
     }
-    
+
     // Cliente filter
     if (options.clientes) {
         populateMultiSelect('cliente', options.clientes);
         console.log(`[DASHBOARD_EXECUTIVO] Clientes: ${options.clientes.length} opções`);
     }
-    
+
     // Modal filter
     if (options.modais) {
         populateMultiSelect('modal', options.modais);
         console.log(`[DASHBOARD_EXECUTIVO] Modais: ${options.modais.length} opções`);
     }
-    
+
     // Canal filter
     if (options.canais) {
         populateMultiSelect('canal', options.canais);
         console.log(`[DASHBOARD_EXECUTIVO] Canais: ${options.canais.length} opções`);
     }
-    
+
     // NÃO initialize aqui - será feito quando o modal abrir
     console.log('[DASHBOARD_EXECUTIVO] Opções de filtros populadas - event listeners serão configurados ao abrir modal');
 }
@@ -4033,15 +4037,15 @@ function populateFilterOptions(options) {
 function populateMultiSelect(type, options) {
     const optionsContainer = document.getElementById(`${type}-options`);
     if (!optionsContainer) return;
-    
+
     optionsContainer.innerHTML = '';
-    
+
     options.forEach((option, index) => {
         const optionElement = document.createElement('div');
         optionElement.className = 'multi-select-option';
-        
+
         let iconHtml = '';
-        
+
         // Add icons for modal options
         if (type === 'modal') {
             iconHtml = getModalIcon(option);
@@ -4050,7 +4054,7 @@ function populateMultiSelect(type, options) {
         else if (type === 'canal') {
             iconHtml = getCanalIndicator(option);
         }
-        
+
         optionElement.innerHTML = `
             <input type="checkbox" id="${type}-${index}" value="${option}" onchange="updateMultiSelectDisplay('${type}')">
             <label for="${type}-${index}">
@@ -4067,26 +4071,26 @@ function populateMultiSelect(type, options) {
  */
 function initializeMultiSelects() {
     console.log('[DASHBOARD_EXECUTIVO] Inicializando multi-selects...');
-    
+
     const types = ['material', 'cliente', 'modal', 'canal'];
     let initializedCount = 0;
-    
+
     types.forEach(type => {
         const header = document.getElementById(`${type}-header`);
         const dropdown = document.getElementById(`${type}-dropdown`);
         const search = document.getElementById(`${type}-search`);
-        
+
         if (header && dropdown) {
             console.log(`[DASHBOARD_EXECUTIVO] Configurando event listeners para ${type}`);
-            
+
             // Remover event listeners existentes clonando o elemento
             const newHeader = header.cloneNode(true);
             header.parentNode.replaceChild(newHeader, header);
-            
+
             // Toggle dropdown on header click
-            newHeader.addEventListener('click', function() {
+            newHeader.addEventListener('click', function () {
                 console.log(`[DASHBOARD_EXECUTIVO] Clique no header ${type}`);
-                
+
                 // Close other dropdowns
                 types.forEach(otherType => {
                     if (otherType !== type) {
@@ -4098,22 +4102,22 @@ function initializeMultiSelects() {
                         }
                     }
                 });
-                
+
                 // Toggle current dropdown
                 dropdown.classList.toggle('open');
                 newHeader.classList.toggle('active');
-                
+
                 console.log(`[DASHBOARD_EXECUTIVO] Dropdown ${type} ${dropdown.classList.contains('open') ? 'aberto' : 'fechado'}`);
             });
-            
+
             // Search functionality
             const searchInput = document.getElementById(`${type}-search`);
             if (searchInput) {
-                searchInput.addEventListener('input', function() {
+                searchInput.addEventListener('input', function () {
                     filterMultiSelectOptions(type, this.value);
                 });
             }
-            
+
             initializedCount++;
         } else {
             console.warn(`[DASHBOARD_EXECUTIVO] Elementos não encontrados para ${type}:`, {
@@ -4122,11 +4126,11 @@ function initializeMultiSelects() {
             });
         }
     });
-    
+
     // Só adicionar o event listener global se algum multi-select foi inicializado
     if (initializedCount > 0) {
         // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!e.target.closest('.multi-select-container')) {
                 types.forEach(type => {
                     const dropdown = document.getElementById(`${type}-dropdown`);
@@ -4138,7 +4142,7 @@ function initializeMultiSelects() {
                 });
             }
         });
-        
+
         console.log(`[DASHBOARD_EXECUTIVO] Multi-selects inicializados: ${initializedCount}/${types.length}`);
     } else {
         console.error('[DASHBOARD_EXECUTIVO] Nenhum multi-select foi inicializado!');
@@ -4151,7 +4155,7 @@ function initializeMultiSelects() {
 function filterMultiSelectOptions(type, searchTerm) {
     const options = document.querySelectorAll(`#${type}-options .multi-select-option`);
     const term = searchTerm.toLowerCase();
-    
+
     options.forEach(option => {
         const label = option.querySelector('label').textContent.toLowerCase();
         if (label.includes(term)) {
@@ -4168,11 +4172,11 @@ function filterMultiSelectOptions(type, searchTerm) {
 function updateMultiSelectDisplay(type) {
     const checkboxes = document.querySelectorAll(`#${type}-options input[type="checkbox"]:checked`);
     const placeholder = document.querySelector(`#${type}-header .multi-select-placeholder`);
-    
+
     if (!placeholder) return;
-    
+
     const selectedCount = checkboxes.length;
-    
+
     if (selectedCount === 0) {
         placeholder.innerHTML = `Todos os ${getTypePlural(type)}`;
     } else if (selectedCount === 1) {
@@ -4180,14 +4184,14 @@ function updateMultiSelectDisplay(type) {
     } else {
         placeholder.innerHTML = `${selectedCount} ${getTypePlural(type)} selecionados`;
     }
-    
+
     // CORREÇÃO: Atualizar currentFilters e mostrar/esconder botão Reset
     if (!currentFilters) currentFilters = {};
-    
+
     // Obter valores selecionados do multi-select
     const selectedValues = getMultiSelectValues(type);
     currentFilters[type] = selectedValues.length > 0 ? selectedValues.join(',') : '';
-    
+
     // Atualizar visibilidade do botão Reset
     updateResetButtonVisibility();
 }
@@ -4198,7 +4202,7 @@ function updateMultiSelectDisplay(type) {
 function getTypePlural(type) {
     const plurals = {
         'material': 'materiais',
-        'cliente': 'clientes', 
+        'cliente': 'clientes',
         'modal': 'modais',
         'canal': 'canais'
     };
@@ -4222,30 +4226,30 @@ function getMultiSelectValues(type) {
  */
 function buildFilterQueryString(excludeKpiStatus = false) {
     const params = new URLSearchParams();
-    
+
     const dataInicio = document.getElementById('data-inicio')?.value;
     const dataFim = document.getElementById('data-fim')?.value;
-    
+
     // Get multi-select values
     const materiais = getMultiSelectValues('material');
     const clientes = getMultiSelectValues('cliente');
     const modais = getMultiSelectValues('modal');
     const canais = getMultiSelectValues('canal');
-    
+
     if (dataInicio) params.append('data_inicio', dataInicio);
     if (dataFim) params.append('data_fim', dataFim);
-    
+
     // Add multi-select values as comma-separated strings
     if (materiais.length > 0) params.append('material', materiais.join(','));
     if (clientes.length > 0) params.append('cliente', clientes.join(','));
     if (modais.length > 0) params.append('modal', modais.join(','));
     if (canais.length > 0) params.append('canal', canais.join(','));
-    
+
     // NOVO: Adicionar filtro de KPI clicável apenas se não for para excluir
     if (!excludeKpiStatus && currentFilters.kpi_status) {
         params.append('kpi_status', currentFilters.kpi_status);
     }
-    
+
     return params.toString();
 }
 
@@ -4254,11 +4258,11 @@ function buildFilterQueryString(excludeKpiStatus = false) {
  */
 function openFilterModal() {
     console.log('[DASHBOARD_EXECUTIVO] Abrindo modal de filtros...');
-    
+
     const modal = document.getElementById('filter-modal');
     if (modal) {
         modal.style.display = 'block';
-        
+
         // Aguardar o modal estar visível e então inicializar os multi-selects
         setTimeout(() => {
             console.log('[DASHBOARD_EXECUTIVO] Modal visível - inicializando multi-selects...');
@@ -4286,10 +4290,10 @@ function setQuickPeriod(days) {
     const hoje = new Date();
     const dataFim = hoje.toISOString().split('T')[0];
     const dataInicio = new Date(hoje.getTime() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
-    
+
     document.getElementById('data-inicio').value = dataInicio;
     document.getElementById('data-fim').value = dataFim;
-    
+
     // Update active button
     document.querySelectorAll('.btn-quick').forEach(btn => {
         btn.classList.remove('active');
@@ -4305,7 +4309,7 @@ function setQuickPeriod(days) {
 async function applyFilters() {
     try {
         showLoading(true);
-        
+
         // CORREÇÃO: Store current filters using correct methods
         currentFilters = {
             dataInicio: document.getElementById('data-inicio')?.value,
@@ -4316,22 +4320,22 @@ async function applyFilters() {
             modal: getMultiSelectValues('modal').join(','),
             canal: getMultiSelectValues('canal').join(',')
         };
-        
+
         console.log('[DASHBOARD_EXECUTIVO] Filtros aplicados:', currentFilters);
-        
+
         // Update filter summary
         updateFilterSummary();
-        
+
         // Show/hide reset button based on active filters
         updateResetButtonVisibility();
-        
+
         // Close modal
         closeFilterModal();
-        
+
         // CORREÇÃO: NÃO invalidar cache completo - apenas recarregar dados com filtros
         // dashboardCache.invalidate(); // ❌ REMOVIDO - causa perda dos dados base
         console.log('[DASHBOARD_EXECUTIVO] Recarregando dados com novos filtros...');
-        
+
         // Reload data with filters using cache system
         await Promise.all([
             loadDashboardKPIsWithCache(),
@@ -4339,10 +4343,10 @@ async function applyFilters() {
             loadRecentOperationsWithCache(),
             loadPaisesProcedenciaWithRetry()  // CORREÇÃO: Incluir tabela de países
         ]);
-        
+
         showLoading(false);
         // Removido o popup de confirmação
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao aplicar filtros:', error);
         showError('Erro ao aplicar filtros: ' + error.message);
@@ -4357,7 +4361,7 @@ function clearFilters() {
     // Clear date inputs
     document.getElementById('data-inicio').value = '';
     document.getElementById('data-fim').value = '';
-    
+
     // Clear multi-select checkboxes
     const types = ['material', 'cliente', 'modal', 'canal'];
     types.forEach(type => {
@@ -4367,23 +4371,23 @@ function clearFilters() {
         });
         updateMultiSelectDisplay(type);
     });
-    
+
     // Clear active buttons
     document.querySelectorAll('.btn-quick').forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
     // Clear stored filters (incluindo KPI filter)
     currentFilters = {};
-    
+
     // NOVO: Remover classe active dos KPIs clicáveis
     document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
         kpi.classList.remove('kpi-active');
     });
-    
+
     // Update summary
     updateFilterSummary();
-    
+
     showSuccess('Filtros limpos!');
 }
 
@@ -4393,11 +4397,11 @@ function clearFilters() {
 async function resetAllFilters() {
     try {
         showLoading(true);
-        
+
         // Clear date inputs
         document.getElementById('data-inicio').value = '';
         document.getElementById('data-fim').value = '';
-        
+
         // Clear multi-select checkboxes
         const types = ['material', 'cliente', 'modal', 'canal'];
         types.forEach(type => {
@@ -4407,39 +4411,39 @@ async function resetAllFilters() {
             });
             updateMultiSelectDisplay(type);
         });
-        
+
         // Clear active buttons
         document.querySelectorAll('.btn-quick').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         // Clear stored filters (incluindo KPI filter)
         currentFilters = {};
-        
+
         // NOVO: Remover classe active dos KPIs clicáveis
         document.querySelectorAll('.kpi-card.kpi-active').forEach(kpi => {
             kpi.classList.remove('kpi-active');
         });
-        
+
         // Update summary
         updateFilterSummary();
-        
+
         // Hide reset button
         updateResetButtonVisibility();
-        
+
         // CORREÇÃO: NÃO invalidar cache - preservar dados base para evitar erro "Dados não encontrados"
         // dashboardCache.invalidate(); // ❌ REMOVIDO - causa erro de dados
         console.log('[DASHBOARD_EXECUTIVO] Recarregando dados sem filtros (cache preservado)...');
-        
+
         await Promise.all([
             loadDashboardKPIsWithCache(),
             loadDashboardChartsWithCache(),
             loadRecentOperationsWithCache(),
             loadPaisesProcedenciaWithRetry()  // CORREÇÃO: Incluir tabela de países
         ]);
-        
+
         showLoading(false);
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao resetar filtros:', error);
         showError('Erro ao resetar filtros: ' + error.message);
@@ -4453,10 +4457,10 @@ async function resetAllFilters() {
 function updateResetButtonVisibility() {
     const resetBtn = document.getElementById('reset-filters');
     if (!resetBtn) return;
-    
+
     // Check if any filter is active
     const hasActiveFilters = Object.values(currentFilters).some(value => value && value.trim() !== '');
-    
+
     if (hasActiveFilters) {
         resetBtn.style.display = 'inline-block';
     } else {
@@ -4470,14 +4474,14 @@ function updateResetButtonVisibility() {
 function updateFilterSummary() {
     const summaryElement = document.getElementById('filter-summary-text');
     if (!summaryElement) return;
-    
+
     let summaryText = 'Analisando dados completos';
-    
+
     if (currentFilters.dataInicio && currentFilters.dataFim) {
         const dataInicio = new Date(currentFilters.dataInicio).toLocaleDateString('pt-BR');
         const dataFim = new Date(currentFilters.dataFim).toLocaleDateString('pt-BR');
         summaryText = `Dados de ${dataInicio} até ${dataFim}`;
-        
+
         // Add other filters
         const otherFilters = [];
         if (currentFilters.material) otherFilters.push(`Material: ${currentFilters.material}`);
@@ -4488,12 +4492,12 @@ function updateFilterSummary() {
             const statusText = currentFilters.statusProcesso === 'aberto' ? 'Processos Abertos' : 'Processos Fechados';
             otherFilters.push(`Status: ${statusText}`);
         }
-        
+
         if (otherFilters.length > 0) {
             summaryText += ` (${otherFilters.join(', ')})`;
         }
     }
-    
+
     summaryElement.textContent = summaryText;
 }
 
@@ -4506,14 +4510,14 @@ function createPrincipaisMateriaisTable(data) {
         console.error('[DASHBOARD_EXECUTIVO] Tabela de principais materiais não encontrada');
         return;
     }
-    
+
     tableBody.innerHTML = '';
-    
+
     if (!data.data || data.data.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum material encontrado</td></tr>';
         return;
     }
-    
+
     // Exibir TODOS os materiais (já ordenados pelo backend)
     data.data.forEach(material => {
         const row = document.createElement('tr');
@@ -4526,15 +4530,15 @@ function createPrincipaisMateriaisTable(data) {
             <td class="text-center">${material.total_processos}</td>
             <td class="text-center">${formatCurrency(material.custo_total)}</td>
             <td class="text-center">
-                ${material.is_urgente ? 
-                    `<span class="material-urgente">${formatDate(material.data_chegada)} (${material.dias_para_chegada} dias)</span>` : 
-                    formatDate(material.data_chegada)
-                }
+                ${material.is_urgente ?
+                `<span class="material-urgente">${formatDate(material.data_chegada)} (${material.dias_para_chegada} dias)</span>` :
+                formatDate(material.data_chegada)
+            }
             </td>
         `;
         tableBody.appendChild(row);
     });
-    
+
     console.log(`[DASHBOARD_EXECUTIVO] Tabela de materiais criada com ${data.data.length} itens exibidos (total: ${data.data.length})`);
 }
 
@@ -4545,7 +4549,7 @@ function getModalIcon(modal) {
     const modalLower = modal.toLowerCase();
     let iconClass = 'mdi-help';
     let cssClass = '';
-    
+
     if (modalLower.includes('maritim') || modalLower.includes('marítim')) {
         iconClass = 'mdi-ferry';
         cssClass = 'maritima';
@@ -4565,7 +4569,7 @@ function getModalIcon(modal) {
         iconClass = 'mdi-package-variant';
         cssClass = 'courier';
     }
-    
+
     return `<span class="modal-icon ${cssClass}"><i class="mdi ${iconClass}"></i></span>`;
 }
 
@@ -4600,7 +4604,7 @@ async function silentRefresh() {
         console.log('[DASHBOARD_EXECUTIVO] Já está carregando, pulando refresh silencioso');
         return;
     }
-    
+
     try {
         await loadInitialData();
         console.log('[DASHBOARD_EXECUTIVO] Refresh silencioso concluído com sucesso');
@@ -4621,9 +4625,9 @@ window.dashboardModule = {
     data: dashboardData,
     isLoading: () => isLoading,
     hasData: () => {
-        return dashboardData && 
-               dashboardData.length > 0 &&
-               Object.keys(dashboardCharts).length > 0;
+        return dashboardData &&
+            dashboardData.length > 0 &&
+            Object.keys(dashboardCharts).length > 0;
     },
     validateCharts: validateAndRecreateCharts
 };
@@ -4633,43 +4637,43 @@ window.loadInitialData = loadInitialData;
 window.dashboardCharts = dashboardCharts;
 
 // Integração com o sistema global de refresh
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Escutar evento de refresh global para executar force refresh específico
-    document.addEventListener('globalRefreshRequested', function() {
+    document.addEventListener('globalRefreshRequested', function () {
         console.log('[DASHBOARD_EXECUTIVO] Refresh global detectado, executando force refresh...');
         forceRefreshDashboard();
     });
-    
+
     // Disponibilizar função de force refresh globalmente
     window.forceRefreshDashboard = forceRefreshDashboard;
 });
 
 // INTEGRAÇÃO COM SISTEMA GLOBAL DE REFRESH
 // Hook para interceptar o botão global de refresh quando estamos no dashboard executivo
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Verificar se estamos na página do dashboard executivo
     const isDashboardExecutivo = window.location.pathname.includes('/dashboard-executivo');
-    
+
     if (isDashboardExecutivo) {
         console.log('[DASHBOARD_EXECUTIVO] Integrando com sistema global de refresh...');
-        
+
         // Substituir comportamento do botão global de refresh
         const globalRefreshButton = document.getElementById('global-refresh-button');
         if (globalRefreshButton) {
             // Remover listeners existentes clonando o elemento
             const newButton = globalRefreshButton.cloneNode(true);
             globalRefreshButton.parentNode.replaceChild(newButton, globalRefreshButton);
-            
+
             // Adicionar novo listener específico para o dashboard
-            newButton.addEventListener('click', async function() {
+            newButton.addEventListener('click', async function () {
                 console.log('[DASHBOARD_EXECUTIVO] Force refresh acionado via botão global');
-                
+
                 // Feedback visual
                 const originalHtml = newButton.innerHTML;
                 newButton.innerHTML = '<i class="mdi mdi-loading mdi-spin text-sm"></i>';
                 newButton.disabled = true;
                 newButton.classList.add('opacity-50');
-                
+
                 try {
                     await forceRefreshDashboard();
                 } finally {
@@ -4679,16 +4683,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     newButton.classList.remove('opacity-50');
                 }
             });
-            
+
             console.log('[DASHBOARD_EXECUTIVO] Botão global de refresh redirecionado para force refresh do dashboard');
         }
-        
+
         // Registrar módulo no sistema global (se existir)
         if (window.GlobalRefresh) {
             console.log('[DASHBOARD_EXECUTIVO] Registrando no sistema GlobalRefresh...');
-            
+
             // Adicionar listener para refresh global
-            window.addEventListener('globalRefreshCompleted', function(event) {
+            window.addEventListener('globalRefreshCompleted', function (event) {
                 console.log('[DASHBOARD_EXECUTIVO] Refresh global detectado, sincronizando dashboard...');
                 // Apenas recarregar cache, não force refresh novamente
                 loadInitialDataWithCache().catch(console.error);
@@ -4704,15 +4708,15 @@ async function loadPaisesProcedenciaWithRetry(maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt}/${maxRetries} - Carregando países de procedência...`);
-            
+
             // CORREÇÃO: Incluir filtros na requisição
             const queryString = buildFilterQueryString();
             const url = `/dashboard-executivo/api/paises-procedencia${queryString ? '?' + queryString : ''}`;
             console.log(`[DASHBOARD_EXECUTIVO] URL com filtros: ${url}`);
-            
+
             const response = await fetch(url);
             const result = await response.json();
-            
+
             if (result.success) {
                 console.log(`[DASHBOARD_EXECUTIVO] Países de procedência carregados: ${result.data.length} países`);
                 await renderPaisesProcedenciaTable(result.data);
@@ -4720,10 +4724,10 @@ async function loadPaisesProcedenciaWithRetry(maxRetries = 3) {
             } else {
                 throw new Error(result.error || 'Erro ao carregar países de procedência');
             }
-            
+
         } catch (error) {
             console.warn(`[DASHBOARD_EXECUTIVO] Tentativa ${attempt} para países falhou:`, error.message);
-            
+
             if (attempt === maxRetries) {
                 console.error('[DASHBOARD_EXECUTIVO] Falha final ao carregar países de procedência:', error);
                 showPaisesError();
@@ -4741,18 +4745,18 @@ async function loadPaisesProcedenciaWithRetry(maxRetries = 3) {
 async function renderPaisesProcedenciaTable(paisesData) {
     const loadingElement = document.getElementById('paises-loading');
     const tableBody = document.querySelector('#paises-procedencia-table tbody');
-    
+
     try {
         // Hide loading
         if (loadingElement) {
             loadingElement.style.display = 'none';
         }
-        
+
         // Clear existing data
         if (tableBody) {
             tableBody.innerHTML = '';
         }
-        
+
         // Check if data is empty
         if (!paisesData || paisesData.length === 0) {
             if (tableBody) {
@@ -4767,15 +4771,15 @@ async function renderPaisesProcedenciaTable(paisesData) {
             }
             return;
         }
-        
+
         // Render table rows
         paisesData.forEach(pais => {
             const row = document.createElement('tr');
-            
+
             // Formatar valores
             const totalCusto = formatCurrency(pais.total_custo || 0);
             const totalProcessos = (pais.total_processos || 0).toLocaleString('pt-BR');
-            
+
             // Extrair apenas o nome do país (remove código se existir)
             let nomePais = pais.pais_procedencia || 'N/A';
             // Remove códigos como "249 - US - " e mantém apenas "ESTADOS UNIDOS"
@@ -4783,14 +4787,14 @@ async function renderPaisesProcedenciaTable(paisesData) {
             if (match) {
                 nomePais = match[1].trim();
             }
-            
+
             // HTML da linha
             row.innerHTML = `
                 <td class="pais-cell">
-                    ${pais.url_bandeira ? 
-                        `<img src="${pais.url_bandeira}" alt="${nomePais}" class="bandeira-icon" onerror="this.style.display='none';">` 
-                        : '<i class="mdi mdi-earth"></i>'
-                    }
+                    ${pais.url_bandeira ?
+                    `<img src="${pais.url_bandeira}" alt="${nomePais}" class="bandeira-icon" onerror="this.style.display='none';">`
+                    : '<i class="mdi mdi-earth"></i>'
+                }
                     <span class="pais-nome">${nomePais}</span>
                 </td>
                 <td class="text-center">
@@ -4800,14 +4804,14 @@ async function renderPaisesProcedenciaTable(paisesData) {
                     <span class="valor-custo">${totalCusto}</span>
                 </td>
             `;
-            
+
             if (tableBody) {
                 tableBody.appendChild(row);
             }
         });
-        
+
         console.log(`[DASHBOARD_EXECUTIVO] Tabela de países renderizada com ${paisesData.length} países`);
-        
+
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro ao renderizar tabela de países:', error);
         showPaisesError();
@@ -4820,11 +4824,11 @@ async function renderPaisesProcedenciaTable(paisesData) {
 function showPaisesError() {
     const loadingElement = document.getElementById('paises-loading');
     const tableBody = document.querySelector('#paises-procedencia-table tbody');
-    
+
     if (loadingElement) {
         loadingElement.style.display = 'none';
     }
-    
+
     if (tableBody) {
         tableBody.innerHTML = `
             <tr>
@@ -4945,9 +4949,9 @@ function getCountryCode(countryName) {
         'UZBEQUISTAO': 'UZ',
         'UZBEQUISTÃO': 'UZ'
     };
-    
+
     if (!countryName) return null;
-    
+
     const normalizedName = countryName.toString().toUpperCase().trim();
     return COUNTRY_MAPPING[normalizedName] || null;
 }
@@ -4958,22 +4962,22 @@ function getCountryCode(countryName) {
  */
 function openArmazenagemModal(operationIndex) {
     console.log('[ARMAZENAGEM] Abrindo modal para índice:', operationIndex);
-    
+
     // Validation checks
     if (!window.currentOperations) {
         console.error('[ARMAZENAGEM] Array global de operações não encontrado');
         return;
     }
-    
+
     if (operationIndex === -1 || !window.currentOperations[operationIndex]) {
         console.error('[ARMAZENAGEM] Operação não encontrada no índice:', operationIndex);
         return;
     }
-    
+
     const operation = window.currentOperations[operationIndex];
     console.log('[ARMAZENAGEM] Dados da operação:', operation);
     console.log('[ARMAZENAGEM] ref_unique:', operation.ref_unique);
-    
+
     // Chamar função do módulo ArmazenagemKingspan
     if (typeof window.ArmazenagemKingspan !== 'undefined' && typeof window.ArmazenagemKingspan.openModal === 'function') {
         window.ArmazenagemKingspan.openModal(operation.ref_unique, operation);

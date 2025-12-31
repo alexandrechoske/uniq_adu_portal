@@ -17,1222 +17,1267 @@
 {% block content %}
 <!-- Security Warning for clients without companies -->
 {% if show_company_warning %}
-<div class="alert alert-warning company-warning-alert" style="margin: 20px; padding: 20px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;">
+<div class="alert alert-warning company-warning-alert"
+    style="margin: 20px; padding: 20px; border-radius: 8px; background: #fff3cd; border: 1px solid #ffeaa7; color: #856404;">
     <div style="display: flex; align-items: center; gap: 12px;">
         <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #f39c12;"></i>
         <div>
             <h4 style="margin: 0 0 8px 0; color: #856404;">Acesso Restrito - Empresas Não Vinculadas</h4>
             <p style="margin: 0; font-size: 14px; line-height: 1.4;">
-                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o administrador do sistema para associar as empresas adequadas ao seu perfil.
+                Sua conta não possui empresas vinculadas. Para acessar os dados do dashboard, entre em contato com o
+                administrador do sistema para associar as empresas adequadas ao seu perfil.
             </p>
             <p style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;">
-                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é restrito às empresas associadas à sua conta.
+                <i class="mdi mdi-information"></i> Por questões de segurança e privacidade, o acesso aos dados é
+                restrito às empresas associadas à sua conta.
             </p>
         </div>
     </div>
-    </div>
+</div>
 </div>
 <div class="dashboard-container dashboard-loading" id="dashboard-container" style="opacity: 0.3; pointer-events: none;">
-{% else %}
-<div class="dashboard-container dashboard-loading" id="dashboard-container">
-{% endif %}
-    <div id="dashboard-skeleton" class="dashboard-skeleton" aria-hidden="false">
-        <div class="skeleton-section skeleton-kpi-grid">
-            {% for _ in range(9) %}
-            <div class="skeleton-kpi-card">
-                <span class="skeleton-line skeleton-line-xs"></span>
-                <span class="skeleton-line skeleton-line-lg"></span>
-                <span class="skeleton-line skeleton-line-sm"></span>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="skeleton-section skeleton-chart-grid">
-            {% for _ in range(3) %}
-            <div class="skeleton-chart-card">
-                <span class="skeleton-line skeleton-line-sm"></span>
-                <div class="skeleton-chart-area"></div>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="skeleton-section skeleton-chart-grid secondary">
-            {% for _ in range(2) %}
-            <div class="skeleton-chart-card">
-                <span class="skeleton-line skeleton-line-sm"></span>
-                <div class="skeleton-chart-area"></div>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="skeleton-section skeleton-table-section">
-            <span class="skeleton-line skeleton-line-sm"></span>
-            <div class="skeleton-table">
-                {% for _ in range(6) %}
-                <div class="skeleton-table-row">
-                    {% for _ in range(6) %}
+    {% else %}
+    <div class="dashboard-container dashboard-loading" id="dashboard-container">
+        {% endif %}
+        <div id="dashboard-skeleton" class="dashboard-skeleton" aria-hidden="false">
+            <div class="skeleton-section skeleton-kpi-grid">
+                {% for _ in range(9) %}
+                <div class="skeleton-kpi-card">
                     <span class="skeleton-line skeleton-line-xs"></span>
-                    {% endfor %}
+                    <span class="skeleton-line skeleton-line-lg"></span>
+                    <span class="skeleton-line skeleton-line-sm"></span>
                 </div>
                 {% endfor %}
             </div>
-        </div>
-    </div>
-    <div id="dashboard-main-content" class="dashboard-main-content" aria-hidden="true">
-    <!-- Actions Bar with Breadcrumb -->
-    <div class="actions-bar module-header-importacoes">
-        <div class="actions-left">
-            {{ get_breadcrumb_with_module_colors([
-                {'name': t('menu.main_menu'), 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
-                {'name': t('modules.dashboard_executivo.title'), 'icon': 'mdi mdi-view-dashboard', 'url': url_for('menu.dashboards')},
-                {'name': t('importacoes.dashboard_executivo.title'), 'icon': 'mdi mdi-chart-line'}
-            ], 'importacoes') }}
-            <!-- Resumo de Filtros -->
-            <div id="filter-summary" class="filter-summary">
-                <span id="filter-summary-text">{{ t('importacoes.dashboard_executivo.subtitle') }}</span>
-            </div>
-        </div>
-        <div class="actions-right">
-            <button id="open-filters" class="btn btn-light" type="button">
-                <i class="mdi mdi-filter"></i>
-                {{ t('importacoes.dashboard_operacional.filtros') }}
-            </button>
-            <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
-                <i class="mdi mdi-filter-off"></i>
-                {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
-            </button>
-        </div>
-    </div>
-    
-    <!-- KPI Cards - Layout 6 cards superiores + 3 cards inferiores -->
-    <div class="kpi-grid">
-        <!-- Card 1: Processos Abertos (TOTAL GERAL) -->
-        <div class="kpi-card kpi-info kpi-clickable" data-kpi-status="processos_abertos" title="Clique para ver todos os processos">
-            <div class="kpi-icon">
-                <i class="mdi mdi-folder-open"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Processos Abertos</p>
-                <p class="kpi-value" id="kpi-processos-abertos">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 2: Agd Embarque -->
-        <div class="kpi-card kpi-orange kpi-clickable" data-kpi-status="agd_embarque" title="Clique para filtrar processos aguardando embarque">
-            <div class="kpi-icon">
-                <i class="mdi mdi-ship-wheel"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Embarque</p>
-                <p class="kpi-value" id="kpi-agd-embarque">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 3: Agd Chegada -->
-        <div class="kpi-card kpi-purple kpi-clickable" data-kpi-status="agd_chegada" title="Clique para filtrar processos aguardando chegada">
-            <div class="kpi-icon">
-                <i class="mdi mdi-map-marker-check"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Chegada</p>
-                <p class="kpi-value" id="kpi-agd-chegada">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 4: Agd Registro (NOVO) -->
-        <div class="kpi-card kpi-blue kpi-clickable" data-kpi-status="agd_registro" title="Clique para filtrar processos aguardando registro">
-            <div class="kpi-icon">
-                <i class="mdi mdi-file-document-edit"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Registro</p>
-                <p class="kpi-value" id="kpi-agd-registro">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 5: Agd Desembaraço (NOVO) -->
-        <div class="kpi-card kpi-warning kpi-clickable" data-kpi-status="agd_desembaraco" title="Clique para filtrar processos aguardando desembaraço">
-            <div class="kpi-icon">
-                <i class="mdi mdi-shield-check"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Desembaraço</p>
-                <p class="kpi-value" id="kpi-agd-desembaraco">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 6: Agd Fechamento -->
-        <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento" title="Clique para filtrar processos aguardando fechamento">
-            <div class="kpi-icon">
-                <i class="mdi mdi-file-check"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Agd Fechamento</p>
-                <p class="kpi-value" id="kpi-agd-fechamento">-</p>
-            </div>
-        </div>
-        
-        <!-- LINHA INFERIOR: 3 cards -->
-        
-        <!-- Card 7: Chegando Esta Semana -->
-        <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana" title="Clique para filtrar processos chegando esta semana">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-week"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Esta Semana</p>
-                <p class="kpi-value" id="kpi-chegando-semana">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 8: Chegando Este Mês -->
-        <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes" title="Clique para filtrar processos chegando este mês">
-            <div class="kpi-icon">
-                <i class="mdi mdi-calendar-month"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Chegando Este Mês</p>
-                <p class="kpi-value" id="kpi-chegando-mes">-</p>
-                <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
-            </div>
-        </div>
-        
-        <!-- Card 9: Total Despesas -->
-        <div class="kpi-card kpi-indigo">
-            <div class="kpi-icon">
-                <i class="mdi mdi-currency-usd"></i>
-            </div>
-            <div class="kpi-content">
-                <p class="kpi-label">Total Despesas</p>
-                <p class="kpi-value" id="kpi-total-despesas">-</p>
-            </div>
-        </div>
-        
-        <!-- Loading Overlay -->
-        <div id="kpi-loading" class="component-loading">
-            <div class="spinner"></div>
-        </div>
-    </div>
-    
-    <!-- Charts Grid -->
-    <!-- LINHA 1: Evolução Mensal, Países de Procedência, Destinos por Processos -->
-    <div class="dashboard-line-1">
-        <!-- Monthly Evolution Chart -->
-        <div class="chart-section chart-linha-1">
-            <div class="chart-header">
-                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.evolucao_mensal') }}</h2>
-                <div class="period-controls">
-                    <button class="period-btn active" data-period="mensal">{{ t('importacoes.dashboard_executivo.mensal') }}</button>
-                    <button class="period-btn" data-period="semanal">{{ t('importacoes.dashboard_executivo.semanal') }}</button>
-                    <button class="period-btn" data-period="diario">{{ t('importacoes.dashboard_executivo.diario') }}</button>
+            <div class="skeleton-section skeleton-chart-grid">
+                {% for _ in range(3) %}
+                <div class="skeleton-chart-card">
+                    <span class="skeleton-line skeleton-line-sm"></span>
+                    <div class="skeleton-chart-area"></div>
                 </div>
+                {% endfor %}
             </div>
-            <div class="chart-container">
-                <div id="monthly-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="monthly-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <!-- Países de Procedência Table -->
-        <div class="chart-section chart-linha-1">
-            <div class="chart-header">
-                <h2 class="chart-title">
-                    {{ t('importacoes.dashboard_executivo.paises_procedencia') }}
-                </h2>
-            </div>
-            <div class="table-container">
-                <div id="paises-loading" class="component-loading"><div class="spinner"></div></div>
-                <table id="paises-procedencia-table" class="data-table">
-                    <thead>
-                        <tr>
-                            <th>{{ t('importacoes.dashboard_executivo.pais') }}</th>
-                            <th class="text-center">{{ t('importacoes.dashboard_executivo.total_processos') }}</th>
-                            <th class="text-center">{{ t('importacoes.dashboard_executivo.total_custo') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Dados carregados dinamicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Destinos por Processos (URF Chart) -->
-        <div class="chart-section chart-linha-1">
-            <div class="chart-header">
-                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.destinos_processos') }}</h2>
-            </div>
-            <div class="chart-container">
-                <div id="urf-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="urf-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- LINHA 2: Distribuição por Status, Processos e Custos por Modal, Principais Materiais -->
-    <div class="dashboard-line-2">
-        <!-- Status Chart -->
-        <div class="chart-section chart-linha-2">
-            <div class="chart-header">
-                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.distribuicao_status') }}</h2>
-            </div>
-            <div class="chart-container">
-                <div id="status-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="status-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <!-- Modal Chart -->
-        <div class="chart-section chart-linha-2">
-            <div class="chart-header">
-                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.processos_custos_modal') }}</h2>
-            </div>
-            <div class="chart-container">
-                <div id="modal-loading" class="component-loading"><div class="spinner"></div></div>
-                <canvas id="grouped-modal-chart" class="chart-canvas"></canvas>
-            </div>
-        </div>
-
-        <!-- Material Chart/Table - Apenas para usuários KINGSPAN/CISER -->
-        <div class="chart-section chart-linha-2" id="material-chart-section" style="display: none;">
-            <div class="chart-header">
-                <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.principais_materiais') }}</h2>
-            </div>
-            <div class="table-container">
-                <div id="material-loading" class="component-loading"><div class="spinner"></div></div>
-                <table id="principais-materiais-table" class="data-table">
-                    <thead>
-                        <tr>
-                            <th>{{ t('importacoes.dashboard_executivo.material') }}</th>
-                            <th>{{ t('importacoes.dashboard_executivo.processos') }}</th>
-                            <th>{{ t('importacoes.dashboard_executivo.custo_total') }}</th>
-                            <th>{{ t('importacoes.dashboard_executivo.proxima_chegada') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Dados carregados dinamicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Operações Recentes Table -->
-    <div class="enhanced-table-section" id="recent-operations-container">
-        <div class="enhanced-table-header">
-            <h2 class="enhanced-table-title">
-                <i class="mdi mdi-format-list-bulleted"></i>
-                {{ t('importacoes.dashboard_executivo.operacoes_recentes') }}
-            </h2>
-            <div class="enhanced-table-controls">
-                <div class="enhanced-search-container">
-                    <i class="mdi mdi-magnify enhanced-search-icon"></i>
-                    <input type="text" id="recent-operations-search" class="enhanced-search-input" 
-                           placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
+            <div class="skeleton-section skeleton-chart-grid secondary">
+                {% for _ in range(2) %}
+                <div class="skeleton-chart-card">
+                    <span class="skeleton-line skeleton-line-sm"></span>
+                    <div class="skeleton-chart-area"></div>
                 </div>
-                <div class="enhanced-control-buttons">
-                    <button id="open-columns-config" class="btn btn-light" type="button">
-                        <i class="mdi mdi-cog-outline"></i>
-                        Configurar Colunas
-                    </button>
+                {% endfor %}
+            </div>
+            <div class="skeleton-section skeleton-table-section">
+                <span class="skeleton-line skeleton-line-sm"></span>
+                <div class="skeleton-table">
+                    {% for _ in range(6) %}
+                    <div class="skeleton-table-row">
+                        {% for _ in range(6) %}
+                        <span class="skeleton-line skeleton-line-xs"></span>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-        <div class="enhanced-table-container" style="position: relative;">
-            <div id="recent-ops-loading" class="component-loading"><div class="spinner"></div></div>
-            <table id="recent-operations-table" class="enhanced-data-table">
-                <thead>
-                    <tr>
-                        <th>{{ t('importacoes.dashboard_executivo.acoes') }}</th>
-                        <th class="sortable" data-sort="ref_importador">{{ t('importacoes.dashboard_executivo.pedido') }}</th>
-                        <th class="sortable" data-sort="importador">{{ t('importacoes.dashboard_executivo.importador') }}</th>
-                        <th class="sortable" data-sort="data_abertura">{{ t('importacoes.dashboard_executivo.data_abertura') }}</th>
-                        <th class="sortable" data-sort="exportador_fornecedor">{{ t('importacoes.dashboard_executivo.exportador') }}</th>
-                        <th class="sortable" data-sort="modal">{{ t('importacoes.dashboard_operacional.modal') }}</th>
-                        <th class="sortable" data-sort="status">{{ t('importacoes.dashboard_operacional.status') }}</th>
-                        <th class="sortable" data-sort="custo_total">{{ t('importacoes.dashboard_executivo.custo_total') }}</th>
-                        <th class="sortable" data-sort="data_chegada">{{ t('importacoes.dashboard_executivo.data_chegada') }}</th>
-                        <th class="sortable" data-sort="material">{{ t('importacoes.dashboard_executivo.material') }}</th>
-                        <th class="sortable" data-sort="urf_despacho">{{ t('importacoes.dashboard_executivo.urf') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Dados carregados dinamicamente -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Modal de Detalhes do Processo -->
-    <div id="process-modal" class="modal-overlay">
-        <div class="modal-container">
-            <!-- Modal Header -->
-            <div class="modal-header">
-                <h2 class="modal-title" id="modal-title">{{ t('importacoes.dashboard_executivo.detalhes_processo') }}</h2>
-                <button class="modal-close" id="modal-close">
-                    <i class="mdi mdi-close"></i>
-                </button>
+        <div id="dashboard-main-content" class="dashboard-main-content" aria-hidden="true">
+            <!-- Actions Bar with Breadcrumb -->
+            <div class="actions-bar module-header-importacoes">
+                <div class="actions-left">
+                    {{ get_breadcrumb_with_module_colors([
+                    {'name': t('menu.main_menu'), 'icon': 'mdi mdi-menu', 'url': url_for('menu.menu_home')},
+                    {'name': t('modules.dashboard_executivo.title'), 'icon': 'mdi mdi-view-dashboard', 'url':
+                    url_for('menu.dashboards')},
+                    {'name': t('importacoes.dashboard_executivo.title'), 'icon': 'mdi mdi-chart-line'}
+                    ], 'importacoes') }}
+                    <!-- Resumo de Filtros -->
+                    <div id="filter-summary" class="filter-summary">
+                        <span id="filter-summary-text">{{ t('importacoes.dashboard_executivo.subtitle') }}</span>
+                    </div>
+                </div>
+                <div class="actions-right">
+                    <button id="open-filters" class="btn btn-light" type="button">
+                        <i class="mdi mdi-filter"></i>
+                        {{ t('importacoes.dashboard_operacional.filtros') }}
+                    </button>
+                    <button id="reset-filters" class="btn btn-outline-light" style="display: none;">
+                        <i class="mdi mdi-filter-off"></i>
+                        {{ t('importacoes.dashboard_operacional.limpar_filtros') }}
+                    </button>
+                </div>
             </div>
 
-            <!-- Modal Content -->
-            <div class="modal-content">
-                <!-- Timeline do Processo -->
-                <div class="process-timeline">
-                    <div class="timeline-step" data-step="1">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-file-document-outline"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.abertura') }}</div>
+            <!-- KPI Cards - Layout 6 cards superiores + 3 cards inferiores -->
+            <div class="kpi-grid">
+                <!-- Card 1: Processos Abertos (TOTAL GERAL) -->
+                <div class="kpi-card kpi-info kpi-clickable" data-kpi-status="processos_abertos"
+                    title="Clique para ver todos os processos">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-folder-open"></i>
                     </div>
-                    <div class="timeline-step" data-step="2">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-truck"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.embarque') }}</div>
-                    </div>
-                    <div class="timeline-step" data-step="3">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-airplane-landing"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.chegada') }}</div>
-                    </div>
-                    <div class="timeline-step" data-step="4">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-file-document-edit"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.registro') }}</div>
-                    </div>
-                    <div class="timeline-step" data-step="5">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-check-circle-outline"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.desembaraco') }}</div>
-                    </div>
-                    <div class="timeline-step" data-step="6">
-                        <div class="timeline-icon">
-                            <i class="mdi mdi-flag-checkered"></i>
-                        </div>
-                        <div class="timeline-label">{{ t('importacoes.dashboard_executivo.finalizado') }}</div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Processos Abertos</p>
+                        <p class="kpi-value" id="kpi-processos-abertos">-</p>
                     </div>
                 </div>
 
-                <!-- Modal Tabs Navigation -->
-                <div class="modal-tabs">
-                    <button class="modal-tab active" data-tab="geral">
-                        <i class="mdi mdi-information-outline"></i>
-                        Informações Gerais
-                    </button>
-                    <button class="modal-tab" data-tab="carga">
-                        <i class="mdi mdi-truck-cargo-container"></i>
-                        Carga e Transporte
-                    </button>
-                    <button class="modal-tab" data-tab="aduaneira">
-                        <i class="mdi mdi-file-document-check"></i>
-                        Aduaneiras
-                    </button>
-                    <button class="modal-tab" data-tab="financeiro">
-                        <i class="mdi mdi-cash-multiple"></i>
-                        Financeiro
-                    </button>
-                    <button class="modal-tab" data-tab="documentos">
-                        <i class="mdi mdi-file-document-multiple"></i>
-                        Documentos
-                    </button>
+                <!-- Card 2: Agd Embarque -->
+                <div class="kpi-card kpi-orange kpi-clickable" data-kpi-status="agd_embarque"
+                    title="Clique para filtrar processos aguardando embarque">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-ship-wheel"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Agd Embarque</p>
+                        <p class="kpi-value" id="kpi-agd-embarque">-</p>
+                    </div>
                 </div>
 
-                <!-- Cards de Informações -->
-                <div class="modal-cards">
-                    <!-- Card 1: Informações Gerais -->
-                    <div class="info-card" data-tab-content="geral">
-                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_gerais') }}</h3>
-                        <div class="card-grid-3">
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.ref_unique') }}:</label>
-                                <span id="detail-ref-unique">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.ref_importador') }}:</label>
-                                <span id="detail-ref-importador">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_abertura') }}:</label>
-                                <span id="detail-data-abertura">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.importador') }}:</label>
-                                <span id="detail-importador">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.exportador') }}:</label>
-                                <span id="detail-exportador">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.cnpj') }}:</label>
-                                <span id="detail-cnpj">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.status_atual') }}:</label>
-                                <span id="detail-status" class="status-badge">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.pais_procedencia') }}:</label>
-                                <span id="detail-pais-procedencia" class="country-info">
-                                    <img id="detail-country-flag" src="" alt="" class="country-flag" style="width: 20px; height: 15px; margin-right: 8px; display: none;">
-                                    <span id="detail-country-name">-</span>
-                                </span>
-                            </div>
-                            <!-- Kingspan Fields -->
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>PO Cliente:</label>
-                                <span id="detail-po-cliente">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Referência Exportador:</label>
-                                <span id="detail-ref-exportador">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Código Produto:</label>
-                                <span id="detail-codigo-produto">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Filial (Código):</label>
-                                <span id="detail-filial-codigo">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Licença Importação:</label>
-                                <span id="detail-licenca-importacao">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Total Pedido (Moeda Origem):</label>
-                                <span id="detail-total-pedido" class="highlight-value">-</span>
-                            </div>
+                <!-- Card 3: Agd Chegada -->
+                <div class="kpi-card kpi-purple kpi-clickable" data-kpi-status="agd_chegada"
+                    title="Clique para filtrar processos aguardando chegada">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-map-marker-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Agd Chegada</p>
+                        <p class="kpi-value" id="kpi-agd-chegada">-</p>
+                    </div>
+                </div>
+
+                <!-- Card 4: Agd Registro (NOVO) -->
+                <div class="kpi-card kpi-blue kpi-clickable" data-kpi-status="agd_registro"
+                    title="Clique para filtrar processos aguardando registro">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-file-document-edit"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Agd Registro</p>
+                        <p class="kpi-value" id="kpi-agd-registro">-</p>
+                    </div>
+                </div>
+
+                <!-- Card 5: Agd Desembaraço (NOVO) -->
+                <div class="kpi-card kpi-warning kpi-clickable" data-kpi-status="agd_desembaraco"
+                    title="Clique para filtrar processos aguardando desembaraço">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-shield-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Agd Desembaraço</p>
+                        <p class="kpi-value" id="kpi-agd-desembaraco">-</p>
+                    </div>
+                </div>
+
+                <!-- Card 6: Agd Fechamento -->
+                <div class="kpi-card kpi-success kpi-clickable" data-kpi-status="agd_fechamento"
+                    title="Clique para filtrar processos aguardando fechamento">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-file-check"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Agd Fechamento</p>
+                        <p class="kpi-value" id="kpi-agd-fechamento">-</p>
+                    </div>
+                </div>
+
+                <!-- LINHA INFERIOR: 3 cards -->
+
+                <!-- Card 7: Chegando Esta Semana -->
+                <div class="kpi-card kpi-teal kpi-clickable" data-kpi-status="chegando_semana"
+                    title="Clique para filtrar processos chegando esta semana">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-calendar-week"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Chegando Esta Semana</p>
+                        <p class="kpi-value" id="kpi-chegando-semana">-</p>
+                        <p class="kpi-sub-value" id="kpi-chegando-semana-custo">-</p>
+                    </div>
+                </div>
+
+                <!-- Card 8: Chegando Este Mês -->
+                <div class="kpi-card kpi-emerald kpi-clickable" data-kpi-status="chegando_mes"
+                    title="Clique para filtrar processos chegando este mês">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-calendar-month"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Chegando Este Mês</p>
+                        <p class="kpi-value" id="kpi-chegando-mes">-</p>
+                        <p class="kpi-sub-value" id="kpi-chegando-mes-custo">-</p>
+                    </div>
+                </div>
+
+                <!-- Card 9: Total Despesas -->
+                <div class="kpi-card kpi-indigo">
+                    <div class="kpi-icon">
+                        <i class="mdi mdi-currency-usd"></i>
+                    </div>
+                    <div class="kpi-content">
+                        <p class="kpi-label">Total Despesas</p>
+                        <p class="kpi-value" id="kpi-total-despesas">-</p>
+                    </div>
+                </div>
+
+                <!-- Loading Overlay -->
+                <div id="kpi-loading" class="component-loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <!-- LINHA 1: Evolução Mensal, Países de Procedência, Destinos por Processos -->
+            <div class="dashboard-line-1">
+                <!-- Monthly Evolution Chart -->
+                <div class="chart-section chart-linha-1">
+                    <div class="chart-header">
+                        <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.evolucao_mensal') }}</h2>
+                        <div class="period-controls">
+                            <button class="period-btn active" data-period="mensal">{{
+                                t('importacoes.dashboard_executivo.mensal') }}</button>
+                            <button class="period-btn" data-period="semanal">{{
+                                t('importacoes.dashboard_executivo.semanal') }}</button>
+                            <button class="period-btn" data-period="diario">{{
+                                t('importacoes.dashboard_executivo.diario') }}</button>
                         </div>
                     </div>
-
-                    <!-- Card 2: Detalhes da Carga e Transporte -->
-                    <div class="info-card" data-tab-content="carga">
-                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.detalhes_carga_transporte') }}</h3>
-                        <div class="card-grid-2">
-                            <!-- Linha 1: Modal - Peso -->
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_operacional.modal') }}:</label>
-                                <span id="detail-modal">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.peso_bruto') }}:</label>
-                                <span id="detail-peso-bruto">-</span>
-                            </div>
-                            
-                            <!-- Linha 2: Data Embarque - Previsão Chegada -->
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_embarque') }}:</label>
-                                <span id="detail-data-embarque">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_chegada') }}:</label>
-                                <span id="detail-data-chegada">-</span>
-                            </div>
-                            
-                            <!-- Linha 3: Data Fechamento - Transit Time -->
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_fechamento') }}:</label>
-                                <span id="detail-data-fechamento">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.transit_time') }}:</label>
-                                <span id="detail-transit-time">-</span>
-                            </div>
-                            
-                            <!-- Kingspan Fields - Logística -->
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Freetime:</label>
-                                <span id="detail-freetime">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>ETB:</label>
-                                <span id="detail-etb">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Navio:</label>
-                                <span id="detail-navio">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Armador/Agente Trade:</label>
-                                <span id="detail-armador">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Data Desova (ETB):</label>
-                                <span id="detail-data-desova">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Limite 1º Período:</label>
-                                <span id="detail-limite-primeiro">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Limite 2º Período:</label>
-                                <span id="detail-limite-segundo">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Dias Extras Armazenagem:</label>
-                                <span id="detail-dias-extras">-</span>
-                            </div>
-                            
-                            <!-- Linha 4: Containers (ocupa toda a linha) -->
-                            <div class="info-item container-item" style="grid-column: 1 / -1;">
-                                <label>{{ t('importacoes.dashboard_executivo.containers') }}:</label>
-                                <div id="detail-container" class="container-list">-</div>
-                            </div>
+                    <div class="chart-container">
+                        <div id="monthly-loading" class="component-loading">
+                            <div class="spinner"></div>
                         </div>
+                        <canvas id="monthly-chart" class="chart-canvas"></canvas>
                     </div>
+                </div>
 
-
-                    <!-- Card 3: Informações Aduaneiras -->
-                    <div class="info-card" data-tab-content="aduaneira">
-                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_aduaneiras') }}</h3>
-                        <div class="card-grid-2">
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.numero_di') }}:</label>
-                                <span id="detail-numero-di">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_registro_di') }}:</label>
-                                <span id="detail-data-registro">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.canal') }}:</label>
-                                <span id="detail-canal">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.data_desembaraco') }}:</label>
-                                <span id="detail-data-desembaraco">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.urf_despacho') }}:</label>
-                                <span id="detail-urf-despacho">-</span>
-                            </div>
+                <!-- Países de Procedência Table -->
+                <div class="chart-section chart-linha-1">
+                    <div class="chart-header">
+                        <h2 class="chart-title">
+                            {{ t('importacoes.dashboard_executivo.paises_procedencia') }}
+                        </h2>
+                    </div>
+                    <div class="table-container">
+                        <div id="paises-loading" class="component-loading">
+                            <div class="spinner"></div>
                         </div>
+                        <table id="paises-procedencia-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ t('importacoes.dashboard_executivo.pais') }}</th>
+                                    <th class="text-center">{{ t('importacoes.dashboard_executivo.total_processos') }}
+                                    </th>
+                                    <th class="text-center">{{ t('importacoes.dashboard_executivo.total_custo') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dados carregados dinamicamente -->
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <!-- Card 4: Resumo Financeiro -->
-                    <div class="info-card" data-tab-content="financeiro">
-                        <h3 class="card-title">{{ t('importacoes.dashboard_executivo.resumo_financeiro') }}</h3>
-                        <div class="card-grid-2">
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.valor_cif') }}:</label>
-                                <span id="detail-valor-cif">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.frete_internacional') }}:</label>
-                                <span id="detail-frete-inter">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.armazenagem') }}:</label>
-                                <span id="detail-armazenagem">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.honorarios') }}:</label>
-                                <span id="detail-honorarios">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>{{ t('importacoes.dashboard_executivo.outras_despesas') }}:</label>
-                                <span id="detail-outras-despesas">-</span>
-                            </div>
-                            <!-- Kingspan Fields - Financeiro -->
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Moeda:</label>
-                                <span id="detail-moeda">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>PTAX:</label>
-                                <span id="detail-ptax">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Incoterm:</label>
-                                <span id="detail-incoterm">-</span>
-                            </div>
-                            <div class="info-item kingspan-field" style="display: none;">
-                                <label>Valor Despesas Extras:</label>
-                                <span id="detail-valor-extras" class="highlight-value">-</span>
-                            </div>
-                            <div class="info-item total-item">
-                                <label>{{ t('importacoes.dashboard_executivo.custo_total') }}:</label>
-                                <span id="detail-custo-total" class="total-value">-</span>
-                            </div>
+                <!-- Destinos por Processos (URF Chart) -->
+                <div class="chart-section chart-linha-1">
+                    <div class="chart-header">
+                        <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.destinos_processos') }}</h2>
+                    </div>
+                    <div class="chart-container">
+                        <div id="urf-loading" class="component-loading">
+                            <div class="spinner"></div>
                         </div>
+                        <canvas id="urf-chart" class="chart-canvas"></canvas>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Card 6: Documentos Anexados -->
-                    <div class="info-card" data-tab-content="documentos">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h3 class="card-title" style="margin: 0;">
-                                <i class="mdi mdi-file-document-multiple"></i>
-                                {{ t('importacoes.dashboard_executivo.documentos_anexados') }}
-                            </h3>
-                            <button type="button" class="btn-download-all" id="download-all-docs-btn" style="display: none;" title="Baixar todos os documentos">
-                                <i class="mdi mdi-download-multiple"></i>
-                                Baixar Todos
+            <!-- LINHA 2: Distribuição por Status, Processos e Custos por Modal, Principais Materiais -->
+            <div class="dashboard-line-2">
+                <!-- Status Chart -->
+                <div class="chart-section chart-linha-2">
+                    <div class="chart-header">
+                        <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.distribuicao_status') }}</h2>
+                    </div>
+                    <div class="chart-container">
+                        <div id="status-loading" class="component-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <canvas id="status-chart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Modal Chart -->
+                <div class="chart-section chart-linha-2">
+                    <div class="chart-header">
+                        <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.processos_custos_modal') }}</h2>
+                    </div>
+                    <div class="chart-container">
+                        <div id="modal-loading" class="component-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <canvas id="grouped-modal-chart" class="chart-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Material Chart/Table - Apenas para usuários KINGSPAN/CISER -->
+                <div class="chart-section chart-linha-2" id="material-chart-section" style="display: none;">
+                    <div class="chart-header">
+                        <h2 class="chart-title">{{ t('importacoes.dashboard_executivo.principais_materiais') }}</h2>
+                    </div>
+                    <div class="table-container">
+                        <div id="material-loading" class="component-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <table id="principais-materiais-table" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ t('importacoes.dashboard_executivo.material') }}</th>
+                                    <th>{{ t('importacoes.dashboard_executivo.processos') }}</th>
+                                    <th>{{ t('importacoes.dashboard_executivo.custo_total') }}</th>
+                                    <th>{{ t('importacoes.dashboard_executivo.proxima_chegada') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dados carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operações Recentes Table -->
+            <div class="enhanced-table-section" id="recent-operations-container">
+                <div class="enhanced-table-header">
+                    <h2 class="enhanced-table-title">
+                        <i class="mdi mdi-format-list-bulleted"></i>
+                        {{ t('importacoes.dashboard_executivo.operacoes_recentes') }}
+                    </h2>
+                    <div class="enhanced-table-controls">
+                        <div class="enhanced-search-container">
+                            <i class="mdi mdi-magnify enhanced-search-icon"></i>
+                            <input type="text" id="recent-operations-search" class="enhanced-search-input"
+                                placeholder="{{ t('importacoes.dashboard_executivo.buscar_processo') }}">
+                        </div>
+                        <div class="enhanced-control-buttons">
+                            <button id="open-columns-config" class="btn btn-light" type="button">
+                                <i class="mdi mdi-cog-outline"></i>
+                                Configurar Colunas
                             </button>
                         </div>
-                        
-                        <!-- Lista de documentos -->
-                        <div class="documents-section">
-                            <div class="documents-list" id="documents-list">
-                                <div class="no-documents">
+                    </div>
+                </div>
+                <div class="enhanced-table-container" style="position: relative;">
+                    <div id="recent-ops-loading" class="component-loading">
+                        <div class="spinner"></div>
+                    </div>
+                    <table id="recent-operations-table" class="enhanced-data-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('importacoes.dashboard_executivo.acoes') }}</th>
+                                <th class="sortable" data-sort="ref_importador">{{
+                                    t('importacoes.dashboard_executivo.pedido') }}</th>
+                                <th class="sortable" data-sort="importador">{{
+                                    t('importacoes.dashboard_executivo.importador') }}</th>
+                                <th class="sortable" data-sort="data_abertura">{{
+                                    t('importacoes.dashboard_executivo.data_abertura') }}</th>
+                                <th class="sortable" data-sort="exportador_fornecedor">{{
+                                    t('importacoes.dashboard_executivo.exportador') }}</th>
+                                <th class="sortable" data-sort="modal">{{ t('importacoes.dashboard_operacional.modal')
+                                    }}</th>
+                                <th class="sortable" data-sort="status">{{ t('importacoes.dashboard_operacional.status')
+                                    }}</th>
+                                <th class="sortable" data-sort="custo_total">{{
+                                    t('importacoes.dashboard_executivo.custo_total') }}</th>
+                                <th class="sortable" data-sort="data_chegada">{{
+                                    t('importacoes.dashboard_executivo.data_chegada') }}</th>
+                                <th class="sortable" data-sort="material">{{
+                                    t('importacoes.dashboard_executivo.material') }}</th>
+                                <th class="sortable" data-sort="urf_despacho">{{
+                                    t('importacoes.dashboard_executivo.urf') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dados carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal de Detalhes do Processo -->
+            <div id="process-modal" class="modal-overlay">
+                <div class="modal-container">
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h2 class="modal-title" id="modal-title">{{
+                            t('importacoes.dashboard_executivo.detalhes_processo') }}</h2>
+                        <button class="modal-close" id="modal-close">
+                            <i class="mdi mdi-close"></i>
+                        </button>
+                    </div>
+
+                    <!-- Modal Content -->
+                    <div class="modal-content">
+                        <!-- Timeline do Processo -->
+                        <div class="process-timeline">
+                            <div class="timeline-step" data-step="1">
+                                <div class="timeline-icon">
                                     <i class="mdi mdi-file-document-outline"></i>
-                                    <p>{{ t('importacoes.dashboard_executivo.carregando_documentos') }}</p>
                                 </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.abertura') }}</div>
                             </div>
-                            
-                            <!-- Botão de upload (apenas para admin/interno) -->
-                            <div class="upload-document-section" id="upload-section" style="display: none;">
-                                <button type="button" class="btn-upload" id="upload-document-btn">
-                                    <i class="mdi mdi-plus"></i>
-                                    {{ t('importacoes.dashboard_executivo.anexar_documento') }}
-                                </button>
+                            <div class="timeline-step" data-step="2">
+                                <div class="timeline-icon">
+                                    <i class="mdi mdi-truck"></i>
+                                </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.embarque') }}</div>
+                            </div>
+                            <div class="timeline-step" data-step="3">
+                                <div class="timeline-icon">
+                                    <i class="mdi mdi-airplane-landing"></i>
+                                </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.chegada') }}</div>
+                            </div>
+                            <div class="timeline-step" data-step="4">
+                                <div class="timeline-icon">
+                                    <i class="mdi mdi-file-document-edit"></i>
+                                </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.registro') }}</div>
+                            </div>
+                            <div class="timeline-step" data-step="5">
+                                <div class="timeline-icon">
+                                    <i class="mdi mdi-check-circle-outline"></i>
+                                </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.desembaraco') }}</div>
+                            </div>
+                            <div class="timeline-step" data-step="6">
+                                <div class="timeline-icon">
+                                    <i class="mdi mdi-flag-checkered"></i>
+                                </div>
+                                <div class="timeline-label">{{ t('importacoes.dashboard_executivo.finalizado') }}</div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal de Upload de Documentos -->
-    <div id="document-upload-modal" class="document-upload-modal">
-        <div class="upload-modal-content">
-            <div class="upload-modal-header">
-                <h3>{{ t('importacoes.dashboard_executivo.anexar_documento') }}</h3>
-                <button type="button" class="close-upload-btn" id="close-upload-modal">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-            
-            <form id="document-upload-form" enctype="multipart/form-data">
-                <div class="upload-form-group">
-                    <label for="document-file">{{ t('importacoes.dashboard_executivo.selecionar_arquivo') }} *</label>
-                    <div class="file-input-wrapper">
-                        <input type="file" id="document-file" name="file" class="file-input-custom" required 
-                               accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.docx,.doc,.txt,.csv,.zip">
-                        <label for="document-file" class="file-input-label">
-                            <i class="mdi mdi-cloud-upload"></i>
-                            <strong>{{ t('importacoes.dashboard_executivo.clique_selecionar') }}</strong> {{ t('importacoes.dashboard_executivo.ou_arraste') }}
-                            <br><small>{{ t('importacoes.dashboard_executivo.tipos_permitidos') }}</small>
-                        </label>
-                    </div>
-                    <div id="file-preview" class="file-preview"></div>
-                </div>
-                
-                <div class="upload-form-group">
-                    <label for="document-display-name">Nome de Exibição *</label>
-                    <input type="text" id="document-display-name" name="display_name" 
-                           placeholder="Nome que aparecerá na lista" required>
-                </div>
-                
-                <div class="upload-form-group">
-                    <label for="document-description">Descrição</label>
-                    <textarea id="document-description" name="description" rows="3" 
-                              placeholder="Descrição opcional do documento"></textarea>
-                </div>
-                
-                <div class="upload-form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="document-visible-client" name="visible_to_client" 
-                               value="true" checked>
-                        <label for="document-visible-client">Visível para o cliente</label>
-                    </div>
-                </div>
-                
-                <div class="upload-modal-actions">
-                    <button type="button" class="btn-secondary" id="cancel-upload">Cancelar</button>
-                    <button type="submit" class="btn-primary">
-                        <i class="mdi mdi-upload"></i>
-                        Enviar Documento
-                        <span id="upload-spinner" class="upload-spinner">
-                            <div class="spinner"></div>
-                        </span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal de Filtros -->
-    <div id="filter-modal" class="filter-modal">
-        <div class="filter-modal-content">
-            <div class="filter-modal-header">
-                <h2 class="filter-modal-title">🔍 Filtros do Dashboard</h2>
-                <button class="filter-modal-close" id="close-modal">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-            <div class="filter-modal-body">
-                <!-- Período -->
-                <div class="filter-section">
-                    <h3 class="filter-section-title">📅 Período</h3>
-                    <div class="filter-quick-buttons">
-                        <button class="btn-quick" data-days="30">30 dias</button>
-                        <button class="btn-quick" data-days="60">60 dias</button>
-                        <button class="btn-quick" data-days="90">90 dias</button>
-                        <button class="btn-quick" data-days="180">6 meses</button>
-                    </div>
-                    <div class="filter-date-inputs">
-                        <div class="filter-input-group">
-                            <label for="data-inicio">Data Início</label>
-                            <input type="date" id="data-inicio" name="data_inicio">
-                        </div>
-                        <div class="filter-input-group">
-                            <label for="data-fim">Data Fim</label>
-                            <input type="date" id="data-fim" name="data_fim">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Material - Apenas para usuários KINGSPAN/CISER -->
-                <div class="filter-section" id="material-filter-section" style="display: none;">
-                    <h3 class="filter-section-title">📦 Material</h3>
-                    <div class="filter-input-group">
-                        <div class="multi-select-container">
-                            <div class="multi-select-header" id="material-header">
-                                <span class="multi-select-placeholder">Todos os materiais</span>
-                                <i class="mdi mdi-chevron-down"></i>
-                            </div>
-                            <div class="multi-select-dropdown" id="material-dropdown">
-                                <div class="multi-select-search">
-                                    <input type="text" placeholder="Buscar material..." id="material-search">
-                                </div>
-                                <div class="multi-select-options" id="material-options">
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cliente -->
-                <div class="filter-section">
-                    <h3 class="filter-section-title">🏢 Cliente</h3>
-                    <div class="filter-input-group">
-                        <div class="multi-select-container">
-                            <div class="multi-select-header" id="cliente-header">
-                                <span class="multi-select-placeholder">Todos os clientes</span>
-                                <i class="mdi mdi-chevron-down"></i>
-                            </div>
-                            <div class="multi-select-dropdown" id="cliente-dropdown">
-                                <div class="multi-select-search">
-                                    <input type="text" placeholder="Buscar cliente..." id="cliente-search">
-                                </div>
-                                <div class="multi-select-options" id="cliente-options">
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal -->
-                <div class="filter-section">
-                    <h3 class="filter-section-title">🚛 Modal</h3>
-                    <div class="filter-input-group">
-                        <div class="multi-select-container">
-                            <div class="multi-select-header" id="modal-header">
-                                <span class="multi-select-placeholder">Todos os modais</span>
-                                <i class="mdi mdi-chevron-down"></i>
-                            </div>
-                            <div class="multi-select-dropdown" id="modal-dropdown">
-                                <div class="multi-select-options" id="modal-options">
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Canal -->
-                <div class="filter-section">
-                    <h3 class="filter-section-title">🚦 Canal</h3>
-                    <div class="filter-input-group">
-                        <div class="multi-select-container">
-                            <div class="multi-select-header" id="canal-header">
-                                <span class="multi-select-placeholder">Todos os canais</span>
-                                <i class="mdi mdi-chevron-down"></i>
-                            </div>
-                            <div class="multi-select-dropdown" id="canal-dropdown">
-                                <div class="multi-select-options" id="canal-options">
-                                    <!-- Opções carregadas dinamicamente -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="filter-modal-footer">
-                <button id="clear-filters" class="btn btn-secondary">
-                    <i class="mdi mdi-refresh"></i>
-                    Limpar Filtros
-                </button>
-                <button id="apply-filters" class="btn btn-primary">
-                    <i class="mdi mdi-check"></i>
-                    Aplicar Filtros
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Configuração de Colunas -->
-    <div class="columns-config-modal-overlay" aria-hidden="true">
-        <div class="columns-config-modal" role="dialog" aria-modal="true">
-            <div class="columns-config-header">
-                <h3>
-                    <i class="mdi mdi-view-column"></i>
-                    Configurar Colunas
-                </h3>
-                <button type="button" class="columns-config-close" aria-label="Fechar">
-                    <i class="mdi mdi-close"></i>
-                </button>
-            </div>
-
-            <div class="columns-config-body">
-                <p class="columns-config-description">
-                    Escolha quais informações deseja visualizar na tabela. Colunas com <i class="mdi mdi-lock"></i> são obrigatórias.
-                </p>
-
-                <div class="columns-config-search">
-                    <i class="mdi mdi-magnify"></i>
-                    <input type="text" id="columns-search" placeholder="Buscar coluna" autocomplete="off">
-                </div>
-
-                <div class="columns-config-actions">
-                    <button type="button" class="columns-config-btn-small" id="columns-select-all">
-                        <i class="mdi mdi-checkbox-multiple-marked"></i>
-                        Marcar todas
-                    </button>
-                    <button type="button" class="columns-config-btn-small" id="columns-deselect-all">
-                        <i class="mdi mdi-checkbox-multiple-blank-outline"></i>
-                        Desmarcar todas
-                    </button>
-                </div>
-
-                <div class="columns-list" id="columns-list"></div>
-            </div>
-
-            <div class="columns-config-footer">
-                <button type="button" class="columns-config-btn columns-config-btn-danger" id="columns-reset-default">
-                    <i class="mdi mdi-restore"></i>
-                    Restaurar padrão
-                </button>
-                <div style="display: flex; gap: 0.75rem;">
-                    <button type="button" class="columns-config-btn columns-config-btn-secondary" id="columns-cancel">
-                        <i class="mdi mdi-close"></i>
-                        Cancelar
-                    </button>
-                    <button type="button" class="columns-config-btn columns-config-btn-primary" id="columns-apply">
-                        <i class="mdi mdi-check"></i>
-                        Aplicar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-    <!-- Modal de Detalhes do Processo -->
-    {% include 'shared/process_modal.html' %}
-
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
-<script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
-<script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
-<script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
-<script src="{{ url_for('dashboard_executivo.static', filename='js/column-filters.js') }}"></script>
-<script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
-<script>
-const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
-window.dashboardUserId = rawDashboardUserId || null;
-window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
-// Definir acesso Kingspan para filtrar colunas disponíveis
-window.hasKingspanAccess = {{ 'true' if has_kingspan_access else 'false' }};
-console.log('[DASHBOARD_EXECUTIVO] Acesso Kingspan:', window.hasKingspanAccess);
-</script>
-<script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
-<script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
-<script src="{{ url_for('dashboard_executivo.static', filename='js/armazenagem-kingspan.js') }}"></script>
-
-<script>
-// Disponibilizar role do usuário globalmente para o Document Manager
-window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
-const rawShowCompanyWarning = '{{ 1 if show_company_warning else 0 }}';
-window.showCompanyWarning = rawShowCompanyWarning === '1';
-
-// Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
-document.addEventListener('DOMContentLoaded', function() {
-    const userRole = window.userRole;
-    const uploadSection = document.getElementById('upload-section');
-    
-    // Check if user has company warning - if so, don't initialize dashboard
-    if (window.showCompanyWarning) {
-        console.log('[DASHBOARD_EXECUTIVO] Usuário sem empresas vinculadas - dashboard bloqueado');
-        return; // Don't initialize dashboard functionality
-    }
-    
-    if (uploadSection && ['admin', 'interno_unique', 'cliente_unique'].includes(userRole)) {
-        uploadSection.style.display = 'block';
-        console.log('[DASHBOARD_EXECUTIVO] Seção de upload habilitada para role:', userRole);
-    } else {
-        console.log('[DASHBOARD_EXECUTIVO] Seção de upload desabilitada para role:', userRole);
-    }
-});
-
-// Controlador simples para esconder os loaders por componente quando os dados renderizam
-const DASH_EXEC_HIDE_LOADER = (id) => { const el = document.getElementById(id); if (el) { el.style.display = 'none'; console.log('[DASH_EXEC] Loader hidden:', id); }};
-const DASH_EXEC_TRY_WRAP = (name, id) => {
-    const fn = window[name];
-    if (typeof fn === 'function') {
-        window[name] = function() {
-            const r = fn.apply(this, arguments);
-            try { DASH_EXEC_HIDE_LOADER(id); } catch (_) {}
-            return r;
-        };
-        console.log('[DASH_EXEC] Wrapped function:', name, '-> hides', id);
-    }
-};
-
-// Aplicar wrappers imediatamente após carregar dashboard.js
-DASH_EXEC_TRY_WRAP('updateDashboardKPIs', 'kpi-loading');
-DASH_EXEC_TRY_WRAP('updateRecentOperationsTable', 'recent-ops-loading');
-DASH_EXEC_TRY_WRAP('createPrincipaisMateriaisTableWithValidation', 'material-loading');
-DASH_EXEC_TRY_WRAP('createMonthlyChartWithValidation', 'monthly-loading');
-DASH_EXEC_TRY_WRAP('createStatusChartWithValidation', 'status-loading');
-DASH_EXEC_TRY_WRAP('createGroupedModalChartWithValidation', 'modal-loading');
-DASH_EXEC_TRY_WRAP('createUrfChartWithValidation', 'urf-loading');
-DASH_EXEC_TRY_WRAP('createMaterialChartWithValidation', 'material-loading');
-
-// Fallbacks com MutationObserver caso funções mudem de nome ou executem antes
-document.addEventListener('DOMContentLoaded', function() {
-    const observeRows = (tableSelector, loaderId) => {
-        const table = document.querySelector(tableSelector);
-        if (!table) return;
-        const tbody = table.querySelector('tbody');
-        if (!tbody) return;
-        const mo = new MutationObserver(() => {
-            if (tbody.children.length > 0) { DASH_EXEC_HIDE_LOADER(loaderId); mo.disconnect(); }
-        });
-        mo.observe(tbody, { childList: true });
-    };
-    observeRows('#recent-operations-table', 'recent-ops-loading');
-    observeRows('#principais-materiais-table', 'material-loading');
-
-    // Safety timeout para não deixar loader preso em caso de erro
-    setTimeout(() => {
-        ['kpi-loading','monthly-loading','status-loading','modal-loading','urf-loading','material-loading','recent-ops-loading']
-            .forEach(DASH_EXEC_HIDE_LOADER);
-        console.warn('[DASH_EXEC] Safety timeout reached. Forced hiding of loaders.');
-    }, 20000);
-});
-
-// Função para controlar exibição de seções de material baseado na permissão
-function toggleMaterialSections(canViewMaterials) {
-    const materialChartSection = document.getElementById('material-chart-section');
-    const materialFilterSection = document.getElementById('material-filter-section');
-    
-    if (materialChartSection) {
-        materialChartSection.style.display = canViewMaterials ? 'block' : 'none';
-        console.log('[MATERIAL_PERMISSION] Seção de gráfico de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
-    }
-    
-    if (materialFilterSection) {
-        materialFilterSection.style.display = canViewMaterials ? 'block' : 'none';
-        console.log('[MATERIAL_PERMISSION] Seção de filtro de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
-    }
-}
-
-// Armazenar permissão globalmente para uso em outros módulos
-window.canViewMaterials = false;
-</script>
-
-<!-- Modal de Armazenagem Kingspan -->
-<div class="armazenagem-modal-overlay">
-    <div class="armazenagem-modal">
-        <div class="armazenagem-modal-header">
-            <h3>
-                <i class="mdi mdi-information-outline"></i>
-                Informações do Processo
-            </h3>
-            <button class="armazenagem-modal-close">
-                <i class="mdi mdi-close"></i>
-            </button>
-        </div>
-        
-        <!-- Tabs Navigation -->
-        <div class="armazenagem-tabs">
-            <button class="armazenagem-tab active" data-tab="produtos">
-                <i class="mdi mdi-package-variant"></i>
-                Produtos
-            </button>
-            <button class="armazenagem-tab" data-tab="armazenagem">
-                <i class="mdi mdi-warehouse"></i>
-                Armazenagem Kingspan
-            </button>
-        </div>
-        
-        <div class="armazenagem-modal-body">
-            <!-- Info Box -->
-            <div class="armazenagem-info-box">
-                <h4>Processo: <span class="ref-unique" id="armazenagem-ref-unique">-</span></h4>
-                <p id="armazenagem-process-info">Carregando informações...</p>
-            </div>
-            
-            <!-- Loading -->
-            <div class="armazenagem-loading">
-                <div class="armazenagem-spinner"></div>
-                <p style="margin-top: 12px; color: #666;">Carregando dados...</p>
-            </div>
-            
-            <!-- Mensagens -->
-            <div class="armazenagem-error-message">
-                <i class="mdi mdi-alert-circle"></i>
-                <span></span>
-            </div>
-            
-            <div class="armazenagem-success-message">
-                <i class="mdi mdi-check-circle"></i>
-                <span></span>
-            </div>
-            
-            <!-- TAB: Produtos -->
-            <div class="armazenagem-tab-content active" id="tab-produtos">
-                <div class="produtos-container">
-                    <h4 style="margin: 0 0 1rem 0; color: #111827; font-size: 1rem; font-weight: 600;">
-                        <i class="mdi mdi-package-variant"></i> Produtos do Processo
-                    </h4>
-                    <div class="produtos-empty" style="display: none;">
-                        <i class="mdi mdi-package-variant-closed" style="font-size: 3rem; color: #d1d5db;"></i>
-                        <p style="color: #6b7280; margin-top: 1rem;">Nenhum produto cadastrado neste processo.</p>
-                    </div>
-                    <div class="produtos-table-wrapper">
-                        <!-- Tabela será renderizada pelo JavaScript -->
-                    </div>
-                </div>
-            </div>
-            
-            <!-- TAB: Armazenagem -->
-            <div class="armazenagem-tab-content" id="tab-armazenagem">
-                <!-- Formulário -->
-                <form id="armazenagem-form">
-                    <!-- Seção de Datas -->
-                    <h4 style="margin: 0 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                        <i class="mdi mdi-calendar-range"></i> Datas de Controle
-                    </h4>
-                    
-                    <div class="armazenagem-form-group">
-                        <label for="armazenagem-data-desova">
-                            <i class="mdi mdi-calendar-check"></i>
-                            Data de Desova
-                            <span class="armazenagem-tooltip" data-tooltip="Data em que o container foi desovado/esvaziado">
+                        <!-- Modal Tabs Navigation -->
+                        <div class="modal-tabs">
+                            <button class="modal-tab active" data-tab="geral">
                                 <i class="mdi mdi-information-outline"></i>
-                            </span>
-                        </label>
-                        <input type="text" 
-                               id="armazenagem-data-desova" 
-                               class="armazenagem-date-input"
-                               placeholder="DD/MM/AAAA"
-                               maxlength="10">
-                        <small>Formato: DD/MM/AAAA</small>
-                    </div>
-                    
-                    <div class="armazenagem-form-row">
-                        <div class="armazenagem-form-group">
-                            <label for="armazenagem-limite-primeiro">
-                                <i class="mdi mdi-calendar-alert"></i>
-                                Limite 1º Período
-                            </label>
-                            <input type="text" 
-                                   id="armazenagem-limite-primeiro" 
-                                   class="armazenagem-date-input"
-                                   placeholder="DD/MM/AAAA"
-                                   maxlength="10">
-                            <small>Primeiro prazo limite</small>
+                                Informações Gerais
+                            </button>
+                            <button class="modal-tab" data-tab="carga">
+                                <i class="mdi mdi-truck-cargo-container"></i>
+                                Carga e Transporte
+                            </button>
+                            <button class="modal-tab" data-tab="aduaneira">
+                                <i class="mdi mdi-file-document-check"></i>
+                                Aduaneiras
+                            </button>
+                            <button class="modal-tab" data-tab="financeiro">
+                                <i class="mdi mdi-cash-multiple"></i>
+                                Financeiro
+                            </button>
+                            <button class="modal-tab" data-tab="documentos">
+                                <i class="mdi mdi-file-document-multiple"></i>
+                                Documentos
+                            </button>
                         </div>
-                        
-                        <div class="armazenagem-form-group">
-                            <label for="armazenagem-limite-segundo">
-                                <i class="mdi mdi-calendar-alert"></i>
-                                Limite 2º Período
-                            </label>
-                            <input type="text" 
-                                   id="armazenagem-limite-segundo" 
-                                   class="armazenagem-date-input"
-                                   placeholder="DD/MM/AAAA"
-                                   maxlength="10">
-                            <small>Segundo prazo limite</small>
-                        </div>
-                    </div>
-                    
-                    <!-- Seção de Valores -->
-                    <h4 style="margin: 24px 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
-                        <i class="mdi mdi-cash-multiple"></i> Valores e Períodos Extras
-                    </h4>
-                    
-                    <div class="armazenagem-form-row">
-                        <div class="armazenagem-form-group">
-                            <label for="armazenagem-dias-extras">
-                                <i class="mdi mdi-calendar-plus"></i>
-                                Dias Extras de Armazenagem
-                            </label>
-                            <input type="number" 
-                                   id="armazenagem-dias-extras" 
-                                   placeholder="0"
-                                   min="0"
-                                   step="1">
-                            <small>Quantidade de dias adicionais</small>
-                        </div>
-                        
-                        <div class="armazenagem-form-group">
-                            <label for="armazenagem-valor-despesas">
-                                <i class="mdi mdi-currency-usd"></i>
-                                Valor Despesas Extras (R$)
-                            </label>
-                            <input type="number" 
-                                   id="armazenagem-valor-despesas" 
-                                   placeholder="0.00"
-                                   min="0"
-                                   step="0.01">
-                            <small>Valor em reais (ex: 1500.50)</small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div class="armazenagem-modal-footer">
-            <div>
-                <button type="button" 
-                        id="armazenagem-btn-delete" 
-                        class="armazenagem-btn armazenagem-btn-danger"
-                        style="display: none;">
-                    <i class="mdi mdi-delete"></i>
-                    Deletar Dados
-                </button>
-            </div>
-            <div style="display: flex; gap: 12px;">
-                <button type="button" 
-                        id="armazenagem-btn-cancel" 
-                        class="armazenagem-btn armazenagem-btn-secondary">
-                    <i class="mdi mdi-close"></i>
-                    Cancelar
-                </button>
-                <button type="button" 
-                        id="armazenagem-btn-save" 
-                        class="armazenagem-btn armazenagem-btn-primary">
-                    <i class="mdi mdi-content-save"></i>
-                    Salvar Dados
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-{% endblock %}
+                        <!-- Cards de Informações -->
+                        <div class="modal-cards">
+                            <!-- Card 1: Informações Gerais -->
+                            <div class="info-card" data-tab-content="geral">
+                                <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_gerais') }}
+                                </h3>
+                                <div class="card-grid-3">
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.ref_unique') }}:</label>
+                                        <span id="detail-ref-unique">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.ref_importador') }}:</label>
+                                        <span id="detail-ref-importador">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_abertura') }}:</label>
+                                        <span id="detail-data-abertura">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.importador') }}:</label>
+                                        <span id="detail-importador">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.exportador') }}:</label>
+                                        <span id="detail-exportador">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.cnpj') }}:</label>
+                                        <span id="detail-cnpj">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.status_atual') }}:</label>
+                                        <span id="detail-status" class="status-badge">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.pais_procedencia') }}:</label>
+                                        <span id="detail-pais-procedencia" class="country-info">
+                                            <img id="detail-country-flag" src="" alt="" class="country-flag"
+                                                style="width: 20px; height: 15px; margin-right: 8px; display: none;">
+                                            <span id="detail-country-name">-</span>
+                                        </span>
+                                    </div>
+                                    <!-- Kingspan Fields -->
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>PO Cliente:</label>
+                                        <span id="detail-po-cliente">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Referência Exportador:</label>
+                                        <span id="detail-ref-exportador">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Código Produto:</label>
+                                        <span id="detail-codigo-produto">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Filial (Código):</label>
+                                        <span id="detail-filial-codigo">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Licença Importação:</label>
+                                        <span id="detail-licenca-importacao">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Total Pedido (Moeda Origem):</label>
+                                        <span id="detail-total-pedido" class="highlight-value">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: Detalhes da Carga e Transporte -->
+                            <div class="info-card" data-tab-content="carga">
+                                <h3 class="card-title">{{ t('importacoes.dashboard_executivo.detalhes_carga_transporte')
+                                    }}</h3>
+                                <div class="card-grid-2">
+                                    <!-- Linha 1: Modal - Peso -->
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_operacional.modal') }}:</label>
+                                        <span id="detail-modal">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.peso_bruto') }}:</label>
+                                        <span id="detail-peso-bruto">-</span>
+                                    </div>
+
+                                    <!-- Linha 2: Data Embarque - Previsão Chegada -->
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_embarque') }}:</label>
+                                        <span id="detail-data-embarque">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_chegada') }}:</label>
+                                        <span id="detail-data-chegada">-</span>
+                                    </div>
+
+                                    <!-- Linha 3: Presença Carga - Transit Time -->
+                                    <div class="info-item">
+                                        <label>Presença Carga:</label>
+                                        <span id="detail-presenca-carga">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.transit_time') }}:</label>
+                                        <span id="detail-transit-time">-</span>
+                                    </div>
+
+                                    <!-- Linha 4: Data Fechamento -->
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_fechamento') }}:</label>
+                                        <span id="detail-data-fechamento">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <!-- Espaço vazio para alinhamento do grid -->
+                                    </div>
+
+                                    <!-- Kingspan Fields - Logística -->
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Freetime:</label>
+                                        <span id="detail-freetime">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>ETB:</label>
+                                        <span id="detail-etb">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Navio:</label>
+                                        <span id="detail-navio">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Armador/Agente Trade:</label>
+                                        <span id="detail-armador">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Data Desova (ETB):</label>
+                                        <span id="detail-data-desova">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Limite 1º Período:</label>
+                                        <span id="detail-limite-primeiro">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Limite 2º Período:</label>
+                                        <span id="detail-limite-segundo">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Dias Extras Armazenagem:</label>
+                                        <span id="detail-dias-extras">-</span>
+                                    </div>
+
+                                    <!-- Linha 4: Containers (ocupa toda a linha) -->
+                                    <div class="info-item container-item" style="grid-column: 1 / -1;">
+                                        <label>{{ t('importacoes.dashboard_executivo.containers') }}:</label>
+                                        <div id="detail-container" class="container-list">-</div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <!-- Card 3: Informações Aduaneiras -->
+                            <div class="info-card" data-tab-content="aduaneira">
+                                <h3 class="card-title">{{ t('importacoes.dashboard_executivo.informacoes_aduaneiras') }}
+                                </h3>
+                                <div class="card-grid-2">
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.numero_di') }}:</label>
+                                        <span id="detail-numero-di">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_registro_di') }}:</label>
+                                        <span id="detail-data-registro">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.canal') }}:</label>
+                                        <span id="detail-canal">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.data_desembaraco') }}:</label>
+                                        <span id="detail-data-desembaraco">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.urf_despacho') }}:</label>
+                                        <span id="detail-urf-despacho">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Resumo Financeiro -->
+                            <div class="info-card" data-tab-content="financeiro">
+                                <h3 class="card-title">{{ t('importacoes.dashboard_executivo.resumo_financeiro') }}</h3>
+                                <div class="card-grid-2">
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.valor_cif') }}:</label>
+                                        <span id="detail-valor-cif">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.frete_internacional') }}:</label>
+                                        <span id="detail-frete-inter">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.armazenagem') }}:</label>
+                                        <span id="detail-armazenagem">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.honorarios') }}:</label>
+                                        <span id="detail-honorarios">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.outras_despesas') }}:</label>
+                                        <span id="detail-outras-despesas">-</span>
+                                    </div>
+                                    <!-- Kingspan Fields - Financeiro -->
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Moeda:</label>
+                                        <span id="detail-moeda">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>PTAX:</label>
+                                        <span id="detail-ptax">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Incoterm:</label>
+                                        <span id="detail-incoterm">-</span>
+                                    </div>
+                                    <div class="info-item kingspan-field" style="display: none;">
+                                        <label>Valor Despesas Extras:</label>
+                                        <span id="detail-valor-extras" class="highlight-value">-</span>
+                                    </div>
+                                    <div class="info-item total-item">
+                                        <label>{{ t('importacoes.dashboard_executivo.custo_total') }}:</label>
+                                        <span id="detail-custo-total" class="total-value">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 6: Documentos Anexados -->
+                            <div class="info-card" data-tab-content="documentos">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h3 class="card-title" style="margin: 0;">
+                                        <i class="mdi mdi-file-document-multiple"></i>
+                                        {{ t('importacoes.dashboard_executivo.documentos_anexados') }}
+                                    </h3>
+                                    <button type="button" class="btn-download-all" id="download-all-docs-btn"
+                                        style="display: none;" title="Baixar todos os documentos">
+                                        <i class="mdi mdi-download-multiple"></i>
+                                        Baixar Todos
+                                    </button>
+                                </div>
+
+                                <!-- Lista de documentos -->
+                                <div class="documents-section">
+                                    <div class="documents-list" id="documents-list">
+                                        <div class="no-documents">
+                                            <i class="mdi mdi-file-document-outline"></i>
+                                            <p>{{ t('importacoes.dashboard_executivo.carregando_documentos') }}</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Botão de upload (apenas para admin/interno) -->
+                                    <div class="upload-document-section" id="upload-section" style="display: none;">
+                                        <button type="button" class="btn-upload" id="upload-document-btn">
+                                            <i class="mdi mdi-plus"></i>
+                                            {{ t('importacoes.dashboard_executivo.anexar_documento') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Upload de Documentos -->
+            <div id="document-upload-modal" class="document-upload-modal">
+                <div class="upload-modal-content">
+                    <div class="upload-modal-header">
+                        <h3>{{ t('importacoes.dashboard_executivo.anexar_documento') }}</h3>
+                        <button type="button" class="close-upload-btn" id="close-upload-modal">
+                            <i class="mdi mdi-close"></i>
+                        </button>
+                    </div>
+
+                    <form id="document-upload-form" enctype="multipart/form-data">
+                        <div class="upload-form-group">
+                            <label for="document-file">{{ t('importacoes.dashboard_executivo.selecionar_arquivo') }}
+                                *</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="document-file" name="file" class="file-input-custom" required
+                                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.xlsx,.xls,.docx,.doc,.txt,.csv,.zip">
+                                <label for="document-file" class="file-input-label">
+                                    <i class="mdi mdi-cloud-upload"></i>
+                                    <strong>{{ t('importacoes.dashboard_executivo.clique_selecionar') }}</strong> {{
+                                    t('importacoes.dashboard_executivo.ou_arraste') }}
+                                    <br><small>{{ t('importacoes.dashboard_executivo.tipos_permitidos') }}</small>
+                                </label>
+                            </div>
+                            <div id="file-preview" class="file-preview"></div>
+                        </div>
+
+                        <div class="upload-form-group">
+                            <label for="document-display-name">Nome de Exibição *</label>
+                            <input type="text" id="document-display-name" name="display_name"
+                                placeholder="Nome que aparecerá na lista" required>
+                        </div>
+
+                        <div class="upload-form-group">
+                            <label for="document-description">Descrição</label>
+                            <textarea id="document-description" name="description" rows="3"
+                                placeholder="Descrição opcional do documento"></textarea>
+                        </div>
+
+                        <div class="upload-form-group">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="document-visible-client" name="visible_to_client"
+                                    value="true" checked>
+                                <label for="document-visible-client">Visível para o cliente</label>
+                            </div>
+                        </div>
+
+                        <div class="upload-modal-actions">
+                            <button type="button" class="btn-secondary" id="cancel-upload">Cancelar</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="mdi mdi-upload"></i>
+                                Enviar Documento
+                                <span id="upload-spinner" class="upload-spinner">
+                                    <div class="spinner"></div>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal de Filtros -->
+            <div id="filter-modal" class="filter-modal">
+                <div class="filter-modal-content">
+                    <div class="filter-modal-header">
+                        <h2 class="filter-modal-title">🔍 Filtros do Dashboard</h2>
+                        <button class="filter-modal-close" id="close-modal">
+                            <i class="mdi mdi-close"></i>
+                        </button>
+                    </div>
+                    <div class="filter-modal-body">
+                        <!-- Período -->
+                        <div class="filter-section">
+                            <h3 class="filter-section-title">📅 Período</h3>
+                            <div class="filter-quick-buttons">
+                                <button class="btn-quick" data-days="30">30 dias</button>
+                                <button class="btn-quick" data-days="60">60 dias</button>
+                                <button class="btn-quick" data-days="90">90 dias</button>
+                                <button class="btn-quick" data-days="180">6 meses</button>
+                            </div>
+                            <div class="filter-date-inputs">
+                                <div class="filter-input-group">
+                                    <label for="data-inicio">Data Início</label>
+                                    <input type="date" id="data-inicio" name="data_inicio">
+                                </div>
+                                <div class="filter-input-group">
+                                    <label for="data-fim">Data Fim</label>
+                                    <input type="date" id="data-fim" name="data_fim">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Material - Apenas para usuários KINGSPAN/CISER -->
+                        <div class="filter-section" id="material-filter-section" style="display: none;">
+                            <h3 class="filter-section-title">📦 Material</h3>
+                            <div class="filter-input-group">
+                                <div class="multi-select-container">
+                                    <div class="multi-select-header" id="material-header">
+                                        <span class="multi-select-placeholder">Todos os materiais</span>
+                                        <i class="mdi mdi-chevron-down"></i>
+                                    </div>
+                                    <div class="multi-select-dropdown" id="material-dropdown">
+                                        <div class="multi-select-search">
+                                            <input type="text" placeholder="Buscar material..." id="material-search">
+                                        </div>
+                                        <div class="multi-select-options" id="material-options">
+                                            <!-- Opções carregadas dinamicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cliente -->
+                        <div class="filter-section">
+                            <h3 class="filter-section-title">🏢 Cliente</h3>
+                            <div class="filter-input-group">
+                                <div class="multi-select-container">
+                                    <div class="multi-select-header" id="cliente-header">
+                                        <span class="multi-select-placeholder">Todos os clientes</span>
+                                        <i class="mdi mdi-chevron-down"></i>
+                                    </div>
+                                    <div class="multi-select-dropdown" id="cliente-dropdown">
+                                        <div class="multi-select-search">
+                                            <input type="text" placeholder="Buscar cliente..." id="cliente-search">
+                                        </div>
+                                        <div class="multi-select-options" id="cliente-options">
+                                            <!-- Opções carregadas dinamicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal -->
+                        <div class="filter-section">
+                            <h3 class="filter-section-title">🚛 Modal</h3>
+                            <div class="filter-input-group">
+                                <div class="multi-select-container">
+                                    <div class="multi-select-header" id="modal-header">
+                                        <span class="multi-select-placeholder">Todos os modais</span>
+                                        <i class="mdi mdi-chevron-down"></i>
+                                    </div>
+                                    <div class="multi-select-dropdown" id="modal-dropdown">
+                                        <div class="multi-select-options" id="modal-options">
+                                            <!-- Opções carregadas dinamicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Canal -->
+                        <div class="filter-section">
+                            <h3 class="filter-section-title">🚦 Canal</h3>
+                            <div class="filter-input-group">
+                                <div class="multi-select-container">
+                                    <div class="multi-select-header" id="canal-header">
+                                        <span class="multi-select-placeholder">Todos os canais</span>
+                                        <i class="mdi mdi-chevron-down"></i>
+                                    </div>
+                                    <div class="multi-select-dropdown" id="canal-dropdown">
+                                        <div class="multi-select-options" id="canal-options">
+                                            <!-- Opções carregadas dinamicamente -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="filter-modal-footer">
+                        <button id="clear-filters" class="btn btn-secondary">
+                            <i class="mdi mdi-refresh"></i>
+                            Limpar Filtros
+                        </button>
+                        <button id="apply-filters" class="btn btn-primary">
+                            <i class="mdi mdi-check"></i>
+                            Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal de Configuração de Colunas -->
+            <div class="columns-config-modal-overlay" aria-hidden="true">
+                <div class="columns-config-modal" role="dialog" aria-modal="true">
+                    <div class="columns-config-header">
+                        <h3>
+                            <i class="mdi mdi-view-column"></i>
+                            Configurar Colunas
+                        </h3>
+                        <button type="button" class="columns-config-close" aria-label="Fechar">
+                            <i class="mdi mdi-close"></i>
+                        </button>
+                    </div>
+
+                    <div class="columns-config-body">
+                        <p class="columns-config-description">
+                            Escolha quais informações deseja visualizar na tabela. Colunas com <i
+                                class="mdi mdi-lock"></i> são obrigatórias.
+                        </p>
+
+                        <div class="columns-config-search">
+                            <i class="mdi mdi-magnify"></i>
+                            <input type="text" id="columns-search" placeholder="Buscar coluna" autocomplete="off">
+                        </div>
+
+                        <div class="columns-config-actions">
+                            <button type="button" class="columns-config-btn-small" id="columns-select-all">
+                                <i class="mdi mdi-checkbox-multiple-marked"></i>
+                                Marcar todas
+                            </button>
+                            <button type="button" class="columns-config-btn-small" id="columns-deselect-all">
+                                <i class="mdi mdi-checkbox-multiple-blank-outline"></i>
+                                Desmarcar todas
+                            </button>
+                        </div>
+
+                        <div class="columns-list" id="columns-list"></div>
+                    </div>
+
+                    <div class="columns-config-footer">
+                        <button type="button" class="columns-config-btn columns-config-btn-danger"
+                            id="columns-reset-default">
+                            <i class="mdi mdi-restore"></i>
+                            Restaurar padrão
+                        </button>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="button" class="columns-config-btn columns-config-btn-secondary"
+                                id="columns-cancel">
+                                <i class="mdi mdi-close"></i>
+                                Cancelar
+                            </button>
+                            <button type="button" class="columns-config-btn columns-config-btn-primary"
+                                id="columns-apply">
+                                <i class="mdi mdi-check"></i>
+                                Aplicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal de Detalhes do Processo -->
+        {% include 'shared/process_modal.html' %}
+
+        {% endblock %}
+
+        {% block extra_js %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="{{ url_for('static', filename='shared/process_modal.js') }}"></script>
+        <script src="{{ url_for('static', filename='shared/document-manager.js') }}"></script>
+        <script src="{{ url_for('shared.static', filename='js/enhanced-table.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/table-sort.js') }}"></script>
+        <script src="{{ url_for('dashboard_executivo.static', filename='js/column-filters.js') }}"></script>
+        <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard.js') }}"></script>
+        <script>
+            const rawDashboardUserId = '{{ session.get("user", {}).get("id", "") }}';
+            window.dashboardUserId = rawDashboardUserId || null;
+            window.dashboardColumnsStorageKey = `dashboard_exec_columns_${window.dashboardUserId || 'anon'}`;
+            // Definir acesso Kingspan para filtrar colunas disponíveis
+            window.hasKingspanAccess = {{ 'true' if has_kingspan_access else 'false' }};
+            console.log('[DASHBOARD_EXECUTIVO] Acesso Kingspan:', window.hasKingspanAccess);
+        </script>
+        <script src="{{ url_for('dashboard_executivo.static', filename='js/columns-config.js') }}"></script>
+        <script src="{{ url_for('dashboard_executivo.static', filename='js/dashboard-customization.js') }}"></script>
+        <script src="{{ url_for('dashboard_executivo.static', filename='js/armazenagem-kingspan.js') }}"></script>
+
+        <script>
+            // Disponibilizar role do usuário globalmente para o Document Manager
+            window.userRole = '{{ session.get("user", {}).get("role", "cliente_unique") }}';
+            const rawShowCompanyWarning = '{{ 1 if show_company_warning else 0 }}';
+            window.showCompanyWarning = rawShowCompanyWarning === '1';
+
+            // Mostrar seção de upload baseado na role - TODAS as roles podem fazer upload
+            document.addEventListener('DOMContentLoaded', function () {
+                const userRole = window.userRole;
+                const uploadSection = document.getElementById('upload-section');
+
+                // Check if user has company warning - if so, don't initialize dashboard
+                if (window.showCompanyWarning) {
+                    console.log('[DASHBOARD_EXECUTIVO] Usuário sem empresas vinculadas - dashboard bloqueado');
+                    return; // Don't initialize dashboard functionality
+                }
+
+                if (uploadSection && ['admin', 'interno_unique', 'cliente_unique'].includes(userRole)) {
+                    uploadSection.style.display = 'block';
+                    console.log('[DASHBOARD_EXECUTIVO] Seção de upload habilitada para role:', userRole);
+                } else {
+                    console.log('[DASHBOARD_EXECUTIVO] Seção de upload desabilitada para role:', userRole);
+                }
+            });
+
+            // Controlador simples para esconder os loaders por componente quando os dados renderizam
+            const DASH_EXEC_HIDE_LOADER = (id) => { const el = document.getElementById(id); if (el) { el.style.display = 'none'; console.log('[DASH_EXEC] Loader hidden:', id); } };
+            const DASH_EXEC_TRY_WRAP = (name, id) => {
+                const fn = window[name];
+                if (typeof fn === 'function') {
+                    window[name] = function () {
+                        const r = fn.apply(this, arguments);
+                        try { DASH_EXEC_HIDE_LOADER(id); } catch (_) { }
+                        return r;
+                    };
+                    console.log('[DASH_EXEC] Wrapped function:', name, '-> hides', id);
+                }
+            };
+
+            // Aplicar wrappers imediatamente após carregar dashboard.js
+            DASH_EXEC_TRY_WRAP('updateDashboardKPIs', 'kpi-loading');
+            DASH_EXEC_TRY_WRAP('updateRecentOperationsTable', 'recent-ops-loading');
+            DASH_EXEC_TRY_WRAP('createPrincipaisMateriaisTableWithValidation', 'material-loading');
+            DASH_EXEC_TRY_WRAP('createMonthlyChartWithValidation', 'monthly-loading');
+            DASH_EXEC_TRY_WRAP('createStatusChartWithValidation', 'status-loading');
+            DASH_EXEC_TRY_WRAP('createGroupedModalChartWithValidation', 'modal-loading');
+            DASH_EXEC_TRY_WRAP('createUrfChartWithValidation', 'urf-loading');
+            DASH_EXEC_TRY_WRAP('createMaterialChartWithValidation', 'material-loading');
+
+            // Fallbacks com MutationObserver caso funções mudem de nome ou executem antes
+            document.addEventListener('DOMContentLoaded', function () {
+                const observeRows = (tableSelector, loaderId) => {
+                    const table = document.querySelector(tableSelector);
+                    if (!table) return;
+                    const tbody = table.querySelector('tbody');
+                    if (!tbody) return;
+                    const mo = new MutationObserver(() => {
+                        if (tbody.children.length > 0) { DASH_EXEC_HIDE_LOADER(loaderId); mo.disconnect(); }
+                    });
+                    mo.observe(tbody, { childList: true });
+                };
+                observeRows('#recent-operations-table', 'recent-ops-loading');
+                observeRows('#principais-materiais-table', 'material-loading');
+
+                // Safety timeout para não deixar loader preso em caso de erro
+                setTimeout(() => {
+                    ['kpi-loading', 'monthly-loading', 'status-loading', 'modal-loading', 'urf-loading', 'material-loading', 'recent-ops-loading']
+                        .forEach(DASH_EXEC_HIDE_LOADER);
+                    console.warn('[DASH_EXEC] Safety timeout reached. Forced hiding of loaders.');
+                }, 20000);
+            });
+
+            // Função para controlar exibição de seções de material baseado na permissão
+            function toggleMaterialSections(canViewMaterials) {
+                const materialChartSection = document.getElementById('material-chart-section');
+                const materialFilterSection = document.getElementById('material-filter-section');
+
+                if (materialChartSection) {
+                    materialChartSection.style.display = canViewMaterials ? 'block' : 'none';
+                    console.log('[MATERIAL_PERMISSION] Seção de gráfico de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
+                }
+
+                if (materialFilterSection) {
+                    materialFilterSection.style.display = canViewMaterials ? 'block' : 'none';
+                    console.log('[MATERIAL_PERMISSION] Seção de filtro de materiais:', canViewMaterials ? 'mostrada' : 'oculta');
+                }
+            }
+
+            // Armazenar permissão globalmente para uso em outros módulos
+            window.canViewMaterials = false;
+        </script>
+
+        <!-- Modal de Armazenagem Kingspan -->
+        <div class="armazenagem-modal-overlay">
+            <div class="armazenagem-modal">
+                <div class="armazenagem-modal-header">
+                    <h3>
+                        <i class="mdi mdi-information-outline"></i>
+                        Informações do Processo
+                    </h3>
+                    <button class="armazenagem-modal-close">
+                        <i class="mdi mdi-close"></i>
+                    </button>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="armazenagem-tabs">
+                    <button class="armazenagem-tab active" data-tab="produtos">
+                        <i class="mdi mdi-package-variant"></i>
+                        Produtos
+                    </button>
+                    <button class="armazenagem-tab" data-tab="armazenagem">
+                        <i class="mdi mdi-warehouse"></i>
+                        Armazenagem Kingspan
+                    </button>
+                </div>
+
+                <div class="armazenagem-modal-body">
+                    <!-- Info Box -->
+                    <div class="armazenagem-info-box">
+                        <h4>Processo: <span class="ref-unique" id="armazenagem-ref-unique">-</span></h4>
+                        <p id="armazenagem-process-info">Carregando informações...</p>
+                    </div>
+
+                    <!-- Loading -->
+                    <div class="armazenagem-loading">
+                        <div class="armazenagem-spinner"></div>
+                        <p style="margin-top: 12px; color: #666;">Carregando dados...</p>
+                    </div>
+
+                    <!-- Mensagens -->
+                    <div class="armazenagem-error-message">
+                        <i class="mdi mdi-alert-circle"></i>
+                        <span></span>
+                    </div>
+
+                    <div class="armazenagem-success-message">
+                        <i class="mdi mdi-check-circle"></i>
+                        <span></span>
+                    </div>
+
+                    <!-- TAB: Produtos -->
+                    <div class="armazenagem-tab-content active" id="tab-produtos">
+                        <div class="produtos-container">
+                            <h4 style="margin: 0 0 1rem 0; color: #111827; font-size: 1rem; font-weight: 600;">
+                                <i class="mdi mdi-package-variant"></i> Produtos do Processo
+                            </h4>
+                            <div class="produtos-empty" style="display: none;">
+                                <i class="mdi mdi-package-variant-closed" style="font-size: 3rem; color: #d1d5db;"></i>
+                                <p style="color: #6b7280; margin-top: 1rem;">Nenhum produto cadastrado neste processo.
+                                </p>
+                            </div>
+                            <div class="produtos-table-wrapper">
+                                <!-- Tabela será renderizada pelo JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Armazenagem -->
+                    <div class="armazenagem-tab-content" id="tab-armazenagem">
+                        <!-- Formulário -->
+                        <form id="armazenagem-form">
+                            <!-- Seção de Datas -->
+                            <h4
+                                style="margin: 0 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                                <i class="mdi mdi-calendar-range"></i> Datas de Controle
+                            </h4>
+
+                            <div class="armazenagem-form-group">
+                                <label for="armazenagem-data-desova">
+                                    <i class="mdi mdi-calendar-check"></i>
+                                    Data de Desova
+                                    <span class="armazenagem-tooltip"
+                                        data-tooltip="Data em que o container foi desovado/esvaziado">
+                                        <i class="mdi mdi-information-outline"></i>
+                                    </span>
+                                </label>
+                                <input type="text" id="armazenagem-data-desova" class="armazenagem-date-input"
+                                    placeholder="DD/MM/AAAA" maxlength="10">
+                                <small>Formato: DD/MM/AAAA</small>
+                            </div>
+
+                            <div class="armazenagem-form-row">
+                                <div class="armazenagem-form-group">
+                                    <label for="armazenagem-limite-primeiro">
+                                        <i class="mdi mdi-calendar-alert"></i>
+                                        Limite 1º Período
+                                    </label>
+                                    <input type="text" id="armazenagem-limite-primeiro" class="armazenagem-date-input"
+                                        placeholder="DD/MM/AAAA" maxlength="10">
+                                    <small>Primeiro prazo limite</small>
+                                </div>
+
+                                <div class="armazenagem-form-group">
+                                    <label for="armazenagem-limite-segundo">
+                                        <i class="mdi mdi-calendar-alert"></i>
+                                        Limite 2º Período
+                                    </label>
+                                    <input type="text" id="armazenagem-limite-segundo" class="armazenagem-date-input"
+                                        placeholder="DD/MM/AAAA" maxlength="10">
+                                    <small>Segundo prazo limite</small>
+                                </div>
+                            </div>
+
+                            <!-- Seção de Valores -->
+                            <h4
+                                style="margin: 24px 0 16px 0; color: #333; font-size: 16px; font-weight: 600; border-bottom: 2px solid #667eea; padding-bottom: 8px;">
+                                <i class="mdi mdi-cash-multiple"></i> Valores e Períodos Extras
+                            </h4>
+
+                            <div class="armazenagem-form-row">
+                                <div class="armazenagem-form-group">
+                                    <label for="armazenagem-dias-extras">
+                                        <i class="mdi mdi-calendar-plus"></i>
+                                        Dias Extras de Armazenagem
+                                    </label>
+                                    <input type="number" id="armazenagem-dias-extras" placeholder="0" min="0" step="1">
+                                    <small>Quantidade de dias adicionais</small>
+                                </div>
+
+                                <div class="armazenagem-form-group">
+                                    <label for="armazenagem-valor-despesas">
+                                        <i class="mdi mdi-currency-usd"></i>
+                                        Valor Despesas Extras (R$)
+                                    </label>
+                                    <input type="number" id="armazenagem-valor-despesas" placeholder="0.00" min="0"
+                                        step="0.01">
+                                    <small>Valor em reais (ex: 1500.50)</small>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="armazenagem-modal-footer">
+                    <div>
+                        <button type="button" id="armazenagem-btn-delete" class="armazenagem-btn armazenagem-btn-danger"
+                            style="display: none;">
+                            <i class="mdi mdi-delete"></i>
+                            Deletar Dados
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" id="armazenagem-btn-cancel"
+                            class="armazenagem-btn armazenagem-btn-secondary">
+                            <i class="mdi mdi-close"></i>
+                            Cancelar
+                        </button>
+                        <button type="button" id="armazenagem-btn-save" class="armazenagem-btn armazenagem-btn-primary">
+                            <i class="mdi mdi-content-save"></i>
+                            Salvar Dados
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% endblock %}
