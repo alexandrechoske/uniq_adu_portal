@@ -39,6 +39,13 @@
     {% else %}
     <div class="dashboard-container dashboard-loading" id="dashboard-container">
         {% endif %}
+
+        <!-- OTIMIZAÇÃO: Desabilitar refresh global (30MB) neste dashboard pois usamos carregamento sob demanda -->
+        <script>
+            console.log('[DASHBOARD_EXECUTIVO] 🚀 Otimização: Desabilitando refresh global de dados (30MB)');
+            window.DISABLE_GLOBAL_REFRESH = true;
+        </script>
+
         <div id="dashboard-skeleton" class="dashboard-skeleton" aria-hidden="false">
             <div class="skeleton-section skeleton-kpi-grid">
                 {% for _ in range(9) %}

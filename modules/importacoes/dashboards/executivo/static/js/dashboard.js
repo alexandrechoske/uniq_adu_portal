@@ -1613,27 +1613,154 @@ async function loadInitialData() {
 
 /**
  * Load initial data with intelligent caching and retry mechanism
+ * OTIMIZAÇÃO: Usar /api/bootstrap para uma única requisição HTTP
  */
 async function loadInitialDataWithCache() {
     setDashboardLoadingState(true);
+    const startTime = performance.now();
+
     try {
-        console.log('[DASHBOARD_EXECUTIVO] Iniciando carregamento com cache...');
+        console.log('[DASHBOARD_EXECUTIVO] 🚀 Iniciando carregamento OTIMIZADO com bootstrap...');
 
-        // Carregar dados base com retry
+        // OTIMIZAÇÃO: Tentar usar bootstrap primeiro (uma única chamada)
+        const bootstrapSuccess = await loadWithBootstrap();
+
+        if (bootstrapSuccess) {
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+            console.log(`[DASHBOARD_EXECUTIVO] ✅ Bootstrap concluído em ${elapsed}s`);
+
+            // Carregar dados completos para operações em background (para modal)
+            loadFullOperationsInBackground();
+            return;
+        }
+
+        // FALLBACK: Se bootstrap falhar, usar método tradicional
+        console.log('[DASHBOARD_EXECUTIVO] ⚠️ Bootstrap falhou, usando fallback tradicional...');
         dashboardData = await loadDataWithRetry();
-
-        // Carregar componentes com retry automático
         await loadComponentsWithRetry();
 
     } catch (error) {
         console.error('[DASHBOARD_EXECUTIVO] Erro fatal ao carregar dados:', error);
-
-        // Tentar recuperação usando cache como último recurso
         await attemptCacheRecovery();
     } finally {
         setDashboardLoadingState(false);
+        const totalElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+        console.log(`[DASHBOARD_EXECUTIVO] 📊 Tempo total de carregamento: ${totalElapsed}s`);
     }
 }
+
+/**
+ * NOVA FUNÇÃO: Carregar tudo em uma única requisição usando /api/bootstrap
+ * Reduz ~5 chamadas HTTP para apenas 1
+ */
+async function loadWithBootstrap() {
+    try {
+        const queryString = buildFilterQueryString();
+        console.log('[DASHBOARD_EXECUTIVO] Chamando /api/bootstrap...');
+
+        const response = await fetch(`/dashboard-executivo/api/bootstrap?${queryString}`);
+        const result = await response.json();
+
+        if (!result.success) {
+            console.warn('[DASHBOARD_EXECUTIVO] Bootstrap retornou erro:', result.error);
+
+            // Verificar se é erro de empresas vinculadas
+            if (result.error === 'no_companies' && result.show_warning) {
+                showWarningMessage(result.message);
+            }
+
+            return false;
+        }
+
+        if (result.debug_columns) {
+            console.log('✅ [BACKEND COLUMNS]:', result.debug_columns);
+            // Check for status columns
+            const hasStatus = result.debug_columns.some(c => c.toLowerCase().includes('status'));
+            const hasCountry = result.debug_columns.some(c => c.toLowerCase().includes('pais'));
+            console.log('Has Status column?', hasStatus);
+            console.log('Has Country column?', hasCountry);
+        }
+
+        console.log(`[DASHBOARD_EXECUTIVO] Bootstrap: ${result.total_filtered || result.total_records} registros`);
+
+        // Armazenar dados base
+        dashboardData = result.data || [];
+
+        // Processar KPIs
+        if (result.kpis) {
+            console.log('[DASHBOARD_EXECUTIVO] Atualizando KPIs do bootstrap...');
+            dashboardCache.set('kpis', result.kpis);
+            updateDashboardKPIs(result.kpis);
+        }
+
+        // Processar Gráficos
+        if (result.charts) {
+            console.log('[DASHBOARD_EXECUTIVO] Atualizando gráficos do bootstrap...');
+            dashboardCache.set('charts', result.charts);
+            createDashboardChartsWithValidation(result.charts);
+
+            // Processar países de procedência se existir
+            if (result.charts.paises_procedencia) {
+                renderPaisesProcedenciaTable(result.charts.paises_procedencia);
+            }
+        }
+
+        // Processar Operações (preview inicial - dados completos carregados depois)
+        if (result.operations && result.operations.length > 0) {
+            console.log(`[DASHBOARD_EXECUTIVO] Atualizando tabela com ${result.operations.length} operações (preview)...`);
+            window.currentOperations = result.operations;
+            window.currentOperationsAll = result.operations;
+
+            if (recentOperationsTable && typeof recentOperationsTable.setData === 'function') {
+                recentOperationsTable.setData(result.operations);
+            }
+        }
+
+        // Processar Opções de Filtro
+        if (result.filter_options) {
+            console.log('[DASHBOARD_EXECUTIVO] Atualizando opções de filtro...');
+            populateFilterOptions(result.filter_options);
+        }
+
+        return true;
+
+    } catch (error) {
+        console.error('[DASHBOARD_EXECUTIVO] Erro no bootstrap:', error);
+        return false;
+    }
+}
+
+/**
+ * Carregar dados completos de operações em background (para modal popup)
+ * Executado após o bootstrap para ter todos os campos disponíveis
+ */
+async function loadFullOperationsInBackground() {
+    try {
+        console.log('[DASHBOARD_EXECUTIVO] 🔄 Carregando dados completos de operações em background...');
+
+        const queryString = buildFilterQueryString();
+        const response = await fetch(`/dashboard-executivo/api/recent-operations?${queryString}`);
+        const result = await response.json();
+
+        if (result.success && result.operations) {
+            console.log(`[DASHBOARD_EXECUTIVO] ✅ Dados completos carregados: ${result.operations.length} operações`);
+
+            // Atualizar arrays globais com dados completos (para modal)
+            window.currentOperations = result.operations;
+            window.currentOperationsAll = result.operations_all || result.operations;
+
+            // Atualizar tabela com dados completos
+            if (recentOperationsTable && typeof recentOperationsTable.setData === 'function') {
+                recentOperationsTable.setData(result.operations);
+            }
+        }
+
+    } catch (error) {
+        console.warn('[DASHBOARD_EXECUTIVO] Erro ao carregar operações completas em background:', error);
+        // Não propagar erro pois dados do bootstrap ainda funcionam para a tabela
+    }
+}
+
 
 /**
  * Load data with automatic retry mechanism
@@ -3189,17 +3316,17 @@ function processExpensesByCategory(despesasProcesso) {
         const categorias = {};
         let total = 0;
 
-        console.log('[DASHBOARD_EXECUTIVO] Processando', despesasProcesso.length, 'despesas...');
+        // console.log('[DASHBOARD_EXECUTIVO] Processando', despesasProcesso.length, 'despesas...');
 
         despesasProcesso.forEach((despesa, index) => {
-            console.log(`[DASHBOARD_EXECUTIVO] Despesa ${index + 1}:`, despesa);
+            // console.log(`[DASHBOARD_EXECUTIVO] Despesa ${index + 1}:`, despesa);
 
             // Categoria exatamente como vem do banco
             const categoria = despesa.categoria_custo || 'Outros Custos';
             const valorStr = despesa.valor_custo;
             const valor = parseFloat(valorStr) || 0;
 
-            console.log(`[DASHBOARD_EXECUTIVO] Processando: categoria="${categoria}", valorStr="${valorStr}", valor=${valor}`);
+            // console.log(`[DASHBOARD_EXECUTIVO] Processando: categoria="${categoria}", valorStr="${valorStr}", valor=${valor}`);
 
             // Acumular valor na categoria
             if (!categorias[categoria]) {
@@ -3209,13 +3336,13 @@ function processExpensesByCategory(despesasProcesso) {
             categorias[categoria] += valor;
             total += valor;
 
-            console.log(`[DASHBOARD_EXECUTIVO] Categoria "${categoria}" agora tem: R$ ${categorias[categoria].toFixed(2)}`);
-            console.log(`[DASHBOARD_EXECUTIVO] Total acumulado: R$ ${total.toFixed(2)}`);
+            // console.log(`[DASHBOARD_EXECUTIVO] Categoria "${categoria}" agora tem: R$ ${categorias[categoria].toFixed(2)}`);
+            // console.log(`[DASHBOARD_EXECUTIVO] Total acumulado: R$ ${total.toFixed(2)}`);
         });
 
-        console.log('[DASHBOARD_EXECUTIVO] Resultado final - categorias:', categorias);
-        console.log('[DASHBOARD_EXECUTIVO] Resultado final - total:', total);
-        console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory (DINÂMICO) ===');
+        // console.log('[DASHBOARD_EXECUTIVO] Resultado final - categorias:', categorias);
+        // console.log('[DASHBOARD_EXECUTIVO] Resultado final - total:', total);
+        // console.log('[DASHBOARD_EXECUTIVO] === FIM processExpensesByCategory (DINÂMICO) ===');
 
         // Retornar categorias exatamente como foram calculadas (sem ajustes)
         return {
@@ -3869,11 +3996,11 @@ function formatDate(dateString) {
 function getStatusBadge(status) {
     if (!status) return '<span class="badge badge-secondary">-</span>';
 
-    console.log('[STATUS_BADGE_DEBUG] Status recebido:', status);
+    // console.log('[STATUS_BADGE_DEBUG] Status recebido:', status);
 
     // NOVO: Ignorar "N/A" - retornar badge vazio
     if (typeof status === 'string' && status.trim().toUpperCase() === 'N/A') {
-        console.log('[STATUS_BADGE_DEBUG] Status é N/A - retornando badge vazio');
+        // console.log('[STATUS_BADGE_DEBUG] Status é N/A - retornando badge vazio');
         return '<span class="badge badge-secondary">N/A</span>';
     }
 
@@ -3881,12 +4008,12 @@ function getStatusBadge(status) {
     let displayStatus = status;
     if (typeof status === 'string' && status.includes(' - ')) {
         displayStatus = status.split(' - ')[1].trim();
-        console.log('[STATUS_BADGE_DEBUG] Status extraído:', displayStatus);
+        // console.log('[STATUS_BADGE_DEBUG] Status extraído:', displayStatus);
     }
 
     // CORREÇÃO: Pegada monocromática - todos os status usam cinza claro
     // Removido mapeamento de cores diferentes para manter design minimalista
-    console.log('[STATUS_BADGE_DEBUG] Aplicando estilo monocromático para:', displayStatus);
+    // console.log('[STATUS_BADGE_DEBUG] Aplicando estilo monocromático para:', displayStatus);
 
     return `<span class="badge badge-light-monochrome">${displayStatus}</span>`;
 }

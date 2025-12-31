@@ -2095,6 +2095,10 @@ def bootstrap_dashboard():
 
         # Charts completos (mensal, status, modal, urf, material, principais_materiais)
         charts = {}
+        # Debug: Verificar colunas disponíveis para diagnóstico de charts vazios
+        if not df.empty:
+            print(f"[DEBUG_BOOTSTRAP] Colunas disponíveis no DF: {df.columns.tolist()}")
+
         if 'data_abertura' in df.columns:
             df['data_abertura_dt'] = pd.to_datetime(df['data_abertura'], format='%d/%m/%Y', errors='coerce')
             dfm = df.dropna(subset=['data_abertura_dt']).copy()
@@ -2113,14 +2117,77 @@ def bootstrap_dashboard():
                 print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: status_macro_sistema')
                 status_counts = df['status_macro_sistema'].fillna('Sem Info').value_counts().head(10)
                 charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+            elif 'status_sistema' in df.columns: # Fallback prioritário (baseado no dashboard.js)
+                print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: status_sistema')
+                status_counts = df['status_sistema'].fillna('Sem Info').value_counts().head(10)
+                charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
             elif 'status_processo' in df.columns:
                 print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: status_processo (fallback)')
                 status_counts = df['status_processo'].fillna('Sem Info').value_counts().head(10)
+                charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+            elif 'Status' in df.columns: # Fallback extra
+                print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: Status (fallback extra)')
+                status_counts = df['Status'].fillna('Sem Info').value_counts().head(10)
+                charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
+            elif 'fase_atual' in df.columns: # Outro possível nome
+                print('[DEBUG_BOOTSTRAP] Usando coluna para Status Chart: fase_atual (fallback extra)')
+                status_counts = df['fase_atual'].fillna('Sem Info').value_counts().head(10)
                 charts['status'] = {'labels': status_counts.index.tolist(),'data': status_counts.values.tolist()}
             else:
                 print('[DEBUG_BOOTSTRAP] Nenhuma coluna de status encontrada para o Status Chart')
         except Exception as e:
             print(f"[DEBUG_BOOTSTRAP] Erro ao montar Status Chart: {e}")
+        # Países de Procedência (Adicionado para corrigir chart faltante)
+        # Países de Procedência (Adicionado para corrigir chart faltante)
+        if 'pais_procedencia' in df.columns:
+             g_pais = df.groupby('pais_procedencia').agg({'ref_unique':'count', 'custo_calculado':'sum'}).reset_index()
+             g_pais = g_pais.sort_values('ref_unique', ascending=False).head(10)
+             
+             # Map básico de bandeiras
+             flag_map = {
+                 'CHINA': 'cn', 'CHINA, REPUBLICA POPULAR': 'cn',
+                 'ITALIA': 'it', 'ALEMANHA': 'de', 'ESTADOS UNIDOS': 'us',
+                 'JAPAO': 'jp', 'PAISES BAIXOS': 'nl', 'HOLANDA': 'nl', 'PAISES BAIXOS (HOLANDA)': 'nl',
+                 'FRANCA': 'fr', 'HONG KONG': 'hk', 'ESPANHA': 'es', 'REINO UNIDO': 'gb',
+                 'BRASIL': 'br', 'ARGENTINA': 'ar', 'INDIA': 'in', 'COREIA DO SUL': 'kr',
+                 'BANGLADESH': 'bd', 'TAIWAN': 'tw', 'VIETNA': 'vn', 'BELGICA': 'be',
+                 'COLOMBIA': 'co', 'CHILE': 'cl', 'MEXICO': 'mx', 'PORTUGAL': 'pt'
+             }
+             
+             paises_data = []
+             for _, row in g_pais.iterrows():
+                 name = row['pais_procedencia']
+                 # Tentar extrair código se formato for "123 - US - PAIS"
+                 code = None
+                 if isinstance(name, str):
+                     parts = name.split('-')
+                     if len(parts) >= 3 and len(parts[1].strip()) == 2:
+                         code = parts[1].strip().lower()
+                     else:
+                         clean_name = name.split('(')[0].strip().upper()
+                         code = flag_map.get(clean_name)
+                 
+                 url = f"https://flagcdn.com/w40/{code}.png" if code else None
+                 
+                 paises_data.append({
+                     'pais_procedencia': name, 
+                     'total_processos': int(row['ref_unique']), 
+                     'total_custo': float(row['custo_calculado']),
+                     'url_bandeira': url 
+                 })
+             charts['paises_procedencia'] = paises_data
+        elif 'pais_origem' in df.columns:
+             g_pais = df.groupby('pais_origem').agg({'ref_unique':'count', 'custo_calculado':'sum'}).reset_index()
+             g_pais = g_pais.sort_values('ref_unique', ascending=False).head(10)
+             charts['paises_procedencia'] = [
+                 {
+                     'pais_procedencia': row['pais_origem'], 
+                     'total_processos': int(row['ref_unique']), 
+                     'total_custo': float(row['custo_calculado']),
+                     'url_bandeira': None 
+                 } for _, row in g_pais.iterrows()
+             ]
+
         if 'modal' in df.columns:
             gm = df.groupby('modal').agg({'ref_unique':'count','custo_calculado':'sum'}).reset_index()
             charts['grouped_modal'] = {
@@ -2226,6 +2293,7 @@ def bootstrap_dashboard():
         applied_filters = {k: v for k, v in request.args.items()}
         payload = {
             'success': True,
+            'debug_columns': df.columns.tolist() if not df.empty else [], # DEBUG: Enviar colunas para o frontend
             'data': filtered,                 # dados já filtrados (para tabela/gráficos imediatos)
             'total_records': len(base_data),  # total bruto antes de filtro
             'total_filtered': len(filtered),
