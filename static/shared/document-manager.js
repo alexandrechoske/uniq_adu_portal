@@ -101,6 +101,11 @@ class DocumentManager {
 
             // Check if response is ok
             if (!response.ok) {
+                if (response.status === 401) {
+                    console.warn('[DOCUMENT_MANAGER] Sessão expirada (401)');
+                    // Deixar o SessionHandler lidar com o redirecionamento
+                    throw new Error('Sessão expirada');
+                }
                 console.error('[DOCUMENT_MANAGER] Erro HTTP:', response.status, response.statusText);
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -116,8 +121,14 @@ class DocumentManager {
                 this.showError('Erro ao carregar documentos: ' + result.error);
             }
         } catch (error) {
-            console.error('[DOCUMENT_MANAGER] Erro de rede:', error);
-            this.showError('Erro de conexão ao carregar documentos');
+            console.error('[DOCUMENT_MANAGER] Erro na requisição:', error);
+
+            if (error.message === 'Sessão expirada') {
+                // Não mostrar erro de conexão, apenas aguardar redirecionamento
+                this.showError('Sessão expirada. Redirecionando...');
+            } else {
+                this.showError('Erro de conexão ao carregar documentos');
+            }
         }
     }
 

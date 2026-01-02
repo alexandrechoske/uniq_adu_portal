@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <defs>
+        <!-- Sky Gradient -->
+        <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#4FC3F7" />
+            <stop offset="100%" stop-color="#0288D1" />
+        </linearGradient>
+
+        <!-- Fuselage Gradient -->
+        <linearGradient id="fuselageGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FFD54F" />
+            <stop offset="50%" stop-color="#FFC107" />
+            <stop offset="100%" stop-color="#FFA000" />
+        </linearGradient>
+
+        <!-- Wing Gradient -->
+        <linearGradient id="wingGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ECEFF1" />
+            <stop offset="100%" stop-color="#B0BEC5" />
+        </linearGradient>
+
+        <!-- Engine Gradient -->
+        <linearGradient id="engineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#78909C" />
+            <stop offset="100%" stop-color="#455A64" />
+        </linearGradient>
+
+        <!-- Motion Blur Filter -->
+        <filter id="blurFilter">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2,0" />
+        </filter>
+    </defs>
+
+    <!-- Background Sky -->
+    <rect width="512" height="512" fill="url(#skyGradient)">
+        <animate attributeName="y" from="0" to="-10" dur="6s" repeatCount="indefinite" values="0;-10;0" />
+    </rect>
+
+    <!-- Background Clouds -->
+    <g fill="#FFFFFF" opacity="0.35">
+        <circle cx="100" cy="400" r="60">
+            <animate attributeName="cx" dur="18s" repeatCount="indefinite" values="100;540;-40;100" />
+        </circle>
+        <circle cx="180" cy="420" r="50">
+            <animate attributeName="cx" dur="22s" repeatCount="indefinite" values="180;550;-60;180" />
+        </circle>
+        <circle cx="400" cy="100" r="40">
+            <animate attributeName="cx" dur="25s" repeatCount="indefinite" values="400;560;-80;400" />
+        </circle>
+        <circle cx="460" cy="120" r="50">
+            <animate attributeName="cx" dur="20s" repeatCount="indefinite" values="460;570;-70;460" />
+        </circle>
+        <path d="M0 400 H512 V512 H0 Z" opacity="0.2" />
+    </g>
+
+    <!-- Speed Lines (Behind) -->
+    <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.35">
+        <line x1="50" y1="200" x2="200" y2="200">
+            <animate attributeName="x1" dur="4s" repeatCount="indefinite" values="50;10;50" />
+            <animate attributeName="x2" dur="4s" repeatCount="indefinite" values="200;160;200" />
+        </line>
+        <line x1="20" y1="300" x2="150" y2="300">
+            <animate attributeName="x1" dur="3.5s" repeatCount="indefinite" values="20;-10;20" />
+            <animate attributeName="x2" dur="3.5s" repeatCount="indefinite" values="150;120;150" />
+        </line>
+    </g>
+
+    <!-- The Airplane Group -->
+    <g transform="translate(0, -20)">
+
+        <animateTransform attributeName="transform" type="translate" dur="5.5s" repeatCount="indefinite" values="0,-20;12,-30;-8,-15;0,-20" />
+
+        <!-- Far Wing (Left Wing) -->
+        <path d="M260 260 L340 230 L360 235 L290 270 Z" fill="#FFA000" />
+
+        <!-- Tail Fin (Vertical Stabilizer) -->
+        <path d="M380 250 L430 160 L470 160 L450 260 Z" fill="url(#fuselageGradient)" stroke="#FFA000"
+            stroke-width="1" />
+        <!-- Tail Logo (Box) -->
+        <rect x="425" y="190" width="20" height="20" rx="2" fill="#D32F2F" transform="skewX(-10)" />
+        <path d="M425 200 H445 M435 190 V210" stroke="#B71C1C" stroke-width="2"
+            transform="skewX(-10) translate(425,190)" />
+
+        <!-- Fuselage (Body) -->
+        <path d="M100 280 
+             C 100 250, 130 230, 180 230 
+             L 400 230 
+             C 450 230, 480 250, 490 260 
+             L 470 280 
+             C 450 295, 200 300, 180 300 
+             C 130 300, 100 295, 100 280 Z" fill="url(#fuselageGradient)" />
+
+        <!-- Red Stripe Branding -->
+        <path d="M160 260 L460 260 L455 270 L165 270 Z" fill="#D32F2F" opacity="0.9" />
+
+        <!-- Cockpit Windows -->
+        <path d="M110 260 
+             C 110 250, 125 240, 140 240 
+             L 160 240 
+             L 160 255 
+             L 115 265 Z" fill="#37474F" />
+        <path d="M120 245 L135 245 L135 255 L122 258 Z" fill="#546E7A" />
+
+        <!-- Engine (Turbine) -->
+        <g transform="translate(240, 290)">
+            <rect x="0" y="0" width="60" height="25" rx="10" ry="10" fill="url(#engineGradient)" />
+            <path d="M5 5 L55 5" stroke="#90A4AE" stroke-width="2" opacity="0.5" />
+            <ellipse cx="60" cy="12.5" rx="5" ry="12" fill="#37474F" />
+            <animateTransform attributeName="transform" type="translate" dur="0.8s" repeatCount="indefinite" values="240,290;242,292;240,290" additive="sum" />
+        </g>
+
+        <!-- Near Wing (Right Wing) -->
+           <path d="M220 270 
+               L 360 270 
+               L 390 330 
+               L 350 330 
+               L 220 270 Z" fill="url(#wingGradient)">
+              <animate attributeName="opacity" dur="2s" repeatCount="indefinite" values="1;0.85;1" />
+           </path>
+        <path d="M220 270 L350 330" stroke="#90A4AE" stroke-width="1" opacity="0.5" />
+
+        <!-- Cargo Door Outline -->
+        <rect x="320" y="240" width="40" height="30" rx="2" fill="none" stroke="#E65100" stroke-width="1"
+            opacity="0.5" />
+
+    </g>
+
+    <!-- Foreground Clouds -->
+    <g fill="#FFFFFF" opacity="0.8">
+        <path d="M50 450 Q 80 400 110 450 T 170 450 T 230 450 V 520 H 50 Z">
+            <animateTransform attributeName="transform" type="translate" dur="7s" repeatCount="indefinite" values="0,0;-20,0;0,0" />
+        </path>
+        <path d="M300 480 Q 330 440 360 480 T 420 480 T 480 480 V 520 H 300 Z">
+            <animateTransform attributeName="transform" type="translate" dur="6s" repeatCount="indefinite" values="0,0;-15,0;0,0" />
+        </path>
+    </g>
+
+    <!-- Speed Lines (Front) -->
+    <g stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.6">
+        <line x1="450" y1="220" x2="500" y2="220">
+            <animate attributeName="x1" dur="1.8s" repeatCount="indefinite" values="450;430;450" />
+            <animate attributeName="x2" dur="1.8s" repeatCount="indefinite" values="500;470;500" />
+        </line>
+        <line x1="480" y1="240" x2="510" y2="240">
+            <animate attributeName="x1" dur="2s" repeatCount="indefinite" values="480;460;480" />
+            <animate attributeName="x2" dur="2s" repeatCount="indefinite" values="510;480;510" />
+        </line>
+        <line x1="400" y1="150" x2="480" y2="150" opacity="0.4">
+            <animate attributeName="x1" dur="2.5s" repeatCount="indefinite" values="400;350;400" />
+            <animate attributeName="x2" dur="2.5s" repeatCount="indefinite" values="480;430;480" />
+        </line>
+    </g>
+
+</svg>

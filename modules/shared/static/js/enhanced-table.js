@@ -232,21 +232,21 @@ class EnhancedDataTable {
     }
 
     setData(data) {
-        console.log('[ENHANCED_TABLE] setData called with', data?.length || 0, 'items');
+        // console.log('[ENHANCED_TABLE] setData called with', data?.length || 0, 'items');
         this.data = data || [];
         this.filteredData = [...this.data];
         this.currentPage = 1;
 
         // Apply initial sorting if configured and not already set
         if (this.config.sortField && this.sortColumn === null) {
-            console.log('[ENHANCED_TABLE] Applying initial sort configuration');
+            // console.log('[ENHANCED_TABLE] Applying initial sort configuration');
             this.setupInitialSorting();
         }
 
         this.sortData();
-        console.log('[ENHANCED_TABLE] Calling render with', this.filteredData.length, 'filtered items');
+        // console.log('[ENHANCED_TABLE] Calling render with', this.filteredData.length, 'filtered items');
         this.render();
-        console.log('[ENHANCED_TABLE] Render completed');
+        // console.log('[ENHANCED_TABLE] Render completed');
     }
 
     handleSearch(query) {
@@ -261,7 +261,7 @@ class EnhancedDataTable {
             });
         }
 
-        console.log(`[ENHANCED_TABLE] Busca "${query}" encontrou ${this.filteredData.length} de ${this.data.length} registros`);
+        // console.log(`[ENHANCED_TABLE] Busca "${query}" encontrou ${this.filteredData.length} de ${this.data.length} registros`);
         this.render();
     }
 
@@ -516,7 +516,7 @@ class EnhancedDataTable {
     }
 
     renderTable() {
-        console.log('[ENHANCED_TABLE] renderTable called');
+        // console.log('[ENHANCED_TABLE] renderTable called');
         const tbody = this.table.querySelector('tbody');
         if (!tbody) {
             console.error('[ENHANCED_TABLE] tbody not found in table');
@@ -524,29 +524,29 @@ class EnhancedDataTable {
         }
 
         tbody.innerHTML = '';
-        console.log('[ENHANCED_TABLE] tbody cleared');
+        // console.log('[ENHANCED_TABLE] tbody cleared');
 
         const startIndex = (this.currentPage - 1) * this.config.itemsPerPage;
         const endIndex = startIndex + this.config.itemsPerPage;
         const pageData = this.filteredData.slice(startIndex, endIndex);
-        console.log('[ENHANCED_TABLE] Page data:', pageData.length, 'items for page', this.currentPage);
+        // console.log('[ENHANCED_TABLE] Page data:', pageData.length, 'items for page', this.currentPage);
 
         if (pageData.length === 0) {
-            console.log('[ENHANCED_TABLE] No data to display, rendering empty state');
+            // console.log('[ENHANCED_TABLE] No data to display, rendering empty state');
             this.renderEmptyState();
             return;
         }
 
-        console.log('[ENHANCED_TABLE] Rendering', pageData.length, 'rows');
+        // console.log('[ENHANCED_TABLE] Rendering', pageData.length, 'rows');
         pageData.forEach((row, index) => {
             const tr = document.createElement('tr');
             const absoluteIndex = startIndex + index; // Calculate absolute index in the full array
             const rowHtml = this.renderRow(row, absoluteIndex);
-            console.log(`[ENHANCED_TABLE] Row ${index} HTML:`, rowHtml.substring(0, 100) + '...');
+            // console.log(`[ENHANCED_TABLE] Row ${index} HTML:`, rowHtml.substring(0, 100) + '...');
             tr.innerHTML = rowHtml;
             tbody.appendChild(tr);
         });
-        console.log('[ENHANCED_TABLE] All rows appended to tbody');
+        // console.log('[ENHANCED_TABLE] All rows appended to tbody');
     }
 
     renderRow(row) {

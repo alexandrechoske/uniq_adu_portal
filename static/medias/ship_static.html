@@ -1,0 +1,232 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <!-- Sky Gradient -->
+    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0F7FA;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Water Gradients -->
+    <linearGradient id="waterDeep" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#01579B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#002f6c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waterSurface" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0288D1;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#01579B;stop-opacity:0.9" />
+    </linearGradient>
+
+    <!-- Hull Gradient -->
+    <linearGradient id="hullGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#B71C1C;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#D32F2F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B71C1C;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Container Gradients -->
+    <linearGradient id="contRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EF5350" />
+      <stop offset="100%" style="stop-color:#C62828" />
+    </linearGradient>
+    <linearGradient id="contBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#42A5F5" />
+      <stop offset="100%" style="stop-color:#1565C0" />
+    </linearGradient>
+    <linearGradient id="contGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#66BB6A" />
+      <stop offset="100%" style="stop-color:#2E7D32" />
+    </linearGradient>
+    <linearGradient id="contYellow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFEE58" />
+      <stop offset="100%" style="stop-color:#F9A825" />
+    </linearGradient>
+    <linearGradient id="contOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFA726" />
+      <stop offset="100%" style="stop-color:#EF6C00" />
+    </linearGradient>
+
+    <!-- Cloud Filter -->
+    <filter id="cloudShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background: Sky -->
+  <rect x="0" y="0" width="800" height="450" fill="url(#skyGradient)" />
+
+  <!-- Sun -->
+    <circle cx="700" cy="80" r="40" fill="#FFEB3B" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;1;0.9" dur="4s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="80;75;80" dur="6s" repeatCount="indefinite" />
+    </circle>
+
+  <!-- Clouds -->
+  <g filter="url(#cloudShadow)" fill="#FFFFFF" opacity="0.8">
+    <path d="M100,100 Q115,80 140,90 T180,100 T220,90 Q240,110 220,130 T160,135 T100,130 Q80,115 100,100 Z">
+        <animateTransform attributeName="transform" type="translate" dur="18s" repeatCount="indefinite" values="0,0;80,0;0,0" />
+    </path>
+    <path d="M400,60 Q415,40 440,50 T480,60 T520,50 Q540,70 520,90 T460,95 T400,90 Q380,75 400,60 Z">
+        <animateTransform attributeName="transform" type="translate" dur="20s" repeatCount="indefinite" values="0,0;-90,0;0,0" />
+    </path>
+    <path d="M600,150 Q615,130 640,140 T680,150 T720,140 Q740,160 720,180 T660,185 T600,180 Q580,165 600,150 Z">
+        <animateTransform attributeName="transform" type="translate" dur="22s" repeatCount="indefinite" values="0,0;70,0;0,0" />
+    </path>
+  </g>
+
+  <!-- Background Sea (Horizon) -->
+  <rect x="0" y="380" width="800" height="220" fill="url(#waterDeep)" />
+
+  <!-- Ship Group -->
+  <g transform="translate(0, 10)">
+    <animateTransform attributeName="transform" type="translate" dur="5.5s" repeatCount="indefinite" values="0,10;0,0;0,12;0,10" />
+    <!-- Ship Shadow on Water -->
+    <ellipse cx="400" cy="460" rx="320" ry="20" fill="#000000" opacity="0.3">
+      <animate attributeName="rx" dur="5s" repeatCount="indefinite" values="320;300;325;320" />
+    </ellipse>
+
+    <!-- Hull Main Body -->
+    <path d="M 80,380 L 140,460 L 680,460 L 720,380 Z" fill="url(#hullGradient)" />
+    <!-- Hull Top Trim -->
+    <path d="M 70,380 L 730,380 L 725,360 L 75,360 Z" fill="#263238" />
+    
+    <!-- Bridge / Superstructure -->
+    <g transform="translate(580, 240)">
+        <!-- Tower Base -->
+        <rect x="0" y="60" width="100" height="60" fill="#ECEFF1" />
+        <rect x="-10" y="100" width="120" height="20" fill="#CFD8DC" /> <!-- Deck overhang -->
+        
+        <!-- Tower Mid -->
+        <rect x="10" y="20" width="80" height="40" fill="#ECEFF1" />
+        <rect x="5" y="50" width="90" height="10" fill="#B0BEC5" /> <!-- Railing/Trim -->
+
+        <!-- Tower Top -->
+        <rect x="20" y="-10" width="60" height="30" fill="#ECEFF1" />
+        
+        <!-- Windows -->
+        <rect x="25" y="0" width="50" height="10" fill="#37474F" rx="2" />
+        <rect x="15" y="30" width="70" height="10" fill="#37474F" rx="2" />
+        
+        <!-- Radar/Antenna -->
+        <line x1="50" y1="-10" x2="50" y2="-40" stroke="#546E7A" stroke-width="3">
+          <animate attributeName="y2" dur="3s" repeatCount="indefinite" values="-40;-45;-40" />
+        </line>
+        <line x1="30" y1="-30" x2="70" y2="-30" stroke="#546E7A" stroke-width="2">
+          <animate attributeName="x1" dur="3.5s" repeatCount="indefinite" values="30;25;30" />
+          <animate attributeName="x2" dur="3.5s" repeatCount="indefinite" values="70;75;70" />
+        </line>
+        <circle cx="50" cy="-40" r="3" fill="#546E7A" />
+    </g>
+
+    <!-- Cargo Containers -->
+    <!-- Row 1 (Bottom) -->
+    <rect x="100" y="310" width="60" height="50" fill="url(#contRed)" stroke="#B71C1C" stroke-width="1">
+      <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;0.85;1" />
+    </rect>
+    <rect x="165" y="310" width="60" height="50" fill="url(#contBlue)" stroke="#0D47A1" stroke-width="1">
+      <animate attributeName="opacity" dur="7s" repeatCount="indefinite" values="1;0.82;1" />
+    </rect>
+    <rect x="230" y="310" width="60" height="50" fill="url(#contGreen)" stroke="#1B5E20" stroke-width="1">
+      <animate attributeName="opacity" dur="6.5s" repeatCount="indefinite" values="1;0.87;1" />
+    </rect>
+    <rect x="295" y="310" width="60" height="50" fill="url(#contYellow)" stroke="#F57F17" stroke-width="1">
+      <animate attributeName="opacity" dur="5.5s" repeatCount="indefinite" values="1;0.9;1" />
+    </rect>
+    <rect x="360" y="310" width="60" height="50" fill="url(#contOrange)" stroke="#E65100" stroke-width="1">
+      <animate attributeName="opacity" dur="8s" repeatCount="indefinite" values="1;0.84;1" />
+    </rect>
+    <rect x="425" y="310" width="60" height="50" fill="url(#contRed)" stroke="#B71C1C" stroke-width="1">
+      <animate attributeName="opacity" dur="6.5s" repeatCount="indefinite" values="1;0.86;1" />
+    </rect>
+    <rect x="490" y="310" width="60" height="50" fill="url(#contBlue)" stroke="#0D47A1" stroke-width="1">
+      <animate attributeName="opacity" dur="7.5s" repeatCount="indefinite" values="1;0.88;1" />
+    </rect>
+
+    <!-- Row 2 -->
+    <rect x="100" y="260" width="60" height="50" fill="url(#contBlue)" stroke="#0D47A1" stroke-width="1">
+      <animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;0.83;1" />
+    </rect>
+    <rect x="165" y="260" width="60" height="50" fill="url(#contOrange)" stroke="#E65100" stroke-width="1">
+      <animate attributeName="opacity" dur="5.8s" repeatCount="indefinite" values="1;0.86;1" />
+    </rect>
+    <rect x="230" y="260" width="60" height="50" fill="url(#contRed)" stroke="#B71C1C" stroke-width="1">
+      <animate attributeName="opacity" dur="6.4s" repeatCount="indefinite" values="1;0.88;1" />
+    </rect>
+    <rect x="295" y="260" width="60" height="50" fill="url(#contGreen)" stroke="#1B5E20" stroke-width="1">
+      <animate attributeName="opacity" dur="6.8s" repeatCount="indefinite" values="1;0.9;1" />
+    </rect>
+    <rect x="360" y="260" width="60" height="50" fill="url(#contYellow)" stroke="#F57F17" stroke-width="1">
+      <animate attributeName="opacity" dur="7.2s" repeatCount="indefinite" values="1;0.82;1" />
+    </rect>
+    <rect x="425" y="260" width="60" height="50" fill="url(#contBlue)" stroke="#0D47A1" stroke-width="1">
+      <animate attributeName="opacity" dur="5.9s" repeatCount="indefinite" values="1;0.85;1" />
+    </rect>
+    <rect x="490" y="260" width="60" height="50" fill="url(#contGreen)" stroke="#1B5E20" stroke-width="1">
+      <animate attributeName="opacity" dur="7.1s" repeatCount="indefinite" values="1;0.87;1" />
+    </rect>
+
+    <!-- Row 3 -->
+    <rect x="165" y="210" width="60" height="50" fill="url(#contYellow)" stroke="#F57F17" stroke-width="1">
+      <animate attributeName="opacity" dur="6.2s" repeatCount="indefinite" values="1;0.84;1" />
+    </rect>
+    <rect x="230" y="210" width="60" height="50" fill="url(#contBlue)" stroke="#0D47A1" stroke-width="1">
+      <animate attributeName="opacity" dur="7.4s" repeatCount="indefinite" values="1;0.9;1" />
+    </rect>
+    <rect x="295" y="210" width="60" height="50" fill="url(#contRed)" stroke="#B71C1C" stroke-width="1">
+      <animate attributeName="opacity" dur="5.7s" repeatCount="indefinite" values="1;0.85;1" />
+    </rect>
+    <rect x="360" y="210" width="60" height="50" fill="url(#contGreen)" stroke="#1B5E20" stroke-width="1">
+      <animate attributeName="opacity" dur="6.6s" repeatCount="indefinite" values="1;0.86;1" />
+    </rect>
+    <rect x="425" y="210" width="60" height="50" fill="url(#contOrange)" stroke="#E65100" stroke-width="1">
+      <animate attributeName="opacity" dur="7.3s" repeatCount="indefinite" values="1;0.88;1" />
+    </rect>
+
+    <!-- Crane / Mast Details -->
+    <rect x="560" y="280" width="10" height="80" fill="#455A64">
+      <animate attributeName="y" dur="4.5s" repeatCount="indefinite" values="280;270;280" />
+    </rect>
+    <line x1="565" y1="280" x2="540" y2="240" stroke="#455A64" stroke-width="3">
+      <animate attributeName="x2" dur="4.5s" repeatCount="indefinite" values="540;520;540" />
+    </line>
+    
+    <!-- Anchor -->
+    <circle cx="130" cy="410" r="6" fill="#37474F">
+      <animate attributeName="cy" dur="3.8s" repeatCount="indefinite" values="410;405;410" />
+    </circle>
+    <path d="M130,410 L130,430 M120,425 L140,425" stroke="#37474F" stroke-width="3" fill="none">
+      <animate attributeName="d" dur="3.8s" repeatCount="indefinite" values="M130,410 L130,430 M120,425 L140,425;M130,405 L130,425 M120,420 L140,420;M130,410 L130,430 M120,425 L140,425" />
+    </path>
+  </g>
+
+  <!-- Foreground Waves -->
+  <path d="M0,440 
+           Q 50,420 100,440 T 200,440 T 300,440 T 400,440 T 500,440 T 600,440 T 700,440 T 800,440 
+           V 600 H 0 Z" 
+        fill="url(#waterSurface)" opacity="0.8">
+        <animate attributeName="d" 
+                 values="M0,440 Q 50,420 100,440 T 200,440 T 300,440 T 400,440 T 500,440 T 600,440 T 700,440 T 800,440 V 600 H 0 Z;
+                         M0,440 Q 50,460 100,440 T 200,440 T 300,440 T 400,440 T 500,440 T 600,440 T 700,440 T 800,440 V 600 H 0 Z;
+                         M0,440 Q 50,420 100,440 T 200,440 T 300,440 T 400,440 T 500,440 T 600,440 T 700,440 T 800,440 V 600 H 0 Z" 
+                 dur="5s" repeatCount="indefinite" />
+  </path>
+  
+  <path d="M-50,460 
+           Q 0,480 50,460 T 150,460 T 250,460 T 350,460 T 450,460 T 550,460 T 650,460 T 750,460 T 850,460
+           V 600 H -50 Z" 
+        fill="#4FC3F7" opacity="0.4">
+        <animate attributeName="d" 
+                 values="M-50,460 Q 0,480 50,460 T 150,460 T 250,460 T 350,460 T 450,460 T 550,460 T 650,460 T 750,460 T 850,460 V 600 H -50 Z;
+                         M-50,460 Q 0,440 50,460 T 150,460 T 250,460 T 350,460 T 450,460 T 550,460 T 650,460 T 750,460 T 850,460 V 600 H -50 Z;
+                         M-50,460 Q 0,480 50,460 T 150,460 T 250,460 T 350,460 T 450,460 T 550,460 T 650,460 T 750,460 T 850,460 V 600 H -50 Z" 
+                 dur="4s" repeatCount="indefinite" />
+  </path>
+
+</svg>

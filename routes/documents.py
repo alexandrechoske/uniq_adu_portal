@@ -155,6 +155,16 @@ def get_process_documents(ref_unique):
         if result['success']:
             return jsonify(result)
         else:
+            # Verificar se é erro de token expirado
+            error_msg = str(result.get('error', ''))
+            if 'JWT expired' in error_msg or 'PGRST301' in error_msg:
+                print(f"[DOC DEBUG] Token expirado detectado: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': 'Sessão expirada. Por favor, faça login novamente.',
+                    'code': 'session_expired'
+                }), 401
+            
             return jsonify(result), 400
             
     except Exception as e:

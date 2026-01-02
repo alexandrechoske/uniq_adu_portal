@@ -279,6 +279,7 @@
       "data_abertura": "Opening Date",
       "exportador": "Exporter",
       "data_chegada": "Arrival Forecast",
+      "presenca_carga": "Cargo Presence",
       "urf": "URF",
       "detalhes_processo": "Process Details",
       "abertura": "Opening",
