@@ -7,34 +7,34 @@ class SessionHandler {
         this.checkInterval = 5 * 60 * 1000; // Verificar a cada 5 minutos
         this.warningThreshold = 15 * 60 * 1000; // Avisar 15 minutos antes de expirar
         this.isActive = true;
-        
+
         this.init();
     }
-    
+
     init() {
         // Iniciar monitoramento da sessão
         this.startSessionMonitoring();
-        
+
         // Monitorar atividade do usuário
         this.monitorUserActivity();
-        
+
         // Interceptar requisições AJAX para verificar status da sessão
         this.interceptAjaxRequests();
     }
-    
+
     startSessionMonitoring() {
         setInterval(() => {
             if (this.isActive) {
                 this.checkSession();
             }
         }, this.checkInterval);
-        
+
         // Primeira verificação após 1 minuto
         setTimeout(() => {
             this.checkSession();
         }, 60000);
     }
-    
+
     async checkSession() {
         try {
             const response = await fetch('/paginas/check-session', {
@@ -44,54 +44,54 @@ class SessionHandler {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-            
+
             if (response.status === 401) {
                 this.handleSessionExpired();
                 return;
             }
-            
+
             const data = await response.json();
-            
+
             if (!data.valid) {
                 this.handleSessionExpired();
             } else {
                 // Sessão válida, continuar normalmente
                 console.log('[SESSION] Sessão válida');
             }
-            
+
         } catch (error) {
             console.warn('[SESSION] Erro ao verificar sessão:', error);
         }
     }
-    
+
     monitorUserActivity() {
         const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-        
+
         events.forEach(event => {
             document.addEventListener(event, () => {
                 this.updateActivity();
             }, { passive: true });
         });
     }
-    
+
     updateActivity() {
         // Atualizar timestamp de atividade (se necessário)
         // Por enquanto, apenas resetar qualquer timer de warning
         this.clearWarnings();
     }
-    
+
     interceptAjaxRequests() {
         const originalFetch = window.fetch;
-        
+
         // Armazenar referência ao fetch original para uso por outras partes do código
         this.originalFetch = originalFetch;
         window.sessionHandler = this;
-        
+
         window.fetch = async (...args) => {
             try {
                 // Aplicar o contexto correto do window, não do SessionHandler
                 const response = await originalFetch.apply(window, args);
-                
+
                 // Verificar se a resposta indica sessão expirada
                 if (response.status === 401) {
                     const responseData = await response.clone().json().catch(() => ({}));
@@ -99,20 +99,33 @@ class SessionHandler {
                         this.handleSessionExpired();
                     }
                 }
-                
+
                 return response;
             } catch (error) {
                 throw error;
             }
         };
     }
-    
+
     handleSessionExpired() {
-        // Não faz nada: não mostra aviso, não desativa sessão, não redireciona
+        console.warn('[SESSION] Sessão expirada detectada! Redirecionando para login...');
+
+        // Evitar múltiplos redirecionamentos
+        if (this.isRedirecting) return;
+        this.isRedirecting = true;
+
+        // Salvar URL atual para redirecionamento pós-login (opcional)
+        // localStorage.setItem('redirect_after_login', window.location.pathname);
+
+        // Alertar usuário (opcional, pode ser intrusivo)
+        // alert('Sua sessão expirou. Por favor, faça login novamente.');
+
+        // Redirecionar para login
+        window.location.href = '/auth/login?expired=true';
     }
-    
+
     // showExpiredMessage removido: não exibe mais aviso visual
-    
+
     clearWarnings() {
         const existingAlert = document.getElementById('session-warning-alert');
         if (existingAlert) {
