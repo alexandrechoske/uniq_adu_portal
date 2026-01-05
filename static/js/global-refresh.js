@@ -2,9 +2,9 @@
 // Sistema global de atualização de dados que busca tudo do Supabase a cada 60s
 // e disponibiliza para todas as páginas da aplicação
 
-(function() {
+(function () {
     'use strict';
-    
+
     // Verificar se já foi inicializado
     if (window.GlobalRefresh) {
         console.warn('[GlobalRefresh] Sistema já inicializado, ignorando nova inicialização');
@@ -40,7 +40,10 @@
     // Função para verificar se a sessão ainda é válida
     async function checkSession() {
         try {
-            console.log('[GlobalRefresh] Verificando sessão...');
+            console.log('[GlobalRefresh] ========== VERIFICANDO SESSÃO ==========');
+            console.log('[GlobalRefresh] Endpoint:', CONFIG.CHECK_SESSION_ENDPOINT);
+            console.log('[GlobalRefresh] Pathname atual:', window.location.pathname);
+
             let response = await fetch(CONFIG.CHECK_SESSION_ENDPOINT, {
                 method: 'GET',
                 headers: {
@@ -48,6 +51,9 @@
                     'Cache-Control': 'no-cache'
                 }
             });
+
+            console.log('[GlobalRefresh] Response status:', response.status);
+            console.log('[GlobalRefresh] Response ok:', response.ok);
 
             if (!response.ok) {
                 // Retry rápido em caso de erro transitório (exceto 401)
@@ -63,26 +69,47 @@
                     });
                 }
                 if (response.status === 401) {
-                    console.warn('[GlobalRefresh] Sessão expirada, redirecionando para login...');
-                    window.location.href = '/login';
+                    console.warn('[GlobalRefresh] 🔴 Sessão expirada (401), redirecionando para login...');
+                    window.location.href = '/auth/login?expired=true';
                     return false;
                 }
                 throw new Error(`Erro ao verificar sessão: ${response.status}`);
             }
 
-            const sessionData = await response.json();
-            if (!sessionData || sessionData.status !== 'success') {
-                console.warn('[GlobalRefresh] Sessão inválida:', sessionData);
-                window.location.href = '/login';
+            const responseText = await response.text();
+            console.log('[GlobalRefresh] Response text (primeiros 500 chars):', responseText.substring(0, 500));
+
+            let sessionData;
+            try {
+                sessionData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('[GlobalRefresh] 🔴 ERRO ao parsear JSON:', parseError);
+                console.error('[GlobalRefresh] Response text completo:', responseText);
+                // NÃO redirecionar em caso de erro de parse - pode ser erro temporário
                 return false;
             }
 
-            console.log('[GlobalRefresh] Sessão válida');
+            console.log('[GlobalRefresh] sessionData:', sessionData);
+            console.log('[GlobalRefresh] sessionData.status:', sessionData?.status);
+            console.log('[GlobalRefresh] Status é success?', sessionData?.status === 'success');
+
+            if (!sessionData || sessionData.status !== 'success') {
+                console.warn('[GlobalRefresh] 🔴 Sessão considerada inválida!');
+                console.warn('[GlobalRefresh] sessionData:', JSON.stringify(sessionData, null, 2));
+                console.warn('[GlobalRefresh] Motivo: sessionData.status =', sessionData?.status, '(esperado: success)');
+                window.location.href = '/auth/login?expired=true';
+                return false;
+            }
+
+            console.log('[GlobalRefresh] ✅ Sessão válida!');
+            console.log('[GlobalRefresh] ========================================');
             globalDataCache.session_valid = true;
             return true;
         } catch (error) {
-            console.error('[GlobalRefresh] Erro na verificação de sessão:', error);
+            console.error('[GlobalRefresh] 🔴 Erro na verificação de sessão:', error);
+            console.error('[GlobalRefresh] Stack:', error.stack);
             globalDataCache.session_valid = false;
+            // NÃO redirecionar em caso de erro de rede - pode ser erro temporário
             return false;
         }
     }
@@ -91,7 +118,7 @@
     async function fetchGlobalData() {
         try {
             console.log('[GlobalRefresh] Buscando dados globais...');
-            
+
             let response = await fetch(CONFIG.GLOBAL_DATA_ENDPOINT, {
                 method: 'GET',
                 headers: {
@@ -117,7 +144,7 @@
             }
 
             const data = await response.json();
-            
+
             if (data.status === 'success') {
                 // Atualizar cache global
                 globalDataCache = {
@@ -125,17 +152,17 @@
                     ...data.data,
                     last_update: new Date().toLocaleString('pt-BR')
                 };
-                
+
                 console.log('[GlobalRefresh] Dados globais atualizados:', Object.keys(data.data));
-                
+
                 // Emitir evento para notificar páginas
                 eventEmitter.dispatchEvent(new CustomEvent('dataUpdated', {
                     detail: globalDataCache
                 }));
-                
+
                 // Atualizar timestamp no header
                 updateHeaderTimestamp();
-                
+
                 return true;
             } else {
                 // Servidor respondeu com erro; não quebrar UX, apenas logar e manter dados atuais
@@ -217,15 +244,15 @@
     // Função para iniciar o contador regressivo
     function startCountdown() {
         const countdownElement = document.querySelector('[data-global-countdown]');
-        
+
         countdownInterval = setInterval(() => {
             countdown--;
-            
+
             if (countdownElement) {
                 // Usar a função helper para formatar
                 countdownElement.textContent = formatCountdown(countdown);
             }
-            
+
             if (countdown <= 0) {
                 countdown = CONFIG.REFRESH_INTERVAL;
                 performGlobalRefresh();
@@ -251,7 +278,7 @@
         try {
             isRefreshing = true;
             console.log('[GlobalRefresh] Iniciando refresh global...');
-            
+
             // Verificar sessão primeiro
             const sessionValid = await checkSession();
             if (!sessionValid) {
@@ -260,12 +287,12 @@
 
             // Buscar dados globais
             const success = await fetchGlobalData();
-            
+
             if (success) {
                 lastUpdateTime = new Date();
                 console.log('[GlobalRefresh] Refresh global concluído com sucesso');
             }
-            
+
         } catch (error) {
             console.error('[GlobalRefresh] Erro durante refresh global:', error);
             showNotification('Erro durante atualização global: ' + error.message, 'error');
@@ -285,20 +312,20 @@
         try {
             isRefreshing = true;
             console.log('[GlobalRefresh] Iniciando refresh FORÇADO...');
-            
+
             // Feedback visual no botão
             const refreshButton = document.getElementById('global-refresh-button');
             const originalHtml = refreshButton ? refreshButton.innerHTML : '';
-            
+
             if (refreshButton) {
                 refreshButton.innerHTML = '<i class="mdi mdi-loading mdi-spin text-sm"></i>';
                 refreshButton.disabled = true;
                 refreshButton.classList.add('opacity-50');
             }
-            
+
             // Mostrar notificação de início
             showNotification('🔄 Iniciando atualização forçada dos dados...', 'info');
-            
+
             // Verificar se estamos no dashboard executivo e executar force refresh específico
             const currentPath = window.location.pathname;
             if (currentPath.includes('/dashboard-executivo') && typeof window.forceRefreshDashboard === 'function') {
@@ -313,7 +340,7 @@
                     return;
                 }
             }
-            
+
             // Verificar sessão primeiro
             const sessionValid = await checkSession();
             if (!sessionValid) {
@@ -336,7 +363,7 @@
             }
 
             const result = await response.json();
-            
+
             if (result.status === 'success') {
                 // Atualizar cache global com dados forçados
                 globalDataCache = {
@@ -344,38 +371,38 @@
                     ...result.data,
                     last_update: result.timestamp
                 };
-                
+
                 lastUpdateTime = new Date();
-                
+
                 // Resetar countdown
                 countdown = CONFIG.REFRESH_INTERVAL;
                 updateCountdownDisplay(); // Atualizar display após reset
-                
+
                 // Emitir evento para páginas específicas
                 const refreshEvent = new CustomEvent('globalDataForceRefresh', {
-                    detail: { 
-                        data: result.data, 
+                    detail: {
+                        data: result.data,
                         timestamp: result.timestamp,
                         totalRecords: result.data.total_records_updated || 0
                     }
                 });
                 eventEmitter.dispatchEvent(refreshEvent);
                 window.dispatchEvent(refreshEvent);
-                
+
                 // Notificação de sucesso
                 const totalRecords = result.data.total_records_updated || 0;
                 showNotification(
-                    `✅ Atualização forçada concluída! ${totalRecords} registros atualizados.`, 
+                    `✅ Atualização forçada concluída! ${totalRecords} registros atualizados.`,
                     'success'
                 );
-                
+
                 console.log('[GlobalRefresh] Refresh forçado concluído com sucesso');
                 console.log(`[GlobalRefresh] Total de registros atualizados: ${totalRecords}`);
-                
+
             } else {
                 throw new Error(result.message || 'Erro desconhecido no refresh forçado');
             }
-            
+
         } catch (error) {
             console.error('[GlobalRefresh] Erro durante refresh forçado:', error);
             showNotification('❌ Erro durante atualização forçada: ' + error.message, 'error');
@@ -392,7 +419,7 @@
                 refreshButton.disabled = false;
                 refreshButton.classList.remove('opacity-50');
             }
-            
+
             isRefreshing = false;
         }
     }
@@ -400,51 +427,53 @@
     // Função para inicializar o sistema
     function initializeGlobalRefresh() {
         console.log('[GlobalRefresh] Inicializando sistema de refresh global...');
-        
+
         // Parar qualquer intervalo existente
         if (refreshInterval) {
             clearInterval(refreshInterval);
         }
-        
+
         // Fazer primeira busca imediatamente
         performGlobalRefresh();
-        
+
         // Iniciar contador
         countdown = CONFIG.REFRESH_INTERVAL;
         updateCountdownDisplay(); // Atualizar display inicial
         startCountdown();
-        
+
         console.log('[GlobalRefresh] Sistema de refresh global iniciado');
     }
 
     // Função para parar o sistema
     function stopGlobalRefresh() {
         console.log('[GlobalRefresh] Parando sistema de refresh global...');
-        
+
         if (refreshInterval) {
             clearInterval(refreshInterval);
             refreshInterval = null;
         }
-        
+
         stopCountdown();
-        
+
         console.log('[GlobalRefresh] Sistema de refresh global parado');
     }    // Event listeners e inicialização
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         console.log('[GlobalRefresh] Verificando se deve inicializar...');
-        
-        // Não inicializar o sistema na página de login
-        if (window.location.pathname === '/login' || window.location.pathname === '/auth/login') {
-            console.log('[GlobalRefresh] Na página de login, não inicializando sistema');
+
+        // Não inicializar o sistema em páginas de autenticação
+        const authPaths = ['/login', '/auth/login', '/auth/logout', '/auth/forgot-password', '/auth/reset-password'];
+        const currentPath = window.location.pathname;
+        if (authPaths.some(path => currentPath === path || currentPath.startsWith(path + '?') || currentPath.startsWith(path + '/'))) {
+            console.log('[GlobalRefresh] Na página de autenticação, não inicializando sistema');
             return;
         }
-        
+
         // Verificar se existe um usuário logado antes de inicializar
         if (!document.body.classList.contains('logged-in') && !document.querySelector('[data-user-id]')) {
             console.log('[GlobalRefresh] Usuário não logado, não inicializando sistema');
             return;
         }
-        
+
         // Permitir que páginas desativem explicitamente o refresh global
         if (window.DISABLE_GLOBAL_REFRESH === true || window.location.pathname.includes('/usuarios/analytics/agente')) {
             console.log('[GlobalRefresh] Desativado nesta página (flag ou rota de agente).');
@@ -452,21 +481,21 @@
         }
 
         console.log('[GlobalRefresh] Inicializando GlobalRefresh...');
-        
+
         // Inicializar sistema
         initializeGlobalRefresh();
-        
+
         // Event listener para botão de refresh manual global
         const globalRefreshButton = document.getElementById('global-refresh-button');
         if (globalRefreshButton) {
-            globalRefreshButton.addEventListener('click', function() {
+            globalRefreshButton.addEventListener('click', function () {
                 console.log('[GlobalRefresh] Refresh forçado solicitado');
                 performForceRefresh();
             });
         }
-        
+
         // Parar refresh quando a página não estiver visível
-        document.addEventListener('visibilitychange', function() {
+        document.addEventListener('visibilitychange', function () {
             if (document.hidden) {
                 console.log('[GlobalRefresh] Página oculta, pausando refresh');
                 stopCountdown();
@@ -475,7 +504,7 @@
                 startCountdown();
             }
         });
-        
+
         console.log('[GlobalRefresh] Inicialização concluída');
     });
 
@@ -486,46 +515,46 @@
         stop: stopGlobalRefresh,
         refresh: performGlobalRefresh,
         forceRefresh: performForceRefresh, // Nova função de refresh forçado
-        
+
         // Acesso aos dados
-        getData: function() {
+        getData: function () {
             return { ...globalDataCache };
         },
-        
-        getImportacoes: function() {
+
+        getImportacoes: function () {
             return globalDataCache.importacoes || [];
         },
-        
-        getUsuarios: function() {
+
+        getUsuarios: function () {
             return globalDataCache.usuarios || [];
         },
-        
-        getDashboardStats: function() {
+
+        getDashboardStats: function () {
             return globalDataCache.dashboard_stats || {};
         },
-        
-        getLastUpdate: function() {
+
+        getLastUpdate: function () {
             return globalDataCache.last_update;
         },
-        
-        isSessionValid: function() {
+
+        isSessionValid: function () {
             return globalDataCache.session_valid;
         },
-        
+
         // Event system para páginas se inscreverem em atualizações
-        onDataUpdate: function(callback) {
+        onDataUpdate: function (callback) {
             eventEmitter.addEventListener('dataUpdated', callback);
         },
-        
-        offDataUpdate: function(callback) {
+
+        offDataUpdate: function (callback) {
             eventEmitter.removeEventListener('dataUpdated', callback);
         },
-        
-        onForceRefresh: function(callback) {
+
+        onForceRefresh: function (callback) {
             eventEmitter.addEventListener('globalDataForceRefresh', callback);
         },
-        
-        offForceRefresh: function(callback) {
+
+        offForceRefresh: function (callback) {
             eventEmitter.removeEventListener('globalDataForceRefresh', callback);
         }
     };

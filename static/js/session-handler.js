@@ -37,6 +37,7 @@ class SessionHandler {
 
     async checkSession() {
         try {
+            console.log('[SESSION] ========== VERIFICANDO SESSÃO ==========');
             const response = await fetch('/paginas/check-session', {
                 method: 'GET',
                 credentials: 'same-origin',
@@ -45,22 +46,34 @@ class SessionHandler {
                 }
             });
 
+            console.log('[SESSION] Response status:', response.status);
+
             if (response.status === 401) {
+                console.warn('[SESSION] 🔴 Sessão expirada (401)');
                 this.handleSessionExpired();
                 return;
             }
 
             const data = await response.json();
+            console.log('[SESSION] Response data:', data);
+            console.log('[SESSION] data.status:', data?.status);
+            console.log('[SESSION] data.session_valid:', data?.session_valid);
 
-            if (!data.valid) {
+            // CORREÇÃO: Verificar usando 'status' ou 'session_valid' (o backend retorna ambos)
+            const isValid = data.status === 'success' || data.session_valid === true;
+
+            if (!isValid) {
+                console.warn('[SESSION] 🔴 Sessão inválida!');
+                console.warn('[SESSION] data:', JSON.stringify(data, null, 2));
                 this.handleSessionExpired();
             } else {
                 // Sessão válida, continuar normalmente
-                console.log('[SESSION] Sessão válida');
+                console.log('[SESSION] ✅ Sessão válida');
             }
 
         } catch (error) {
-            console.warn('[SESSION] Erro ao verificar sessão:', error);
+            console.warn('[SESSION] ⚠️ Erro ao verificar sessão (não redirecionando):', error);
+            // NÃO redirecionar em caso de erro de rede - pode ser erro temporário
         }
     }
 
