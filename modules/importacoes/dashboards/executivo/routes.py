@@ -1656,7 +1656,7 @@ def recent_operations():
             # Colunas para a tabela
             'ref_unique', 'importador', 'data_abertura', 'exportador_fornecedor', 
             'modal', 'status_processo', 'status_macro_sistema', 'custo_total', 'custo_total_view', 'data_chegada',
-            'presenca_carga',  # NOVO: Presença Carga
+            'presenca_carga', # NOVO: Presença Carga
             
             # CORREÇÃO: Incluir status_timeline e status_sistema para exibição
             'status_timeline', 'status_sistema',
