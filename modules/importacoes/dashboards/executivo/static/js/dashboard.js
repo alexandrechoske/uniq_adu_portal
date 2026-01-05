@@ -1683,6 +1683,15 @@ async function loadWithBootstrap() {
 
         console.log(`[DASHBOARD_EXECUTIVO] Bootstrap: ${result.total_filtered || result.total_records} registros`);
 
+        // Processar permissão de materiais (CRITICAL FIX)
+        if (typeof result.can_view_materials !== 'undefined') {
+            window.canViewMaterials = result.can_view_materials;
+            console.log('[MATERIAL_PERMISSION] Permissão de materiais (bootstrap):', window.canViewMaterials);
+            if (typeof window.toggleMaterialSections === 'function') {
+                window.toggleMaterialSections(window.canViewMaterials);
+            }
+        }
+
         // Armazenar dados base
         dashboardData = result.data || [];
 

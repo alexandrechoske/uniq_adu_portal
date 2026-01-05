@@ -2291,6 +2291,9 @@ def bootstrap_dashboard():
         # Preparar payload final. Frontend espera campos top-level (data, kpis, charts, operations, filter_options)
         # Mantemos também a chave 'bootstrap' para eventual compatibilidade retroativa.
         applied_filters = {k: v for k, v in request.args.items()}
+        # Verificar permissão de materiais
+        can_view_materials = user_can_view_materials(user_data)
+        
         payload = {
             'success': True,
             'debug_columns': df.columns.tolist() if not df.empty else [], # DEBUG: Enviar colunas para o frontend
@@ -2302,6 +2305,7 @@ def bootstrap_dashboard():
             'operations': operations,
             'filter_options': filter_options_payload,
             'applied_filters': applied_filters,
+            'can_view_materials': can_view_materials, # NOVO: Enviar permissão para o frontend
             'bootstrap': {  # wrapper opcional legado
                 'kpis': kpis,
                 'charts': charts,
@@ -2309,7 +2313,8 @@ def bootstrap_dashboard():
                 'filter_options': filter_options_payload,
                 'total_records': len(base_data),
                 'total_filtered': len(filtered),
-                'applied_filters': applied_filters
+                'applied_filters': applied_filters,
+                'can_view_materials': can_view_materials
             }
         }
 
