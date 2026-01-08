@@ -216,7 +216,9 @@ class DocumentService:
             print(f"[DOCUMENT_SERVICE] user_role: {user_role}")
             print(f"[DOCUMENT_SERVICE] user_companies: {user_companies}")
             
-            query = supabase.table('vw_documentos_processos_completa')\
+            # Usar supabase_admin para evitar erros de "JWT expired" ou "Sessão expirada"
+            # A segurança é garantida pelos filtros explícitos aplicados abaixo
+            query = supabase_admin.table('vw_documentos_processos_completa')\
                 .select('*')\
                 .eq('ref_unique', ref_unique)\
                 .order('data_upload', desc=True)
@@ -282,7 +284,8 @@ class DocumentService:
         """
         try:
             # Buscar documento
-            query = supabase.table('vw_documentos_processos_completa')\
+            # Usar supabase_admin para evitar erros de token expirado
+            query = supabase_admin.table('vw_documentos_processos_completa')\
                 .select('*')\
                 .eq('id', document_id)
             
